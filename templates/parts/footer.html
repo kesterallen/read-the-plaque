@@ -1,0 +1,82 @@
+
+<footer class="footer">
+    <div class="row">
+        <div class="col-lg-4 col-md-4 col-sm-12 col-xs-12">
+            <ul class="list-group">
+                <li class="list-group-item active">Recent Plaques</li>
+                {% for plaque in footer_items.new_plaques %}
+                    <li class="list-group-item">
+                        <a href="/plaque/{{plaque.key.urlsafe()}}">{{plaque.title}}</a>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="col-lg-4 col-md-4 col-sm-12 col-xs-12">
+            <ul class="list-group">
+                <li class="list-group-item active">Recent Comments</li>
+                {% for comment in footer_items.new_comments %}
+                    <li class="list-group-item">
+                        <a href="/plaque_comment/{{comment.key.urlsafe()}}">
+                            {{comment.text | truncate(50, True)}}
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="col-lg-4 col-md-4 col-sm-12 col-xs-12">
+            <ul class="list-group">
+                <a href="/tags"><li class="list-group-item active">Tags (click here for all tags)</li></a>
+                {% for tag in footer_items.tags %}
+                    <li class="list-group-item"><a href="/tag/{{tag}}">{{tag}}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <!-- TODO: Search form -->
+    <!-- TODO: RSS Feed -->
+    <div class="row">
+        <div class="col-xs-6">
+            Read The Plaque tweets at
+            <a href="http://www.twitter.com/readtheplaque">
+                @readtheplaque<i class="fi-social-twitter"></i>
+            </a>
+        </div>
+
+        <div class="col-xs-6">
+            <script>window.twttr = (function(d, s, id) {
+                var js, fjs = d.getElementsByTagName(s)[0],
+                t = window.twttr || {};
+                if (d.getElementById(id)) return t;
+                js = d.createElement(s);
+                js.id = id;
+                js.src = "https://platform.twitter.com/widgets.js";
+                fjs.parentNode.insertBefore(js, fjs);
+                             
+                t._e = [];
+                t.ready = function(f) {
+                    t._e.push(f);
+                };
+                                        
+                return t;
+            }(document, "script", "twitter-wjs"));
+            </script>
+
+            <a href="https://twitter.com/intent/tweet"
+               class="twitter-share-button"
+               data-size="large"
+               data-count="none"
+               {% if plaques %}
+                   data-text="Always read the plaque: '{{plaques[0].title | truncate(90)}}' #readtheplaque"
+                   data-url="http://readtheplaque.net/plaque/{{plaques[0].key.urlsafe()}}"
+               {% else %}
+                   data-text="Always read the plaque. #readtheplaque"
+                   data-url="http://readtheplaque.net"
+               {% endif %}
+            >Tweet this Plaque</a>
+        </div>
+    </div>
+<footer>
+

@@ -1,0 +1,42 @@
+{% extends 'parts/base_template.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    {% include 'parts/map.html' %}
+    <div class="row">
+        {% for iplaque in range(start_index, end_index) %}
+                {% if iplaque < plaques|length %}
+                    {% set plaque = plaques[iplaque] %}
+                    <a href="/plaque/{{plaque.key.urlsafe()}}">
+                        <div class="col-lg-2 col-md-3 col-sm-4 col-xs-6">
+                            <h2>{{plaque.title | wordwrap(10, True)}}</h2>
+                            <img src="{{plaque.thumbnail_url}}" class="img-responsive"/>
+
+                            <p>{{plaque.description | striptags | wordwrap(50, True) | truncate(200)}}</p>
+                            <ul class="list-inline">
+                                {% for tag in plaque.tags %}
+                                    <li>{{tag | truncate(15, True)}}</li>
+                                {% endfor %}
+                            </ul>
+                            <p>{{iplaque + 1}} / {{plaques|length}}
+                        </div>
+                    </a>
+
+                {% if loop.index % 6 == 0 %}
+                    <!-- clearfix every 6 cols for large viewport size -->
+                    <div class="clearfix visible-lg-block"></div>
+                {% elif loop.index % 4 == 0 %}
+                    <!-- clearfix every 4 cols for medium viewport size -->
+                    <div class="clearfix visible-md-block"></div>
+                {% elif loop.index % 3 == 0 %}
+                    <!-- clearfix every 3 cols for small viewport size -->
+                    <div class="clearfix visible-sm-block"></div>
+                {% elif loop.index % 2 == 0 %}
+                    <!-- clearfix every 2 cols for x-small viewport size -->
+                    <div class="clearfix visible-xs-block"></div>
+                {% endif %}
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

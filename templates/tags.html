@@ -1,0 +1,13 @@
+{% extends 'parts/base_template.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1>All Tags</h1>
+    <ul class="list-inline">
+        {% for tag in tags %}
+            <li><a href="/tag/{{tag}}">{{tag}}</a></li>
+        {% endfor %}
+    </ul>
+    {% include 'parts/map.html' %}
+</div>
+{% endblock %}

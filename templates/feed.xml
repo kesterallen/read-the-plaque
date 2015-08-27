@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0">
+    <channel>
+        <title>Read The Plaque</title>
+        <link>http://read-the-plaque.appspot.com</link>
+        <description>Always read the plaque</description>
+        <language>en-us</language>
+        <atom:link href="http://read-the-plaque.appspot.com/rss" rel="self" type="application/rss+xml" />
+
+        {% for plaque in plaques %}
+            <item>
+                <title>{{plaque.title}} uploaded at {{plaque.created_on}}</title>
+                <link>http://read-the-plaque.appspot.com/{{plaque.key.urlsafe()}}</link>
+                <guid>http://read-the-plaque.appspot.com/{{plaque.key.urlsafe()}}</guid>
+                <pubDate>{{plaque.created_on}}</pubDate>
+                <description>
+                    {{plaque.title}} uploaded at {{plaque.created_on}}
+                    <![CDATA[
+                    <p>
+                        <a href="http://read-the-plaque.appspot.com/{{plaque.key.urlsafe()}}">
+                            <img src="{{plaque.pic_url}}" 
+                                 alt="{{plaque.title}}, uploaded at {{plaque.created_on}}"
+                                 title="{{plaque.title}}, uploaded at {{plaque.created_on}}"
+                            />
+                        </a>
+                    </p>
+                    ]]>
+                </description>
+            </item>
+        {% endfor %}
+
+    </channel>
+</rss>
+

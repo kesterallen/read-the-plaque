@@ -1,0 +1,470 @@
+# -*- coding: utf-8 -*-
+
+import datetime
+import jinja2
+import json
+import logging
+import mimetypes
+import os
+import random
+import re
+import urllib
+import webapp2
+
+#from google.appengine.api import app_identity
+from google.appengine.api import images
+from google.appengine.api import memcache
+from google.appengine.api import users
+from google.appengine.ext import blobstore
+from google.appengine.ext import ndb
+
+import lib.cloudstorage as gcs
+
+from Models import Comment, Plaque
+
+# TODO: make plaque submission require login
+#       TODO: multiple OAUTH login
+# TODO: add GPS picker from a map (see the admin page on WP)
+
+
+# The wordpress admin dashboard is pretty easy to use and the process to
+# publish pending the pending plaques is straightforward.
+#
+# Here is my proposed plan of action:
+#
+# 0) Disable comments entirely. They appear to be at least 99.9% spam, with
+#    over twenty thousand pending comments.
+# 1) Publish the ~200 pending plaque posts. This will take a couple months at
+#    the level of effort that I can give to this.
+# 2) Go through the ~100 plaques on the #readtheplaque hashtag, post those.
+# 3) Copy all of the data from the wordpress site to my revamp of the site.
+#    Verify that the data is identical.
+# 4) Switch the domain to point to the new site.
+# 5) Announce a relauch of the site, from both Roman and Alexis
+
+
+# Mysterious GCS_BUCKET configuration. This appears to work for the bucket
+# named 'read-the-plaque.appspot.com', but it is different from surlyfritter. I
+# suspect I did something different/wrong in the setup, but not sure.
+#
+#default_bucket_name = app_identity.get_default_gcs_bucket_name()
+#GCS_BUCKET_NAME = os.environ.get('BUCKET_NAME', default_bucket_name)
+#GCS_BUCKET = '/' + GCS_BUCKET_NAME
+GCS_BUCKET = '/read-the-plaque.appspot.com'
+
+DEFAULT_PLAQUESET_NAME = 'public'
+DEFAULT_PLAQUES_PER_PAGE = 24
+
+# Load templates from the /templates dir. Check if this works on deploy
+JINJA_ENVIRONMENT = jinja2.Environment (
+    loader=jinja2.FileSystemLoader(
+        os.path.join(os.path.dirname(__file__),
+                     'templates')),
+    extensions=['jinja2.ext.autoescape'],
+    autoescape=False)#True) # turn off autoescape to allow html redering of descriptions
+
+# Set a parent key on the Plaque objects to ensure that they are all in the
+# same entity group. Queries across the single entity group will be consistent.
+# However, the write rate should be limited to ~1/second.
+
+def plaqueset_key(plaqueset_name=DEFAULT_PLAQUESET_NAME):
+    """
+    Constructs a Datastore key for a Plaque entity. Use plaqueset_name as
+    the key.
+    """
+    return ndb.Key('Plaque', plaqueset_name)
+
+def last_five_approved(cls):
+    new_items = cls.query(cls.approved == True
+                  ).order(-cls.created_on
+                  ).fetch(limit=5)
+    return new_items
+
+def get_footer_items():
+    """
+    Just 5 tags for the footer.
+    Memcache the output of this so it doesn't get calculated every time.
+    """
+    output = None# TODO: memcache.get('footer_output')
+    if output is None:
+        tags = set()
+        for p in Plaque.query(Plaque.approved == True).fetch():
+            for t in p.tags:
+                tags.add(t)
+        while len(tags) > 5:
+            tags.pop()
+
+        output = {'tags': tags,
+                  'new_plaques': last_five_approved(Plaque),
+                  'new_comments': last_five_approved(Comment)}
+
+        #memcache_status = memcache.set('footer_output', output)
+        #if not memcache_status:
+            #logging.debug("memcaching for footer_output failed")
+    else:
+        logging.debug("memcache.get worked for footer_output")
+
+    return output
+
+class ViewAllPlaques(webapp2.RequestHandler):
+    def get(self, page_num=1, plaques_per_page=DEFAULT_PLAQUES_PER_PAGE):
+        """
+        View the nth plaques_per_page plaques on a grid.
+        page_num is a one-based integer
+        """
+        try:
+            page_num = int(page_num)
+        except ValueError as err:
+            logging.error(err)
+            page_num = 1
+        if page_num < 1:
+            page_num = 1
+
+        # Grab all plaques for the map. TODO: think about memcaching the map setup
+        plaques = Plaque.query(Plaque.approved == True
+                       ).order(-Plaque.created_on
+                       ).fetch()
+        start_index = plaques_per_page * (page_num - 1)
+        end_index = start_index + plaques_per_page 
+
+        template = JINJA_ENVIRONMENT.get_template('all.html')
+        template_values = {
+            'all_plaques': plaques,
+            'plaques': plaques,
+            'start_index': start_index,
+            'end_index': end_index, 
+            'mapzoom': 1,
+            'footer_items': get_footer_items(),
+        }
+        print start_index, end_index
+        self.response.write(template.render(template_values))
+
+class ViewOnePlaqueParent(webapp2.RequestHandler):
+    def get(self):
+        raise NotImplementedError("Don't call ViewOnePlaqueParent.get directly")
+
+    def _random_plaque_key(self):
+        logging.debug("Neither comment_key nor plaque_key is specified. "
+                      "Grab a random plaque.")
+        count = Plaque.query().count()
+        if not count:
+            raise ValueError("No plaques!")
+
+        iplaque = random.randint(1, count)
+        plaques = Plaque.query().order(Plaque.created_on).fetch(offset=iplaque,
+                                                                limit=1)
+        plaque_key = plaques[0].key.urlsafe()
+        return plaque_key
+
+    def _get_from_key(self, comment_key=None, plaque_key=None):
+        """
+        Put the single plaque into a list for rendering so that the common
+        map functionality can be used unchanged.
+        """
+        all_plaques = Plaque.query().filter(Plaque.approved == True).fetch()
+        if comment_key is not None:
+            comment = ndb.Key(urlsafe=comment_key).get()
+            plaque = Plaque.query().filter(Plaque.approved == True
+                                  ).filter(Plaque.comments == comment.key
+                                  ).get()
+        elif plaque_key is not None:
+            plaque = ndb.Key(urlsafe=plaque_key).get()
+        else:
+        #TODO: put plaque-from-title logic here
+            logging.debug("Neither comment_key nor plaque_key is specified. "
+                          "Grab a random plaque.")
+            key = self._random_plaque_key()
+            self.redirect('/plaque/' + key)
+            return
+
+        template = JINJA_ENVIRONMENT.get_template('one.html')
+        template_values = {
+            'all_plaques': [plaque],
+            'plaques': [plaque],
+            'mapzoom': 8,
+            'footer_items': get_footer_items(),
+        }
+        self.response.write(template.render(template_values))
+
+class ViewOnePlaqueFromComment(ViewOnePlaqueParent):
+    """
+    Render the single-plaque page from a comment key.
+    """
+    def get(self, comment_key):
+        self._get_from_key(comment_key=comment_key)
+
+class JsonOnePlaque(ViewOnePlaqueParent):
+    """
+    Render the single-plaque page from a plaque key, or get a random plaque.
+    """
+    def get(self, plaque_key=None):
+        if plaque_key is None:
+            plaque_key = self._random_plaque_key()
+
+        plaque = ndb.Key(urlsafe=plaque_key).get()
+        self.response.write(
+            json.dumps({
+                'plaque_key': plaque.key.urlsafe(),
+                'title': plaque.title,
+            }))
+
+class ViewOnePlaque(ViewOnePlaqueParent):
+    """
+    Render the single-plaque page from a plaque key, or get a random plaque.
+    """
+    def get(self, plaque_key=None):
+        self._get_from_key(plaque_key=plaque_key)
+
+class ViewAllTags(webapp2.RequestHandler):
+    def get(self):
+        tags = set()
+        plaques = Plaque.query().filter(Plaque.approved == True).fetch()
+        for plaque in plaques:
+            for t in plaque.tags:
+                tags.add(t)
+
+        template = JINJA_ENVIRONMENT.get_template('tags.html')
+        template_values = {
+            'tags': tags,
+            'mapzoom': 1,
+            'footer_items': get_footer_items(),
+        }
+        self.response.write(template.render(template_values))
+
+class ViewTag(webapp2.RequestHandler):
+    def get(self, tag):
+        """
+        View plaque with a given tag on a grid.
+        """
+        all_plaques = Plaque.query().filter(Plaque.approved == True
+                                   ).order(-Plaque.created_on
+                                   ).fetch()
+        plaques = Plaque.query().filter(Plaque.approved == True
+                               ).filter(Plaque.tags == tag
+                               ).order(-Plaque.created_on
+                               ).fetch()
+        template = JINJA_ENVIRONMENT.get_template('all.html')
+        template_values = {
+            'all_plaques': all_plaques,
+            'plaques': plaques,
+            'start_index': 0,
+            'end_index': len(plaques),
+            'mapzoom': 1,
+            'footer_items': get_footer_items(),
+        }
+        self.response.write(template.render(template_values))
+
+class About(webapp2.RequestHandler):
+    def get(self):
+        """
+        Render the About page from the common template.
+        """
+        template = JINJA_ENVIRONMENT.get_template('about.html')
+        template_values = {
+            'footer_items': get_footer_items(),
+        }
+        self.response.write(template.render(template_values))
+
+class AddComment(webapp2.RequestHandler):
+    def post(self):
+        plaque_key = self.request.get('plaque_key')
+        plaque = ndb.Key(urlsafe=plaque_key).get()
+
+        comment_text = self.request.get('comment_text')
+        comment = Comment()
+        comment.text = comment_text
+        comment.put()
+
+        if len(plaque.comments) < 1:
+            plaque.comments = [comment.key]
+        else:
+            plaque.comments.append(comment.key)
+        plaque.put()
+
+        # TODO: email notify admin
+
+        self.redirect('/plaque/%s' % plaque.key.urlsafe())
+
+class AddPlaque(webapp2.RequestHandler):
+    def get(self, message=None):
+        template = JINJA_ENVIRONMENT.get_template('add.html')
+        template_values = { 'footer_items': get_footer_items(), }
+        if message is not None:
+            template_values['message'] = message
+
+        template = JINJA_ENVIRONMENT.get_template('add.html')
+        self.response.write(template.render(template_values))
+
+    def post(self):
+        self._post(False)
+
+    def _post(self, is_migration=False):
+        """
+        We set the same parent key on the 'Plaque' to ensure each Plauqe is in
+        the same entity group. Queries across the single entity group will be
+        consistent. However, the write rate to a single entity group should be
+        limited to ~1/second.
+
+        TODO: think about what happens if the implicit gcs_file.close (from the
+        with: block in _upload_image_to_gcs) doesn't happen, or what error
+        would need to be dealt with in this case. I think the below is OK,
+        because anything that prevents the implict .close from happening will
+        throw an error and prevent the plaque.put from happening also.
+        """
+
+        plaqueset_name = self.request.get('plaqueset_name',
+                                          DEFAULT_PLAQUESET_NAME)
+        location, created_by, title, description, image, tags = \
+            self._get_form_args()
+
+        plaque = Plaque(parent=plaqueset_key(plaqueset_name))
+        plaque.location = location
+        plaque.title = title
+        plaque.description = description
+        plaque.tags = tags
+        if is_migration:
+            plaque.approved = True
+
+        if is_migration:
+            img_name = os.path.basename(image)
+            img_fh = urllib.urlopen(image)
+        else:
+            img_name = image.filename
+            img_fh = image.file
+
+        gcs_file_name, gcs_url = self._upload_image_to_gcs(img_name, img_fh)
+        plaque.pic = gcs_file_name
+        plaque.pic_url = gcs_url
+        plaque.put()
+
+        # TODO: email notify admin
+
+        if not is_migration:
+            msg = """Hooray! And thank you. We'll geocode your plaque and you'll
+                  see it appear on the map shortly <a href="/plaque/%s">here</a>.""" % \
+                  plaque.key.urlsafe()
+            self.get(message=msg)
+        return
+
+    def _get_form_args(self):
+        # TODO: put a try block around this?
+        location_str = str(self.request.get('location'))
+        location = ndb.GeoPt(location_str)
+
+        if users.get_current_user():
+            created_by = users.get_current_user()
+        else:
+            created_by = None
+
+        title = self.request.get('title')
+        if len(title) > 1500:
+            title = title[:1499]
+        description = self.request.get('description')
+        image = self.request.POST.get('plaque_image')
+
+        # Get and tokenize tags
+        tags_str = self.request.get('tags')
+        tags_untokenized = tags_str.split(',')
+        tags = [re.sub('\s+', ' ', t.strip().lower()) for t in tags_untokenized]
+        tags = [t for t in tags if t] # Remove empties
+
+        return location, created_by, title, description, image, tags
+
+    def _upload_image_to_gcs(self, image_name, image_fh):
+        """
+        Upload pic into GCS
+
+        The blobstore.create_gs_key and images.get_serving_url calls are
+        outside of the with block; I think this is correct. The
+        blobstore.create_gs_key call was erroring out on production when it was
+        inside the with block.
+        """
+        date_slash_time = datetime.datetime.now().strftime("%Y%m%d/%H%M%S")
+        gcs_fn= '%s/%s/%s' % (GCS_BUCKET, date_slash_time, image_name)
+
+        ct = mimetypes.guess_type(image_name)[0]
+        op = {b'x-goog-acl': b'public-read'}
+        with gcs.open(gcs_fn, 'w', content_type=ct, options=op) as gcs_file:
+            image_contents = image_fh.read()
+            gcs_file.write(image_contents)
+
+        blobstore_gs_key = blobstore.create_gs_key('/gs' + gcs_fn)
+        gcs_file_url = images.get_serving_url(blobstore_gs_key)
+
+        return gcs_fn, gcs_file_url
+
+class AddPlaqueMigrate(AddPlaque):
+    """
+    Add a plaque, but use an URL for the image instead of an uploaded image.
+    Used for scraping the old readtheplaque.com site.
+    """
+    def get(self):
+        raise NotImplementedError("No get method for AddPlaqueMigrate")
+
+    def post(self):
+        self._post(is_migration=True)
+
+# TODO: See https://cloud.google.com/appengine/docs/python/search/ for details
+#class SearchPlaques(webapp2.RequestHandler):
+#    """Run a search in the title and description."""
+#    def get(self):
+#        raise NotImplementedError("No get method for SearchPlaques")
+#
+#    def post(self):
+#        search_term = self.request.get('search_term')
+#        plaques = Plaque.query().filter(Plaque.approved == True
+#                               ).filter(Plaque.tags == tag
+#                               ).order(-Plaque.created_on
+#                               ).fetch()
+
+class FlushMemcache(webapp2.RequestHandler):
+    def get(self):
+        memcache.flush_all()
+        self.redirect('/')
+
+    def post(self):
+        memcache.flush_all()
+        self.redirect('/')
+
+class Counts(webapp2.RequestHandler):
+    def get(self):
+        num_comments = Comment.query().count()
+        num_plaques = Plaque.query().count()
+        num_images = 0
+        images = gcs.listbucket(GCS_BUCKET)
+        for image in images:
+            num_images += 1
+
+        msg = "There are %s comments, %s plaques, %s images" % (
+                num_comments, num_plaques, num_images)
+        self.response.write(msg)
+
+class DeleteEverything(webapp2.RequestHandler):
+    def get(self):
+        comments = Comment.query().fetch()
+        for comment in comments:
+            comment.key.delete()
+
+        plaques = Plaque.query().fetch()
+        for plaque in plaques:
+            plaque.key.delete()
+
+        num_images = 0
+        images = gcs.listbucket(GCS_BUCKET)
+        for image in images:
+            num_images += 1
+            gcs.delete(image.filename)
+
+        msg = "Deleted %s comments, %s plaques, %s images" % (
+                len(comments), len(plaques), num_images)
+        self.response.write(msg)
+
+class RssFeed(webapp2.RequestHandler):
+    def get(self, num_entries=10):
+        plaques = Plaque.query(
+                      ).filter(Plaque.approved == True
+                      ).order(-Plaque.created_on
+                      ).fetch(limit=num_entries)
+        template = JINJA_ENVIRONMENT.get_template('feed.xml') # TODO: update this
+        template_values = {'plaques': plaques}
+        self.response.write(template.render(template_values))

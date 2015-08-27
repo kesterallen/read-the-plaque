@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+a {
+    text-decoration: none;
+}
+/* Rounded outline around column elements */
+.row > a > div {
+    margin-top:10px;
+    padding: 20px;
+    outline: 2px solid #ccc;
+    outline-offset: -10px;
+    -moz-outline-radius: 10px;
+    -webkit-outline-radius: 10px;
+}
+/* Highlight a column element grey when mouse-overed */
+.row > a > div:hover {
+    background-color: grey;
+}
+/* Prevent navbar overlap */
+body { padding-top: 70px; }
+/* Center column class */
+.col-centered {
+    float: none;
+    margin: 0 auto;
+}
+
+/* Sticky footer styles
+-------------------------------------------------- */
+html {
+  position: relative;
+  min-height: 100%;
+}
+body {
+  /* Margin bottom by footer height */
+  margin-bottom: 300px;
+  padding-bottom: 10px; /* put a smidge of blank space at the bottom, just before the footer*/
+}
+.footer {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  /* Set the fixed height of the footer here */
+  height: 300px;
+  background-color: #f5f5f5;
+  padding-top: 10px; /* put a smidge of blank space at the top of the footer */
+}
+
+</style>
+
+{% if all_plaques %}
+    {% include 'parts/map_setup.html' %}
+{% endif %}
+
+<script src="//tinymce.cachefly.net/4.2/tinymce.min.js"></script>
+<script>tinymce.init({selector:'textarea'});</script>
+
+<title>Read the Plaque</title>
+</head>
+
+<body>
+{% include 'parts/navbar.html' %}
+
+{% block content %}
+{% endblock %}
+
+{% if footer_items %}
+    {% include 'parts/footer.html' %}
+{% endif %}
+</body>
+</html>

@@ -1,0 +1,59 @@
+
+<!-- Map stuff -->
+<style>
+#map {
+    height: 400px;
+}
+</style>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCPGpsCWGQww0hOPhblgBu34eoVnzf5sKo"></script>
+<script>
+    function initialize() {
+        var mapCanvas = document.getElementById('map');
+
+        var mapOptions = {
+            center: {
+                lat: {{all_plaques[0].location.lat}},
+                lng: {{all_plaques[0].location.lon}}
+            },
+            zoom: {{mapzoom}},
+            mapTypeId: google.maps.MapTypeId.ROADMAP
+        }
+        var map = new google.maps.Map(mapCanvas, mapOptions)
+
+        var infoForMarkers = [
+             {% for plaque in all_plaques %}
+                { lat: {{plaque.location.lat}},
+                  lng: {{plaque.location.lon}},
+                  title: "{{plaque.title}}",
+                  url: "/plaque/{{plaque.key.urlsafe()}}"
+                },
+             {% endfor %}
+        ];
+        var i;
+        for (i = 0; i < infoForMarkers.length; ++i) {
+            var marker = new google.maps.Marker({
+                                 position: {lat: infoForMarkers[i].lat,
+                                            lng: infoForMarkers[i].lng},
+                                 map: map,
+                                 title: infoForMarkers[i].title,
+                                 url: infoForMarkers[i].url,
+            });
+            //
+            // InfoWindow stuff:
+            //
+            //var infowindow = new google.maps.InfoWindow({content: infoForMarkers[i].title});
+            //google.maps.event.addListener(marker, 'mouseover', function() {
+            //    infowindow.open(map, this);
+            //});
+            //google.maps.event.addListener(marker, 'mouseout', function() { # TODO: mouseout?
+            //    infowindow.close();
+            //});
+            google.maps.event.addListener(marker, 'click', function() {
+                window.location.href = this.url;
+            });
+        }
+    }
+    google.maps.event.addDomListener(window, 'load', initialize);
+</script>
+<!-- End map stuff -->
+
