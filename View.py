@@ -1,5 +1,4 @@
 
-#TODO: Waymarking.com, openplaques.com
 import jinja2
 import logging
 import os
@@ -12,7 +11,7 @@ JINJA_ENVIRONMENT = jinja2.Environment (
         os.path.join(os.path.dirname(__file__),
                      'templates')),
     extensions=['jinja2.ext.autoescape'],
-    autoescape=False)#True) # turn off autoescape to allow html redering of descriptions
+    autoescape=False) # turn off autoescape to allow html redering of descriptions
 
 def handle_404(request, response, exception):
     template = JINJA_ENVIRONMENT.get_template('error.html')

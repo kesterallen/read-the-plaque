@@ -1,4 +1,5 @@
 
+from google.appengine.api import memcache
 from google.appengine.ext import ndb
 
 class Comment(ndb.Model):
@@ -30,7 +31,7 @@ class Plaque(ndb.Model):
     KeyProperty/FK to Comment. Not sure if this is better than having a
     comment.plaque KeyProperty/FK in the other direction.
     """
-    THUMBNAIL_SIZE_PX = 512
+    THUMBNAIL_SIZE_PX = 300
     DISPLAY_SIZE_PX = 1024
 
     title = ndb.StringProperty(required=True) # StringProperty: 1500 char limit
@@ -46,9 +47,13 @@ class Plaque(ndb.Model):
 
     @classmethod
     def all_approved(cls):
-        all_plaques = Plaque.query().filter(Plaque.approved == True
-                                   ).order(-Plaque.created_on
-                                   ).fetch()
+        all_plaques = memcache.get('all_approved')
+        if all_plaques is None:
+            all_plaques = Plaque.query().filter(Plaque.approved == True
+                                       ).order(-Plaque.created_on
+                                       ).fetch()
+        else:
+            logging.debug("memcache.get worked for all_approved")
         return all_plaques
 
     @property

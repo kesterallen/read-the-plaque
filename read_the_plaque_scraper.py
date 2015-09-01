@@ -47,6 +47,7 @@ plaque_ids.sort()
 #site_url = 'http://read-the-plaque.appspot.com'
 site_url = 'http://readtheplaque.net'
 post_url = site_url + '/addmigrate'
+flush_url = site_url + '/flush'
 
 def body_p_filter(tag):
     """
@@ -154,3 +155,6 @@ for iplaque, plaque_id in enumerate(plaque_ids):
     response = requests.post(post_url, data=values)
     print 1+iplaque, '/', len(plaque_ids), url, response, title
     time.sleep(2)
+
+response = requests.get(flush_url)
+print 'Flush:', response

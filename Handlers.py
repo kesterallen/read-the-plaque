@@ -22,9 +22,13 @@ import lib.cloudstorage as gcs
 
 from Models import Comment, Plaque
 
-# TODO: make plaque submission require login
-#       TODO: multiple OAUTH login
-# TODO: add GPS picker from a map (see the admin page on WP)
+# TODO before go-live
+# * Search for plaque text and title
+# * Make plaque submission require login
+#       possibly multiple OAUTH login
+# * GPS picker for submission location
+# * Fix issue with tooltips on map pins not resetting
+# * Social media cards
 
 
 # The wordpress admin dashboard is pretty easy to use and the process to
@@ -85,8 +89,8 @@ def get_footer_items():
     Just 5 tags for the footer.
     Memcache the output of this so it doesn't get calculated every time.
     """
-    output = None# TODO: memcache.get('footer_output')
-    if output is None:
+    footer_items = memcache.get('get_footer_items')
+    if footer_items is None:
         tags = set()
         for p in Plaque.query(Plaque.approved == True).fetch():
             for t in p.tags:
@@ -94,17 +98,17 @@ def get_footer_items():
         while len(tags) > 5:
             tags.pop()
 
-        output = {'tags': tags,
-                  'new_plaques': last_five_approved(Plaque),
-                  'new_comments': last_five_approved(Comment)}
+        footer_items = {'tags': tags,
+                        'new_plaques': last_five_approved(Plaque),
+                        'new_comments': last_five_approved(Comment)}
 
-        #memcache_status = memcache.set('footer_output', output)
-        #if not memcache_status:
-            #logging.debug("memcaching for footer_output failed")
+        memcache_status = memcache.set('get_footer_items', footer_items)
+        if not memcache_status:
+            logging.debug("memcaching for get_footer_items failed")
     else:
-        logging.debug("memcache.get worked for footer_output")
+        logging.debug("memcache.get worked for get_footer_items")
 
-    return output
+    return footer_items
 
 class ViewPlaquesPage(webapp2.RequestHandler):
     def get(self, page_num=1, plaques_per_page=DEFAULT_PLAQUES_PER_PAGE):
@@ -129,7 +133,7 @@ class ViewPlaquesPage(webapp2.RequestHandler):
             plaques_per_page = 1
 
 
-        # Grab all plaques for the map. TODO: think about memcaching the map setup
+        # Grab all plaques for the map
         plaques = Plaque.all_approved()
         start_index = plaques_per_page * (page_num - 1)
         end_index = start_index + plaques_per_page 
@@ -143,8 +147,18 @@ class ViewPlaquesPage(webapp2.RequestHandler):
             'mapzoom': 1,
             'footer_items': get_footer_items(),
         }
-        print start_index, end_index
-        self.response.write(template.render(template_values))
+
+        memcache_name = 'view_plaques_page_%s_%s' % (page_num, plaques_per_page)
+        template_text = memcache.get(memcache_name)
+        if template_text is None:
+            template_text = template.render(template_values)
+            memcache_status = memcache.set(memcache_name, template_text)
+            if not memcache_status:
+                logging.debug("memcaching for ViewPlaquesPage failed")
+        else:
+            logging.debug("memcaching worked for ViewPlaquesPage")
+
+        self.response.write(template_text)
 
 class ViewOnePlaqueParent(webapp2.RequestHandler):
     def get(self):

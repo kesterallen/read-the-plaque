@@ -5,13 +5,20 @@ api_version: 1
 threadsafe: true
 
 handlers:
+- url: /apple-touch-icon.png
+  static_files: static/images/apple-touch-icon.png
+  upload: static/images/apple-touch-icon.png
+
 - url: /favicon\.ico
-  static_files: favicon.ico
-  upload: favicon\.ico
+  static_files: static/images/favicon.ico
+  upload: static/images/favicon\.ico
 
 - url: /googlea9436158c9d937ee.html
   static_files: googlea9436158c9d937ee.html
   upload: googlea9436158c9d937ee.html
+
+- url: /static
+  static_dir: static
 
 - url: /images
   static_dir: static/images

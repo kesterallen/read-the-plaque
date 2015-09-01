@@ -1,10 +1,4 @@
 
-<!-- Map stuff -->
-<style>
-#map {
-    height: 400px;
-}
-</style>
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCPGpsCWGQww0hOPhblgBu34eoVnzf5sKo"></script>
 <script>
     function initialize() {
@@ -12,8 +6,13 @@
 
         var mapOptions = {
             center: {
-                lat: {{all_plaques[0].location.lat}},
-                lng: {{all_plaques[0].location.lon}}
+                {% if all_plaques|length == 0 %}
+                    lat: {{all_plaques[0].location.lat}},
+                    lng: {{all_plaques[0].location.lon}}
+                {% else %}
+                    lat: 0,
+                    lng: 0,
+                {% endif %}
             },
             zoom: {{mapzoom}},
             mapTypeId: google.maps.MapTypeId.ROADMAP
@@ -55,5 +54,4 @@
     }
     google.maps.event.addDomListener(window, 'load', initialize);
 </script>
-<!-- End map stuff -->
 

@@ -1,0 +1,63 @@
+
+a { text-decoration: none; }
+
+/* Prevent navbar overlap */
+body { padding-top: 70px; }
+
+/* Center column class (used by the map) */
+.col-centered {
+    float: none;
+    margin: 0 auto;
+}
+
+/* Sticky footer styles
+-------------------------------------------------- */
+html {
+    position: relative;
+    min-height: 100%;
+}
+body {
+    /* Margin bottom by footer height */
+    margin-bottom: 300px;
+    padding-bottom: 10px; /* put a smidge of blank space at the bottom, just before the footer*/
+}
+.footer {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    /* Set the fixed height of the footer here */
+    height: 300px;
+    background-color: #f5f5f5;
+    padding-top: 10px; /* put a smidge of blank space at the top of the footer */
+}
+
+/* Pintrest-like */
+
+*, *:before, *:after {box-sizing:  border-box !important;}
+
+.pinterest-row {
+    -moz-column-width: 18em;
+    -webkit-column-width: 18em;
+    -moz-column-gap: 0.25em;
+    -webkit-column-gap: 0.25em;
+}
+
+/* Highlight a column element grey when mouse-overed */
+.pinterest-row > a > div:hover {
+    background-color: #40495A;
+}
+.item {
+    display: inline-block;
+    padding:  .25rem;
+    width:  100%;
+}
+
+.well {
+    position:relative;
+    display: block;
+}
+/* end Pintrest-like */
+
+#map {
+    height: 400px;
+}
