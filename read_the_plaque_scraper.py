@@ -32,14 +32,20 @@ plaque_ids = [
     441, 421, 445, 447, 461, 378, 400, 406, 408, 320, 316, 279, 285, 287, 263,
     289, 293, 251, 204, 188, 186, 177, 175, 163, 165, 119, 150, 147, 107, 121,
     129, 123, 127, 109, 99, 95, 90, 86, 78, 70, 61, 45, 17, 5,
+    380, 423, 427, 435, 500, 502, 476, 388, 392, 398, 382, 532, 546, 552, 
+    404, 419, 494, 544, 623, 627, 591, 534, 542, 554, 567, 569, 575, 589, 607,
+    663, 655, 661, 805, 847, 859, 673, 655, 651, 711, 767, 851, 787, 795, 797,
+    823, 839, 845, 861, 394, 402, 512, 615, 639, 643, 653, 675, 1064, 887, 885,
+    811, 835, 443, 659, 713, 715, 699, 733, 683, 649, 741, 775, 773, 731, 763,
+    781, 783, 785, 789, 765, 799, 807, 837, 855, 873, 701, 813, 883, 1240,
 ]
 plaque_ids.sort()
 #plaque_ids.reverse()
 
 #site_url = 'http://10.10.15.40:8080'
 #site_url = 'http://127.0.0.1:8080'
-site_url = 'http://read-the-plaque.appspot.com'
-#site_url = 'http://readtheplaque.net'
+#site_url = 'http://read-the-plaque.appspot.com'
+site_url = 'http://readtheplaque.net'
 post_url = site_url + '/addmigrate'
 
 def body_p_filter(tag):
@@ -146,5 +152,5 @@ for iplaque, plaque_id in enumerate(plaque_ids):
         'description': body
     }
     response = requests.post(post_url, data=values)
-    print 1+iplaque, '/', len(plaque_ids), url, post_url, response, title
+    print 1+iplaque, '/', len(plaque_ids), url, response, title
     time.sleep(2)

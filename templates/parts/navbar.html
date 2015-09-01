@@ -31,7 +31,7 @@
                     <ul class="dropdown-menu scrollable-menu" role="menu">
                         <!-- TODO: parameterize 24 -->
                         {% for i in range(0, 1 + (all_plaques|length // 24)) %}
-                            <li><a href="/all/{{i + 1}}">Plaques {{1 + i*24}} to {{(i+1)*24}}</a></li>
+                            <li><a href="/page/{{i + 1}}">Plaques {{1 + i*24}} to {{(i+1)*24}}</a></li>
                         {% endfor %}
                     </ul>
                 </li>

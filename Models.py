@@ -44,6 +44,13 @@ class Plaque(ndb.Model):
     created_on = ndb.DateTimeProperty(auto_now_add=True)
     created_by = ndb.UserProperty()
 
+    @classmethod
+    def all_approved(cls):
+        all_plaques = Plaque.query().filter(Plaque.approved == True
+                                   ).order(-Plaque.created_on
+                                   ).fetch()
+        return all_plaques
+
     @property
     def thumbnail_url(self):
         """A URL for a square, THUMBNAIL_SIZE_PX wide image for thumbnails."""

@@ -21,13 +21,13 @@
         var map = new google.maps.Map(mapCanvas, mapOptions)
 
         var infoForMarkers = [
-             {% for plaque in all_plaques %}
+            {% for plaque in all_plaques %}
                 { lat: {{plaque.location.lat}},
                   lng: {{plaque.location.lon}},
                   title: "{{plaque.title}}",
                   url: "/plaque/{{plaque.key.urlsafe()}}"
                 },
-             {% endfor %}
+            {% endfor %}
         ];
         var i;
         for (i = 0; i < infoForMarkers.length; ++i) {

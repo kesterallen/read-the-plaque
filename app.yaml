@@ -13,6 +13,9 @@ handlers:
   static_files: googlea9436158c9d937ee.html
   upload: googlea9436158c9d937ee.html
 
+- url: /images
+  static_dir: static/images
+
 - url: /.*
   script: View.app
 

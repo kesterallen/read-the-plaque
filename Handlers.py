@@ -106,7 +106,7 @@ def get_footer_items():
 
     return output
 
-class ViewAllPlaques(webapp2.RequestHandler):
+class ViewPlaquesPage(webapp2.RequestHandler):
     def get(self, page_num=1, plaques_per_page=DEFAULT_PLAQUES_PER_PAGE):
         """
         View the nth plaques_per_page plaques on a grid.
@@ -120,10 +120,17 @@ class ViewAllPlaques(webapp2.RequestHandler):
         if page_num < 1:
             page_num = 1
 
+        try:
+            plaques_per_page = int(plaques_per_page)
+        except ValueError as err:
+            logging.error(err)
+            plaques_per_page = DEFAULT_PLAQUES_PER_PAGE
+        if plaques_per_page < 1:
+            plaques_per_page = 1
+
+
         # Grab all plaques for the map. TODO: think about memcaching the map setup
-        plaques = Plaque.query(Plaque.approved == True
-                       ).order(-Plaque.created_on
-                       ).fetch()
+        plaques = Plaque.all_approved()
         start_index = plaques_per_page * (page_num - 1)
         end_index = start_index + plaques_per_page 
 
@@ -161,7 +168,6 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
         Put the single plaque into a list for rendering so that the common
         map functionality can be used unchanged.
         """
-        all_plaques = Plaque.query().filter(Plaque.approved == True).fetch()
         if comment_key is not None:
             comment = ndb.Key(urlsafe=comment_key).get()
             plaque = Plaque.query().filter(Plaque.approved == True
@@ -236,16 +242,13 @@ class ViewTag(webapp2.RequestHandler):
         """
         View plaque with a given tag on a grid.
         """
-        all_plaques = Plaque.query().filter(Plaque.approved == True
-                                   ).order(-Plaque.created_on
-                                   ).fetch()
         plaques = Plaque.query().filter(Plaque.approved == True
                                ).filter(Plaque.tags == tag
                                ).order(-Plaque.created_on
                                ).fetch()
         template = JINJA_ENVIRONMENT.get_template('all.html')
         template_values = {
-            'all_plaques': all_plaques,
+            'all_plaques': Plaque.all_approved(),
             'plaques': plaques,
             'start_index': 0,
             'end_index': len(plaques),
