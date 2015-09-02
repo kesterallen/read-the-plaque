@@ -11,16 +11,20 @@ import re
 import urllib
 import webapp2
 
-#from google.appengine.api import app_identity
 from google.appengine.api import images
+from google.appengine.api import mail
 from google.appengine.api import memcache
 from google.appengine.api import users
 from google.appengine.ext import blobstore
 from google.appengine.ext import ndb
+from google.appengine.ext.db import BadValueError
 
 import lib.cloudstorage as gcs
 
 from Models import Comment, Plaque
+
+ADMIN_EMAIL = 'kester+readtheplaque@gmail.com'
+NOTIFICATION_SENDER_EMAIL = ADMIN_EMAIL
 
 # TODO before go-live
 # * Search for plaque text and title
@@ -51,9 +55,6 @@ from Models import Comment, Plaque
 # named 'read-the-plaque.appspot.com', but it is different from surlyfritter. I
 # suspect I did something different/wrong in the setup, but not sure.
 #
-#default_bucket_name = app_identity.get_default_gcs_bucket_name()
-#GCS_BUCKET_NAME = os.environ.get('BUCKET_NAME', default_bucket_name)
-#GCS_BUCKET = '/' + GCS_BUCKET_NAME
 GCS_BUCKET = '/read-the-plaque.appspot.com'
 
 DEFAULT_PLAQUESET_NAME = 'public'
@@ -237,15 +238,12 @@ class ViewOnePlaque(ViewOnePlaqueParent):
 
 class ViewAllTags(webapp2.RequestHandler):
     def get(self):
-        tags = set()
-        plaques = Plaque.query().filter(Plaque.approved == True).fetch()
-        for plaque in plaques:
-            for t in plaque.tags:
-                tags.add(t)
+
+        tags_sized = Plaque.all_tags_sized()
 
         template = JINJA_ENVIRONMENT.get_template('tags.html')
         template_values = {
-            'tags': tags,
+            'tags': tags_sized,
             'mapzoom': 1,
             'footer_items': get_footer_items(),
         }
@@ -283,6 +281,7 @@ class About(webapp2.RequestHandler):
         self.response.write(template.render(template_values))
 
 class AddComment(webapp2.RequestHandler):
+    @ndb.transactional(xg=True)
     def post(self):
         plaque_key = self.request.get('plaque_key')
         plaque = ndb.Key(urlsafe=plaque_key).get()
@@ -298,11 +297,24 @@ class AddComment(webapp2.RequestHandler):
             plaque.comments.append(comment.key)
         plaque.put()
 
-        # TODO: email notify admin
+        url = '/plaque/%s' % plaque.key.urlsafe()
+        
+        # Email notify admin:
+        msg = 'Comment<hr><p>%s</p><hr> added to %s' % (comment.text, url)
+        mail.send_mail(
+            sender=NOTIFICATION_SENDER_EMAIL,
+            to=ADMIN_EMAIL,
+            subject='Comment added to %s' % url,
+            body=msg,
+            html=msg,
+        )
 
-        self.redirect('/plaque/%s' % plaque.key.urlsafe())
+        self.redirect(url)
 
 class AddPlaque(webapp2.RequestHandler):
+    """
+    Add a plaque entity. Transactional in the _post method.
+    """
     def get(self, message=None):
         template = JINJA_ENVIRONMENT.get_template('add.html')
         template_values = { 'footer_items': get_footer_items(), }
@@ -315,6 +327,7 @@ class AddPlaque(webapp2.RequestHandler):
     def post(self):
         self._post(False)
 
+    @ndb.transactional
     def _post(self, is_migration=False):
         """
         We set the same parent key on the 'Plaque' to ensure each Plauqe is in
@@ -329,42 +342,65 @@ class AddPlaque(webapp2.RequestHandler):
         throw an error and prevent the plaque.put from happening also.
         """
 
-        plaqueset_name = self.request.get('plaqueset_name',
-                                          DEFAULT_PLAQUESET_NAME)
-        location, created_by, title, description, image, tags = \
-            self._get_form_args()
+        try:
+            plaqueset_name = self.request.get('plaqueset_name',
+                                              DEFAULT_PLAQUESET_NAME)
+            location, created_by, title, description, image, tags = \
+                self._get_form_args()
 
-        plaque = Plaque(parent=plaqueset_key(plaqueset_name))
-        plaque.location = location
-        plaque.title = title
-        plaque.description = description
-        plaque.tags = tags
-        if is_migration:
-            plaque.approved = True
+            plaque = Plaque(parent=plaqueset_key(plaqueset_name))
+            plaque.location = location
+            plaque.title = title
+            plaque.description = description
+            plaque.tags = tags
+            if is_migration:
+                plaque.approved = True
 
-        if is_migration:
-            img_name = os.path.basename(image)
-            img_fh = urllib.urlopen(image)
-        else:
-            img_name = image.filename
-            img_fh = image.file
+            if is_migration:
+                img_name = os.path.basename(image)
+                img_fh = urllib.urlopen(image)
+            else:
+                img_name = image.filename
+                img_fh = image.file
 
-        gcs_file_name, gcs_url = self._upload_image_to_gcs(img_name, img_fh)
-        plaque.pic = gcs_file_name
-        plaque.pic_url = gcs_url
-        plaque.put()
+            gcs_file_name, gcs_url = self._upload_image_to_gcs(img_name, img_fh)
+            plaque.pic = gcs_file_name
+            plaque.pic_url = gcs_url
+            plaque.put()
 
-        # TODO: email notify admin
+            url = "/plaque/%s" % plaque.key.urlsafe()
+        except BadValueError as err:
+            msg = "Sorry, your plaque submission had this error: '%s'" % err
+            self.get(message=msg)
+            return
+
+        # Email notify admin:
+        msg = """<p>Plaque '%s'</p>
+                 <p>at %s</p>
+                 <p>%s</p> added to %s""" % (
+            plaque.title,
+            plaque.location,
+            plaque.description,
+            url
+        )
+        mail.send_mail(
+            sender=NOTIFICATION_SENDER_EMAIL,
+            to=ADMIN_EMAIL,
+            subject='Plaque added: %s' % url,
+            body=msg,
+            html=msg,
+        )
 
         if not is_migration:
-            msg = """Hooray! And thank you. We'll geocode your plaque and you'll
-                  see it appear on the map shortly <a href="/plaque/%s">here</a>.""" % \
+            msg = """Hooray! And thank you. We'll geocode your 
+                  plaque and you'll see it appear on the map shortly 
+                  <a href="/plaque/%s">here</a>.""" % \
                   plaque.key.urlsafe()
             self.get(message=msg)
         return
 
     def _get_form_args(self):
-        # TODO: put a try block around this?
+
         location_str = str(self.request.get('location'))
         location = ndb.GeoPt(location_str)
 

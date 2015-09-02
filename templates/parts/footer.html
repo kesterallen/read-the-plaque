@@ -45,7 +45,9 @@
         </div>
 
         <div class="col-xs-4">
-            <a href="/rss"><img src="/images/rss.gif" alt="rss icon"/></a>
+            Read The Plaque logo is available on a 
+            <a href="http://chopshopstore.com/index.php/readtheplaque.html">T-shirt</a> from 
+            <a href="http://chopshopstore.com">Chop Shop</a>.
         </div>
 
         <div class="col-xs-4">
@@ -69,7 +71,6 @@
 
             <a href="https://twitter.com/intent/tweet"
                class="twitter-share-button"
-               data-size="large"
                data-count="none"
                {% if plaques %}
                    data-text="Always read the plaque: '{{plaques[0].title | truncate(90)}}' #readtheplaque"
@@ -78,7 +79,21 @@
                    data-text="Always read the plaque. #readtheplaque"
                    data-url="http://readtheplaque.net"
                {% endif %}
-            >Tweet this Plaque</a>
+            >Tweet this Page</a>
+
+            <a href="/rss"><img src="/images/rss.gif" alt="rss icon"/></a>
+
+            <!-- Hook for FB Share button-->
+            <script>(function(d, s, id) {
+                var js, fjs = d.getElementsByTagName(s)[0];
+                if (d.getElementById(id)) return;
+                js = d.createElement(s); js.id = id;
+                js.src = "//connect.facebook.net/en_US/sdk.js#xfbml=1&version=v2.0";
+                fjs.parentNode.insertBefore(js, fjs);
+            }(document, 'script', 'facebook-jssdk'));</script>
+            <!-- Hook for FB Share button end-->
+
+            <div class="fb-share-button" data-layout="button"></div>
         </div>
     </div>
 <footer>

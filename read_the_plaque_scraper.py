@@ -37,7 +37,9 @@ plaque_ids = [
     663, 655, 661, 805, 847, 859, 673, 655, 651, 711, 767, 851, 787, 795, 797,
     823, 839, 845, 861, 394, 402, 512, 615, 639, 643, 653, 675, 1064, 887, 885,
     811, 835, 443, 659, 713, 715, 699, 733, 683, 649, 741, 775, 773, 731, 763,
-    781, 783, 785, 789, 765, 799, 807, 837, 855, 873, 701, 813, 883, 1240,
+    781, 783, 785, 789, 765, 799, 807, 837, 855, 873, 701, 813, 883, 1240, 761,
+    875, 889, 869, 779, 735, 697, 504, 516, 685, 687, 815, 853, 825, 817, 791,
+    819, 705, 809, 803, 863, 865, 893, 909, 877, 936, 879,
 ]
 plaque_ids.sort()
 #plaque_ids.reverse()
@@ -136,6 +138,9 @@ def get_page_contents(soup):
 #
 #    return img_filename
 
+response = requests.get(flush_url)
+print 'Flush:', response
+
 for iplaque, plaque_id in enumerate(plaque_ids):
     url = 'http://readtheplaque.com/%s' % plaque_id
     resp = requests.get(url)
@@ -154,7 +159,7 @@ for iplaque, plaque_id in enumerate(plaque_ids):
     }
     response = requests.post(post_url, data=values)
     print 1+iplaque, '/', len(plaque_ids), url, response, title
-    time.sleep(2)
+    time.sleep(1)
 
 response = requests.get(flush_url)
 print 'Flush:', response

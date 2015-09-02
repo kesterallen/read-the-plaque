@@ -1,4 +1,6 @@
 
+from collections import defaultdict
+
 from google.appengine.api import memcache
 from google.appengine.ext import ndb
 
@@ -55,6 +57,43 @@ class Plaque(ndb.Model):
         else:
             logging.debug("memcache.get worked for all_approved")
         return all_plaques
+
+    @classmethod
+    def all_tags_sized(cls):
+        """
+        Return a dict of the tags and their display-layer font sizes. Done
+        here to speed rendering and to make the whole thing memcacheable.
+        """
+        tag_counts = memcache.get('all_tags_sized')
+        if tag_counts is None:
+            tag_counts = defaultdict(int)
+
+            plaques = Plaque.query().filter(Plaque.approved == True).fetch()
+            for plaque in plaques:
+                for t in plaque.tags:
+                    tag_counts[t] += 1
+
+            tag_fontsize = {}
+            for tag, count in tag_counts.items():
+                if count < 5:
+                    tag_fontsize[tag] = 10
+                elif count < 10:
+                    tag_fontsize[tag] = 13
+                elif count < 20:
+                    tag_fontsize[tag] = 16
+                elif count < 40:
+                    tag_fontsize[tag] = 19
+                elif count < 120:
+                    tag_fontsize[tag] = 22
+                else:
+                    tag_fontsize[tag] = 25
+            memcache_status = memcache.set('all_tags_sized', tag_fontsize)
+            if not memcache_status:
+                logging.debug("memcaching for all_tags_sized failed")
+        else:
+            logging.debug("memcache.get worked for all_tags_sized")
+
+        return tag_counts
 
     @property
     def thumbnail_url(self):

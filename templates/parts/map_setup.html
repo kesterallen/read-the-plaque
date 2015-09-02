@@ -6,7 +6,7 @@
 
         var mapOptions = {
             center: {
-                {% if all_plaques|length == 0 %}
+                {% if all_plaques|length == 1 %}
                     lat: {{all_plaques[0].location.lat}},
                     lng: {{all_plaques[0].location.lon}}
                 {% else %}
@@ -29,6 +29,9 @@
             {% endfor %}
         ];
         var i;
+        var infowindows = [];
+        var markers = [];
+
         for (i = 0; i < infoForMarkers.length; ++i) {
             var marker = new google.maps.Marker({
                                  position: {lat: infoForMarkers[i].lat,
@@ -37,17 +40,22 @@
                                  title: infoForMarkers[i].title,
                                  url: infoForMarkers[i].url,
             });
+            markers.push(marker);
             //
             // InfoWindow stuff:
             //
-            //var infowindow = new google.maps.InfoWindow({content: infoForMarkers[i].title});
-            //google.maps.event.addListener(marker, 'mouseover', function() {
-            //    infowindow.open(map, this);
-            //});
-            //google.maps.event.addListener(marker, 'mouseout', function() { # TODO: mouseout?
-            //    infowindow.close();
-            //});
-            google.maps.event.addListener(marker, 'click', function() {
+            var infowindow = new google.maps.InfoWindow({content: infoForMarkers[i].title});
+            infowindows.push(infowindow);
+        }
+
+        for (i = 0; i < infoForMarkers.length; ++i) {
+            google.maps.event.addListener(markers[i], 'mouseover', function() {
+                infowindows[i].open(map, this);
+            });
+            google.maps.event.addListener(markers[i], 'mouseout', function() {
+                infowindows[i].close();
+            });
+            google.maps.event.addListener(markers[i], 'click', function() {
                 window.location.href = this.url;
             });
         }

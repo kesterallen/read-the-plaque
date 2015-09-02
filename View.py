@@ -19,6 +19,7 @@ def handle_404(request, response, exception):
     response.set_status(404)
 
 def handle_500(request, response, exception):
+    # TODO: email admin
     template = JINJA_ENVIRONMENT.get_template('error.html')
     response.write(template.render({'code': 500, 'error_text': exception}))
     response.set_status(500)

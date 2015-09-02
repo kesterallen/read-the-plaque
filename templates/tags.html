@@ -4,8 +4,8 @@
 <div class="container-fluid">
     <h1>All Tags</h1>
     <ul class="list-inline">
-        {% for tag in tags %}
-            <li><a href="/tag/{{tag}}">{{tag}}</a></li>
+        {% for tag, fontsize in tags.items() %}
+            <li style="font-size:{{fontsize}}"><a href="/tag/{{tag}}">{{tag}}</a></li>
         {% endfor %}
     </ul>
     {% include 'parts/map.html' %}
