@@ -19,51 +19,31 @@
         }
         var map = new google.maps.Map(mapCanvas, mapOptions)
 
-        var infoForMarkers = [
-            {% for plaque in all_plaques %}
-                { lat: {{plaque.location.lat}},
-                  lng: {{plaque.location.lon}},
-                  title: "{{plaque.title|escape}}",
-                  content: "<a href='/plaque/{{plaque.key.urlsafe()}}'><h3>{{plaque.title|escape}}</h3> <p> <img src='{{plaque.thumbnail_url}}'/></a>",
-                  url: "/plaque/{{plaque.key.urlsafe()}}"
-                },
-            {% endfor %}
-        ];
-        var i;
-        var k;
-        var infoWindows = [];
         var markers = [];
 
-        for (i = 0; i < infoForMarkers.length; ++i) {
+        {% for plaque in all_plaques %}
             markers.push(new google.maps.Marker({
-                position: {lat: infoForMarkers[i].lat,
-                           lng: infoForMarkers[i].lng},
+                position: {lat: {{plaque.location.lat}},
+                           lng: {{plaque.location.lon}}},
                 map: map,
-                url: infoForMarkers[i].url,
+                url: "{{plaque.url}}",
+                infowindow: new google.maps.InfoWindow({
+                    content: "<a href='{{plaque.url}}'>" +
+                             "<h3>{{plaque.title|escape}}</h3> <p>" + 
+                             "<img src='{{plaque.thumbnail_url}}'/></a>"
+                })
             }));
 
-            infoWindows.push(new google.maps.InfoWindow({
-                content: infoForMarkers[i].content
-            }));
-            google.maps.event.addListener(markers[i], 'click', /*'mouseover'*/ function(j) {
-                return function() {
-                    for (k = 0; k < infoForMarkers.length; ++k) {
-                        infoWindows[k].close();
-                    }
-                    infoWindows[j].open(map, markers[j]);
-                }
-            }(i));
-            //google.maps.event.addListener(markers[i], 'mouseout', function(j) {
-                //return function() {
-                    //infoWindows[j].close();
-                //}
-            //}(i));
-            //google.maps.event.addListener(markers[i], 'click', function(j) {
-                //return function() {
-                    //window.location.href = this.url;
-                //}
-            //}(i));
-        }
+            google.maps.event.addListener(markers[{{loop.index0}}], 'mouseover', function(j) {
+                return function() { markers[j].infowindow.open(map, markers[j]); }
+            }({{loop.index0}}));
+            google.maps.event.addListener(markers[{{loop.index0}}], 'mouseout', function(j) {
+                return function() { markers[j].infowindow.close(); }
+            }({{loop.index0}}));
+            google.maps.event.addListener(markers[{{loop.index0}}], 'click', function(j) {
+                return function() { window.location.href = this.url; }
+            }({{loop.index0}}));
+        {% endfor %}
     }
     google.maps.event.addDomListener(window, 'load', initialize);
 </script>

@@ -108,3 +108,8 @@ class Plaque(ndb.Model):
     def display_url(self):
         """A URL for a display-size image for display."""
         return '%s=s%s' % (self.pic_url, self.DISPLAY_SIZE_PX)
+
+    @property
+    def url(self):
+        """This plaque's key-based page URL."""
+        return '/plaque/%s' % self.key.urlsafe()

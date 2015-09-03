@@ -7,7 +7,7 @@
         {% for iplaque in range(start_index, end_index) %}
             {% if iplaque < plaques|length %}
                 {% set plaque = plaques[iplaque] %}
-                <a href="/plaque/{{plaque.key.urlsafe()}}">
+                <a href="{{plaque.url}}">
                     <div class="item">
                         <div class="well">
                             <h2>{{plaque.title}}</h2>
@@ -32,7 +32,7 @@
                 {% for plaque in all_plaques %}
                     <li>
                         <small>
-                        <a href="/plaque/{{plaque.key.urlsafe()}}">{{plaque.title}}</a>
+                        <a href="{{plaque.url}}">{{plaque.title}}</a>
                         </small>
                     </li>
                 {% endfor %}

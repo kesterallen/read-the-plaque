@@ -6,7 +6,7 @@
                 <li class="list-group-item active">Recent Plaques</li>
                 {% for plaque in footer_items.new_plaques %}
                     <li class="list-group-item">
-                        <a href="/plaque/{{plaque.key.urlsafe()}}">{{plaque.title}}</a>
+                        <a href="{{plaque.url}}">{{plaque.title}}</a>
                     </li>
                 {% endfor %}
             </ul>
@@ -74,7 +74,7 @@
                data-count="none"
                {% if plaques %}
                    data-text="Always read the plaque: '{{plaques[0].title | truncate(90)}}' #readtheplaque"
-                   data-url="http://readtheplaque.net/plaque/{{plaques[0].key.urlsafe()}}"
+                   data-url="http://readtheplaque.net/{{plaques[0].url}}"
                {% else %}
                    data-text="Always read the plaque. #readtheplaque"
                    data-url="http://readtheplaque.net"

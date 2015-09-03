@@ -4,6 +4,7 @@ import datetime
 import jinja2
 import json
 import logging
+import math
 import mimetypes
 import os
 import random
@@ -50,8 +51,8 @@ NOTIFICATION_SENDER_EMAIL = ADMIN_EMAIL
 # 5) Announce a relauch of the site, from both Roman and Alexis
 
 
-# Mysterious GCS_BUCKET configuration. This appears to work for the bucket
-# named 'read-the-plaque.appspot.com', but it is different from surlyfritter. I
+# GCS_BUCKET configuration: This appears to work for the bucket named
+# 'read-the-plaque.appspot.com', but it is different from surlyfritter. I
 # suspect I did something different/wrong in the setup, but not sure.
 #
 GCS_BUCKET = '/read-the-plaque.appspot.com'
@@ -85,7 +86,8 @@ def last_five_approved(cls):
     return new_items
 
 def get_pages_list(plaques_per_page=DEFAULT_PLAQUES_PER_PAGE):
-    num_pages = Plaque.num_approved() / plaques_per_page
+    num_pages = int(math.ceil(float(Plaque.num_approved()) /
+                              float(plaques_per_page)))
     pages_list = [1+p for p in range(num_pages)]
     return pages_list
 
@@ -150,7 +152,7 @@ class ViewPlaquesPage(webapp2.RequestHandler):
             'pages_list': get_pages_list(),
             'start_index': start_index,
             'end_index': end_index, 
-            'mapzoom': 1,
+            'mapzoom': 2,
             'footer_items': get_footer_items(),
         }
 
@@ -250,7 +252,7 @@ class ViewAllTags(webapp2.RequestHandler):
         template = JINJA_ENVIRONMENT.get_template('tags.html')
         template_values = {
             'tags': tags_sized,
-            'mapzoom': 1,
+            'mapzoom': 2,
             'footer_items': get_footer_items(),
             'pages_list': get_pages_list(),
         }
@@ -272,7 +274,7 @@ class ViewTag(webapp2.RequestHandler):
             'pages_list': get_pages_list(),
             'start_index': 0,
             'end_index': len(plaques),
-            'mapzoom': 1,
+            'mapzoom': 2,
             'footer_items': get_footer_items(),
         }
         self.response.write(template.render(template_values))
@@ -307,19 +309,17 @@ class AddComment(webapp2.RequestHandler):
             plaque.comments.append(comment.key)
         plaque.put()
 
-        url = '/plaque/%s' % plaque.key.urlsafe()
-        
         # Email notify admin:
-        msg = 'Comment<hr><p>%s</p><hr> added to %s' % (comment.text, url)
+        msg = 'Comment<hr><p>%s</p><hr> added to %s' % (comment.text, plaque.url)
         mail.send_mail(
             sender=NOTIFICATION_SENDER_EMAIL,
             to=ADMIN_EMAIL,
-            subject='Comment added to %s' % url,
+            subject='Comment added to %s' % plaque.url,
             body=msg,
             html=msg,
         )
 
-        self.redirect(url)
+        self.redirect(plaque.url)
 
 class AddPlaque(webapp2.RequestHandler):
     """
@@ -374,8 +374,6 @@ class AddPlaque(webapp2.RequestHandler):
             plaque.pic = gcs_file_name
             plaque.pic_url = gcs_url
             plaque.put()
-
-            url = "/plaque/%s" % plaque.key.urlsafe()
         except BadValueError as err:
             msg = "Sorry, your plaque submission had this error: '%s'" % err
             self.get(message=msg)
@@ -388,12 +386,12 @@ class AddPlaque(webapp2.RequestHandler):
             plaque.title,
             plaque.location,
             plaque.description,
-            url
+            plaque.url
         )
         mail.send_mail(
             sender=NOTIFICATION_SENDER_EMAIL,
             to=ADMIN_EMAIL,
-            subject='Plaque added: %s' % url,
+            subject='Plaque added: %s' % plaque.url,
             body=msg,
             html=msg,
         )
@@ -401,8 +399,7 @@ class AddPlaque(webapp2.RequestHandler):
         if not is_migration:
             msg = """Hooray! And thank you. We'll geocode your 
                   plaque and you'll see it appear on the map shortly 
-                  <a href="/plaque/%s">here</a>.""" % \
-                  plaque.key.urlsafe()
+                  <a href="/%s">here</a>.""" % plaque.url
             self.get(message=msg)
         return
 
