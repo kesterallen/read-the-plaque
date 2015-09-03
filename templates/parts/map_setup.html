@@ -1,5 +1,5 @@
 
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCPGpsCWGQww0hOPhblgBu34eoVnzf5sKo"></script>
+<script src="https://maps.google.com/maps/api/js?sensor=false"></script>
 <script>
     function initialize() {
         var mapCanvas = document.getElementById('map');
@@ -28,9 +28,8 @@
                 map: map,
                 url: "{{plaque.url}}",
                 infowindow: new google.maps.InfoWindow({
-                    content: "<a href='{{plaque.url}}'>" +
-                             "<h3>{{plaque.title|escape}}</h3> <p>" + 
-                             "<img src='{{plaque.thumbnail_url}}'/></a>"
+                    content: "{{plaque.title|escape}}<p>" + 
+                             "<img src='{{plaque.tiny_url}}'/>"
                 })
             }));
 

@@ -25,11 +25,11 @@ handlers:
 
 - url: /submit-your-own
   script: View.app
-  login: admin
+  login: required
 
 - url: /add
   script: View.app
-  login: admin
+  login: required
 
 - url: /.*
   script: View.app

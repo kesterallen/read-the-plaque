@@ -33,6 +33,7 @@ class Plaque(ndb.Model):
     KeyProperty/FK to Comment. Not sure if this is better than having a
     comment.plaque KeyProperty/FK in the other direction.
     """
+    TINY_SIZE_PX = 100
     THUMBNAIL_SIZE_PX = 300
     DISPLAY_SIZE_PX = 1024
 
@@ -98,6 +99,11 @@ class Plaque(ndb.Model):
             logging.debug("memcache.get worked for all_tags_sized")
 
         return tag_counts
+
+    @property
+    def tiny_url(self):
+        """A URL for a square, tiny image for infowindow popups."""
+        return '%s=s%s-c' % (self.pic_url, self.TINY_SIZE_PX)
 
     @property
     def thumbnail_url(self):

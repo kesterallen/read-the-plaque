@@ -1,6 +1,9 @@
 {% extends 'parts/base_template.html' %}
 
 {% block content %}
+<script src="https://maps.google.com/maps/api/js?sensor=false"></script>
+<script src="/static/map_picker.js"></script>
+
 <div class="container-fluid">
     <h1>Add a New Plaque</h1>
 
@@ -23,24 +26,13 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="plaque_description">Description</label>
+                    <label for="plaque_description">Description (transcribe the plaque if you can)</label>
                     <textarea class="form-control"
                               id="plaque_description"
                               name="description"
-                              placeholder="Tell us about the plaque. Transcribe it if you can. And make sure to give us its precise location, so we can geocode it."
                               required
                               rows="3">
                     </textarea>
-                </div>
-
-                <div class="form-group">
-                    <label for="plaque_location">Location</label>
-                    <input type="text"
-                           class="form-control"
-                           id="plaque_location"
-                           name="location"
-                           required
-                           placeholder="Location of the plaque, for example: 37.5, -122.5">
                 </div>
 
                 <div class="form-group">
@@ -51,6 +43,19 @@
                            name="plaque_image"
                            >
                     <p class="help-block">Upload an image of your plaque.</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="plaque_location">Location</label>
+                    <input type="text"
+                           class="form-control"
+                           id="plaque_location"
+                           name="location"
+                           required
+                           placeholder="Click the plaque's location, or enter its lat/long here.">
+                    <div id="maparea">
+                        <div id="mapitems" style="height: 200px"></div>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -67,4 +72,5 @@
         </div>
     </div>
 </div>
+<script>map_init();</script>
 {% endblock %}

@@ -310,7 +310,9 @@ class AddComment(webapp2.RequestHandler):
         plaque.put()
 
         # Email notify admin:
-        msg = 'Comment<hr><p>%s</p><hr> added to %s' % (comment.text, plaque.url)
+        msg = """Comment<hr><p>%s</p><hr> added  
+              <a href="http://readtheplaque.net%s">here</a>""" % (
+                comment.text, plaque.url)
         mail.send_mail(
             sender=NOTIFICATION_SENDER_EMAIL,
             to=ADMIN_EMAIL,
@@ -328,9 +330,8 @@ class AddPlaque(webapp2.RequestHandler):
     def get(self, message=None):
         template = JINJA_ENVIRONMENT.get_template('add.html')
         template_values = {
-            'all_plaques': Plaque.all_approved(),
-            'pages_list': get_pages_list(),
-        }#{ 'footer_items': get_footer_items(), }
+            'mapzoom': 5,
+        }
         if message is not None:
             template_values['message'] = message
 
@@ -374,7 +375,7 @@ class AddPlaque(webapp2.RequestHandler):
             plaque.pic = gcs_file_name
             plaque.pic_url = gcs_url
             plaque.put()
-        except BadValueError as err:
+        except (BadValueError, ValueError) as err:
             msg = "Sorry, your plaque submission had this error: '%s'" % err
             self.get(message=msg)
             return
@@ -382,7 +383,7 @@ class AddPlaque(webapp2.RequestHandler):
         # Email notify admin:
         msg = """<p>Plaque '%s'</p>
                  <p>at %s</p>
-                 <p>%s</p> added to %s""" % (
+                 <p>%s</p> added <a href="http://readtheplaque.net%s">here</a> """ % (
             plaque.title,
             plaque.location,
             plaque.description,
@@ -399,14 +400,15 @@ class AddPlaque(webapp2.RequestHandler):
         if not is_migration:
             msg = """Hooray! And thank you. We'll geocode your 
                   plaque and you'll see it appear on the map shortly 
-                  <a href="/%s">here</a>.""" % plaque.url
+                  <a href="%s">here</a>.""" % plaque.url
             self.get(message=msg)
         return
 
     def _get_form_args(self):
 
-        location_str = str(self.request.get('location'))
-        location = ndb.GeoPt(location_str)
+        latlng = self.request.get('location')
+        lat, lng = [float(l) for l in latlng.split(',')]
+        location = ndb.GeoPt(lat, lng)
 
         if users.get_current_user():
             created_by = users.get_current_user()
