@@ -35,6 +35,7 @@ def main():
         ('/plaque/(.+?)', h.ViewOnePlaque),
         ('/plaque_comment/(.+?)', h.ViewOnePlaqueFromComment),
         ('/add/?', h.AddPlaque),
+        ('/submit-your-own/?', h.AddPlaque),
         ('/addmigrate/?', h.AddPlaqueMigrate),
         ('/comment', h.AddComment),
         ('/tag/(.+?)', h.ViewTag),

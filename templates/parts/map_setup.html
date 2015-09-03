@@ -11,7 +11,7 @@
                     lng: {{all_plaques[0].location.lon}}
                 {% else %}
                     lat: 0,
-                    lng: 0,
+                    lng: -20,
                 {% endif %}
             },
             zoom: {{mapzoom}},
@@ -23,41 +23,46 @@
             {% for plaque in all_plaques %}
                 { lat: {{plaque.location.lat}},
                   lng: {{plaque.location.lon}},
-                  title: "{{plaque.title}}",
+                  title: "{{plaque.title|escape}}",
+                  content: "<a href='/plaque/{{plaque.key.urlsafe()}}'><h3>{{plaque.title|escape}}</h3> <p> <img src='{{plaque.thumbnail_url}}'/></a>",
                   url: "/plaque/{{plaque.key.urlsafe()}}"
                 },
             {% endfor %}
         ];
         var i;
-        var infowindows = [];
+        var k;
+        var infoWindows = [];
         var markers = [];
 
         for (i = 0; i < infoForMarkers.length; ++i) {
-            var marker = new google.maps.Marker({
-                                 position: {lat: infoForMarkers[i].lat,
-                                            lng: infoForMarkers[i].lng},
-                                 map: map,
-                                 title: infoForMarkers[i].title,
-                                 url: infoForMarkers[i].url,
-            });
-            markers.push(marker);
-            //
-            // InfoWindow stuff:
-            //
-            var infowindow = new google.maps.InfoWindow({content: infoForMarkers[i].title});
-            infowindows.push(infowindow);
-        }
+            markers.push(new google.maps.Marker({
+                position: {lat: infoForMarkers[i].lat,
+                           lng: infoForMarkers[i].lng},
+                map: map,
+                url: infoForMarkers[i].url,
+            }));
 
-        for (i = 0; i < infoForMarkers.length; ++i) {
-            google.maps.event.addListener(markers[i], 'mouseover', function() {
-                infowindows[i].open(map, this);
-            });
-            google.maps.event.addListener(markers[i], 'mouseout', function() {
-                infowindows[i].close();
-            });
-            google.maps.event.addListener(markers[i], 'click', function() {
-                window.location.href = this.url;
-            });
+            infoWindows.push(new google.maps.InfoWindow({
+                content: infoForMarkers[i].content
+            }));
+            google.maps.event.addListener(markers[i], 'click', /*'mouseover'*/ function(j) {
+                return function() {
+                    for (k = 0; k < infoForMarkers.length; ++k) {
+                        infoWindows[k].close();
+                    }
+                    infoWindows[j].open(map, markers[j]);
+                }
+            }(i));
+            //google.maps.event.addListener(markers[i], 'mouseout', function(j) {
+                //return function() {
+                    //infoWindows[j].close();
+                //}
+            //}(i));
+            //google.maps.event.addListener(markers[i], 'click', function(j) {
+                //return function() {
+                    //window.location.href = this.url;
+                //}
+            //}(i));
         }
     }
     google.maps.event.addDomListener(window, 'load', initialize);

@@ -1,4 +1,5 @@
 
+/* Don't underline links */
 a { text-decoration: none; }
 
 /* Prevent navbar overlap */
@@ -60,4 +61,10 @@ body {
 
 #map {
     height: 400px;
+}
+
+/* Make navbar buttons stand out more when hovered */
+.navbar-default .navbar-nav > li > a:hover, .navbar-default .navbar-nav > li > a:focus {
+    background-color: #40495A;
+    color: #FFF;
 }

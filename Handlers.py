@@ -14,6 +14,7 @@ import webapp2
 from google.appengine.api import images
 from google.appengine.api import mail
 from google.appengine.api import memcache
+from google.appengine.api import search 
 from google.appengine.api import users
 from google.appengine.ext import blobstore
 from google.appengine.ext import ndb
@@ -31,9 +32,7 @@ NOTIFICATION_SENDER_EMAIL = ADMIN_EMAIL
 # * Make plaque submission require login
 #       possibly multiple OAUTH login
 # * GPS picker for submission location
-# * Fix issue with tooltips on map pins not resetting
-# * Social media cards
-
+# * Change .net to .com for final deploy
 
 # The wordpress admin dashboard is pretty easy to use and the process to
 # publish pending the pending plaques is straightforward.
@@ -84,6 +83,11 @@ def last_five_approved(cls):
                   ).order(-cls.created_on
                   ).fetch(limit=5)
     return new_items
+
+def get_pages_list(plaques_per_page=DEFAULT_PLAQUES_PER_PAGE):
+    num_pages = Plaque.num_approved() / plaques_per_page
+    pages_list = [1+p for p in range(num_pages)]
+    return pages_list
 
 def get_footer_items():
     """
@@ -143,6 +147,7 @@ class ViewPlaquesPage(webapp2.RequestHandler):
         template_values = {
             'all_plaques': plaques,
             'plaques': plaques,
+            'pages_list': get_pages_list(),
             'start_index': start_index,
             'end_index': end_index, 
             'mapzoom': 1,
@@ -202,6 +207,7 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
         template_values = {
             'all_plaques': [plaque],
             'plaques': [plaque],
+            'pages_list': get_pages_list(),
             'mapzoom': 8,
             'footer_items': get_footer_items(),
         }
@@ -246,6 +252,7 @@ class ViewAllTags(webapp2.RequestHandler):
             'tags': tags_sized,
             'mapzoom': 1,
             'footer_items': get_footer_items(),
+            'pages_list': get_pages_list(),
         }
         self.response.write(template.render(template_values))
 
@@ -260,8 +267,9 @@ class ViewTag(webapp2.RequestHandler):
                                ).fetch()
         template = JINJA_ENVIRONMENT.get_template('all.html')
         template_values = {
-            'all_plaques': Plaque.all_approved(),
+            'pages_list': get_pages_list(),
             'plaques': plaques,
+            'pages_list': get_pages_list(),
             'start_index': 0,
             'end_index': len(plaques),
             'mapzoom': 1,
@@ -276,6 +284,8 @@ class About(webapp2.RequestHandler):
         """
         template = JINJA_ENVIRONMENT.get_template('about.html')
         template_values = {
+            'all_plaques': Plaque.all_approved(),
+            'pages_list': get_pages_list(),
             'footer_items': get_footer_items(),
         }
         self.response.write(template.render(template_values))
@@ -317,7 +327,10 @@ class AddPlaque(webapp2.RequestHandler):
     """
     def get(self, message=None):
         template = JINJA_ENVIRONMENT.get_template('add.html')
-        template_values = { 'footer_items': get_footer_items(), }
+        template_values = {
+            'all_plaques': Plaque.all_approved(),
+            'pages_list': get_pages_list(),
+        }#{ 'footer_items': get_footer_items(), }
         if message is not None:
             template_values['message'] = message
 
@@ -334,12 +347,6 @@ class AddPlaque(webapp2.RequestHandler):
         the same entity group. Queries across the single entity group will be
         consistent. However, the write rate to a single entity group should be
         limited to ~1/second.
-
-        TODO: think about what happens if the implicit gcs_file.close (from the
-        with: block in _upload_image_to_gcs) doesn't happen, or what error
-        would need to be dealt with in this case. I think the below is OK,
-        because anything that prevents the implict .close from happening will
-        throw an error and prevent the plaque.put from happening also.
         """
 
         try:
@@ -457,7 +464,10 @@ class AddPlaqueMigrate(AddPlaque):
     def post(self):
         self._post(is_migration=True)
 
-# TODO: See https://cloud.google.com/appengine/docs/python/search/ for details
+# TODO: See:
+#     http://stackoverflow.com/questions/13305302/using-search-api-python-google-app-engine-big-table
+#     https://cloud.google.com/appengine/docs/python/search/ for details
+#
 #class SearchPlaques(webapp2.RequestHandler):
 #    """Run a search in the title and description."""
 #    def get(self):

@@ -15,6 +15,26 @@
 <script src="//tinymce.cachefly.net/4.2/tinymce.min.js"></script>
 <script>tinymce.init({selector:'textarea'});</script>
 
+{% if plaques %}
+    <!-- Twitter card -->
+    <meta name="twitter:card"        content="photo"/>
+    <meta name="twitter:site"        content="@readtheplaque"/>
+    <meta name="twitter:creator"     content="@readtheplaque"/>
+    <meta name="twitter:url"         content="http://readtheplaque.net/plaque/{{plaques[0].key.urlsafe()}}"/>
+    <meta name="twitter:title"       content="{{plaques[0].title | escape}}"/>
+    <meta name="twitter:description" content="{{plaques[0].description | escape}}"/>
+    <meta name="twitter:image"       content="{{plaques[0].thumbnail_url}}"/>
+
+    <!-- Facebook preview-->
+    <meta property="og:title"        content="{{plaques[0].title | escape}}"/>
+    <meta property="og:description"  content="{{plaques[0].description | escape}}"/>
+    <meta property="og:type"         content="blog"/>
+    <meta property="og:image"        content="{{plaques[0].thumbnail_url}}"/>
+    <meta property="og:site_name"    content="Read the Plaque"/>
+    <meta property="og:url"          content="http://readtheplaque.net/plaque/{{plaques[0].key.urlsafe()}}"/>
+    <meta property="fb:admins"       content="kesterallen"/>
+{% endif %}
+
 <title>Read the Plaque</title>
 </head>
 

@@ -23,6 +23,14 @@ handlers:
 - url: /images
   static_dir: static/images
 
+- url: /submit-your-own
+  script: View.app
+  login: admin
+
+- url: /add
+  script: View.app
+  login: admin
+
 - url: /.*
   script: View.app
 

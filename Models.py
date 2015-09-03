@@ -48,6 +48,10 @@ class Plaque(ndb.Model):
     created_by = ndb.UserProperty()
 
     @classmethod
+    def num_approved(cls):
+        return len(cls.all_approved())
+
+    @classmethod
     def all_approved(cls):
         all_plaques = memcache.get('all_approved')
         if all_plaques is None:
@@ -103,4 +107,4 @@ class Plaque(ndb.Model):
     @property
     def display_url(self):
         """A URL for a display-size image for display."""
-        return '%s=s%s' % (self.pic_url, self.THUMBNAIL_SIZE_PX)
+        return '%s=s%s' % (self.pic_url, self.DISPLAY_SIZE_PX)
