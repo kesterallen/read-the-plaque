@@ -26,17 +26,15 @@ def handle_500(request, response, exception):
 
 def main():
     app = webapp2.WSGIApplication([
-        ('/', h.ViewPlaquesPage),
         ('/page/(.+?)/(.+?)', h.ViewPlaquesPage),
         ('/page/(.+?)/?', h.ViewPlaquesPage),
         ('/page/?', h.ViewPlaquesPage),
+        ('/plaque/(.+?)/?', h.ViewOnePlaque),
         ('/plaque/?', h.ViewOnePlaque),
-        ('/jp/?', h.JsonOnePlaque),
-        ('/plaque/(.+?)', h.ViewOnePlaque),
         ('/plaque_comment/(.+?)', h.ViewOnePlaqueFromComment),
+        ('/jp/?', h.JsonOnePlaque),
         ('/add/?', h.AddPlaque),
         ('/submit-your-own/?', h.AddPlaque),
-        ('/addmigrate/?', h.AddPlaqueMigrate),
         ('/comment', h.AddComment),
         ('/tag/(.+?)', h.ViewTag),
         ('/tags/?', h.ViewAllTags),
@@ -45,6 +43,11 @@ def main():
         ('/flush', h.FlushMemcache),
         ('/counts', h.Counts),
         ('/delete', h.DeleteEverything),
+        ('/pending', h.ViewPending),
+        ('/approve', h.ApprovePending),
+        ('/', h.ViewPlaquesPage),
+        ('/(.+?)/?', h.ViewOnePlaque), # supports the old_site_id
+        ('/(.+?)/(.+?)', h.ViewOnePlaque), # supports the old_site_id
     ], debug=True)
 
     app.error_handlers[404] = handle_404

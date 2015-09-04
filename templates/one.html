@@ -5,13 +5,19 @@
 <div class="container-fluid">
     <div class="row">
         <div class="col-xsm-12">
-            <h1>{{plaque.title}}</h1>
+            <h1>{{plaque.title}}{% if not plaque.approved %} [Pending] {% endif %}</h1>
+            {% if not plaque.approved %}
+                <form action="/approve" method="POST">
+                    <input type="hidden" name="plaque_key" value="{{plaque.key.urlsafe()}}">
+                    <button type="submit" class="btn btn-default">Approve</button>
+                </form>
+            {% endif %}
         </div>
     </div>
     <div class="row">
         <div class="col-xs-6">
-            <a href="{{plaque.pic_url}}">
-                <img src="{{plaque.display_url}}" class="img-responsive"/>
+            <a href="{{plaque.img_url}}">
+                <img src="{{plaque.img_url_display}}" class="img-responsive"/>
             </a>
         </div>
         <div class="col-xs-6">
@@ -23,6 +29,7 @@
             </ul>
         </div>
     </div>
+
 
     {% for comment_key in plaque.comments %}
         {% set comment = comment_key.get() %}

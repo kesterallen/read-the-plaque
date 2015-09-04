@@ -19,7 +19,8 @@ function map_init() {
 	marker = new google.maps.Marker({map: map, position: curpoint});
 
 	google.maps.event.addListener(map, 'click', function(event) {
-		document.getElementById("plaque_location").value = event.latLng.lat() + ', ' + event.latLng.lng();
+		document.getElementById("plaque_location").value =
+            event.latLng.lat() + ',' + event.latLng.lng();
 		marker.setPosition(event.latLng);
 	});
 } 

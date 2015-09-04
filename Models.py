@@ -1,4 +1,5 @@
 
+import logging
 from collections import defaultdict
 
 from google.appengine.api import memcache
@@ -41,27 +42,41 @@ class Plaque(ndb.Model):
     description = ndb.TextProperty(required=True) # no limit on TextProperty
     location = ndb.GeoPtProperty(required=True)
     pic = ndb.StringProperty()
-    pic_url = ndb.StringProperty()
+    img_url = ndb.StringProperty()
     tags = ndb.StringProperty(repeated=True)
     comments = ndb.KeyProperty(repeated=True, kind=Comment)
     approved = ndb.BooleanProperty(default=False)
     created_on = ndb.DateTimeProperty(auto_now_add=True)
     created_by = ndb.UserProperty()
+    old_site_id = ndb.IntegerProperty()
 
     @classmethod
     def num_approved(cls):
-        return len(cls.all_approved())
+        return len(cls.approved_list())
 
     @classmethod
-    def all_approved(cls):
-        all_plaques = memcache.get('all_approved')
-        if all_plaques is None:
-            all_plaques = Plaque.query().filter(Plaque.approved == True
-                                       ).order(-Plaque.created_on
-                                       ).fetch()
+    def approved_list(cls):
+        plaques = memcache.get('approved')
+        if plaques is None:
+            plaques = Plaque.query().filter(Plaque.approved == True
+                                   ).order(-Plaque.created_on
+                                   ).fetch()
+            memcache_status = memcache.set('approved', plaques)
+            if not memcache_status:
+                logging.debug("memcaching for Plaque.approved() failed")
         else:
-            logging.debug("memcache.get worked for all_approved")
-        return all_plaques
+            logging.debug("memcache.get worked for Plaque.approved()")
+        return plaques
+
+    @classmethod
+    def pending_list(cls):
+        """A separate method from approved() so that it will 
+        never be memcached."""
+        plaques = Plaque.query().filter(Plaque.approved != True
+                               ).order(-Plaque.approved
+                               ).order(-Plaque.created_on
+                               ).fetch()
+        return plaques
 
     @classmethod
     def all_tags_sized(cls):
@@ -101,21 +116,21 @@ class Plaque(ndb.Model):
         return tag_counts
 
     @property
-    def tiny_url(self):
+    def img_url_tiny(self):
         """A URL for a square, tiny image for infowindow popups."""
-        return '%s=s%s-c' % (self.pic_url, self.TINY_SIZE_PX)
+        return '%s=s%s-c' % (self.img_url, self.TINY_SIZE_PX)
 
     @property
-    def thumbnail_url(self):
+    def img_url_thumbnail(self):
         """A URL for a square, THUMBNAIL_SIZE_PX wide image for thumbnails."""
-        return '%s=s%s-c' % (self.pic_url, self.THUMBNAIL_SIZE_PX)
+        return '%s=s%s-c' % (self.img_url, self.THUMBNAIL_SIZE_PX)
 
     @property
-    def display_url(self):
+    def img_url_display(self):
         """A URL for a display-size image for display."""
-        return '%s=s%s' % (self.pic_url, self.DISPLAY_SIZE_PX)
+        return '%s=s%s' % (self.img_url, self.DISPLAY_SIZE_PX)
 
     @property
-    def url(self):
+    def page_url(self):
         """This plaque's key-based page URL."""
         return '/plaque/%s' % self.key.urlsafe()

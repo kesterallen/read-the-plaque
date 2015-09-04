@@ -72,6 +72,28 @@ JINJA_ENVIRONMENT = jinja2.Environment (
 # same entity group. Queries across the single entity group will be consistent.
 # However, the write rate should be limited to ~1/second.
 
+def email_admin(plaque, comment=None):
+    if comment:
+        subject='Comment added to plaque {0.title} at {%0.page_url}'.format(plaque)
+        msg = """Comment
+                 <p>{0.text}</p>
+                 added to {1.title} 
+                 <a href="http://readtheplaque.net{1.page_url}">
+                 here</a>""".format(comment, plaque)
+    else:
+        subject='New Plaque {0.title} added at {0.page_url}'.format(plaque)
+        msg = """<p>Plaque '{0.title}'</p>
+                 <p>at {0.page_url}</p>
+                 <p>{0.description}</p> added 
+                 <a href="http://readtheplaque.net{0.page_url}">
+                 here</a>""".format(plaque)
+
+    mail.send_mail(sender=NOTIFICATION_SENDER_EMAIL,
+                   to=ADMIN_EMAIL,
+                   subject=subject,
+                   body=msg,
+                   html=msg)
+
 def plaqueset_key(plaqueset_name=DEFAULT_PLAQUESET_NAME):
     """
     Constructs a Datastore key for a Plaque entity. Use plaqueset_name as
@@ -139,26 +161,25 @@ class ViewPlaquesPage(webapp2.RequestHandler):
         if plaques_per_page < 1:
             plaques_per_page = 1
 
-
-        # Grab all plaques for the map
-        plaques = Plaque.all_approved()
-        start_index = plaques_per_page * (page_num - 1)
-        end_index = start_index + plaques_per_page 
-
-        template = JINJA_ENVIRONMENT.get_template('all.html')
-        template_values = {
-            'all_plaques': plaques,
-            'plaques': plaques,
-            'pages_list': get_pages_list(),
-            'start_index': start_index,
-            'end_index': end_index, 
-            'mapzoom': 2,
-            'footer_items': get_footer_items(),
-        }
-
         memcache_name = 'view_plaques_page_%s_%s' % (page_num, plaques_per_page)
         template_text = memcache.get(memcache_name)
         if template_text is None:
+            # Grab all plaques for the map
+            plaques = Plaque.approved_list()
+            start_index = plaques_per_page * (page_num - 1)
+            end_index = start_index + plaques_per_page 
+
+            template = JINJA_ENVIRONMENT.get_template('all.html')
+            template_values = {
+                'all_plaques': plaques,
+                'plaques': plaques,
+                'pages_list': get_pages_list(),
+                'start_index': start_index,
+                'end_index': end_index, 
+                'mapzoom': 2,
+                'footer_items': get_footer_items(),
+            }
+
             template_text = template.render(template_values)
             memcache_status = memcache.set(memcache_name, template_text)
             if not memcache_status:
@@ -196,9 +217,14 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
                                   ).filter(Plaque.comments == comment.key
                                   ).get()
         elif plaque_key is not None:
-            plaque = ndb.Key(urlsafe=plaque_key).get()
+            try:
+                old_site_id = int(plaque_key)
+                plaque = Plaque.query().filter(Plaque.approved == True
+                                      ).filter(Plaque.old_site_id == old_site_id
+                                      ).get()
+            except ValueError as err:
+                plaque = ndb.Key(urlsafe=plaque_key).get()
         else:
-        #TODO: put plaque-from-title logic here
             logging.debug("Neither comment_key nor plaque_key is specified. "
                           "Grab a random plaque.")
             key = self._random_plaque_key()
@@ -212,8 +238,16 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
             'pages_list': get_pages_list(),
             'mapzoom': 8,
             'footer_items': get_footer_items(),
+            'is_admin': users.is_current_user_admin(),
         }
         self.response.write(template.render(template_values))
+
+class ViewOnePlaque(ViewOnePlaqueParent):
+    """
+    Render the single-plaque page from a plaque key, or get a random plaque.
+    """
+    def get(self, plaque_key=None, ignored_cruft=None):
+        self._get_from_key(plaque_key=plaque_key)
 
 class ViewOnePlaqueFromComment(ViewOnePlaqueParent):
     """
@@ -236,13 +270,6 @@ class JsonOnePlaque(ViewOnePlaqueParent):
                 'plaque_key': plaque.key.urlsafe(),
                 'title': plaque.title,
             }))
-
-class ViewOnePlaque(ViewOnePlaqueParent):
-    """
-    Render the single-plaque page from a plaque key, or get a random plaque.
-    """
-    def get(self, plaque_key=None):
-        self._get_from_key(plaque_key=plaque_key)
 
 class ViewAllTags(webapp2.RequestHandler):
     def get(self):
@@ -286,7 +313,7 @@ class About(webapp2.RequestHandler):
         """
         template = JINJA_ENVIRONMENT.get_template('about.html')
         template_values = {
-            'all_plaques': Plaque.all_approved(),
+            'all_plaques': Plaque.approved_list(),
             'pages_list': get_pages_list(),
             'footer_items': get_footer_items(),
         }
@@ -308,20 +335,10 @@ class AddComment(webapp2.RequestHandler):
         else:
             plaque.comments.append(comment.key)
         plaque.put()
+        memcache.flush_all()
 
-        # Email notify admin:
-        msg = """Comment<hr><p>%s</p><hr> added  
-              <a href="http://readtheplaque.net%s">here</a>""" % (
-                comment.text, plaque.url)
-        mail.send_mail(
-            sender=NOTIFICATION_SENDER_EMAIL,
-            to=ADMIN_EMAIL,
-            subject='Comment added to %s' % plaque.url,
-            body=msg,
-            html=msg,
-        )
-
-        self.redirect(plaque.url)
+        #email_admin(plaque, comment)
+        self.redirect(plaque.page_url)
 
 class AddPlaque(webapp2.RequestHandler):
     """
@@ -329,20 +346,15 @@ class AddPlaque(webapp2.RequestHandler):
     """
     def get(self, message=None):
         template = JINJA_ENVIRONMENT.get_template('add.html')
-        template_values = {
-            'mapzoom': 5,
-        }
+        template_values = {'mapzoom': 5}
         if message is not None:
             template_values['message'] = message
 
         template = JINJA_ENVIRONMENT.get_template('add.html')
         self.response.write(template.render(template_values))
 
-    def post(self):
-        self._post(False)
-
     @ndb.transactional
-    def _post(self, is_migration=False):
+    def post(self):
         """
         We set the same parent key on the 'Plaque' to ensure each Plauqe is in
         the same entity group. Queries across the single entity group will be
@@ -353,7 +365,7 @@ class AddPlaque(webapp2.RequestHandler):
         try:
             plaqueset_name = self.request.get('plaqueset_name',
                                               DEFAULT_PLAQUESET_NAME)
-            location, created_by, title, description, image, tags = \
+            location, created_by, title, description, img_name, img_fh, tags = \
                 self._get_form_args()
 
             plaque = Plaque(parent=plaqueset_key(plaqueset_name))
@@ -361,48 +373,40 @@ class AddPlaque(webapp2.RequestHandler):
             plaque.title = title
             plaque.description = description
             plaque.tags = tags
-            if is_migration:
-                plaque.approved = True
 
-            if is_migration:
-                img_name = os.path.basename(image)
-                img_fh = urllib.urlopen(image)
-            else:
-                img_name = image.filename
-                img_fh = image.file
+            # TODO: make this user-dependent
+            plaque.approved = False
 
             gcs_file_name, gcs_url = self._upload_image_to_gcs(img_name, img_fh)
             plaque.pic = gcs_file_name
-            plaque.pic_url = gcs_url
+            plaque.img_url = gcs_url
+
+            old_site_id = self.request.get('old_site_id', None)
+            if old_site_id is not None:
+                try:
+                    plaque.old_site_id = int(old_site_id)
+                except ValueError as err:
+                    logging.info('Eating bad ValueError for '
+                                 'old_site_id in AddPlaque')
             plaque.put()
+            memcache.flush_all()
         except (BadValueError, ValueError) as err:
             msg = "Sorry, your plaque submission had this error: '%s'" % err
+            logging.info(msg)
+            # Delete the GCS image, if it exists (the GCS images are not
+            # managed by the transaction, apparently)
+            try:
+                gcs.delete(image.filename)
+            except:
+                pass
             self.get(message=msg)
             return
 
-        # Email notify admin:
-        msg = """<p>Plaque '%s'</p>
-                 <p>at %s</p>
-                 <p>%s</p> added <a href="http://readtheplaque.net%s">here</a> """ % (
-            plaque.title,
-            plaque.location,
-            plaque.description,
-            plaque.url
-        )
-        mail.send_mail(
-            sender=NOTIFICATION_SENDER_EMAIL,
-            to=ADMIN_EMAIL,
-            subject='Plaque added: %s' % plaque.url,
-            body=msg,
-            html=msg,
-        )
-
-        if not is_migration:
-            msg = """Hooray! And thank you. We'll geocode your 
-                  plaque and you'll see it appear on the map shortly 
-                  <a href="%s">here</a>.""" % plaque.url
-            self.get(message=msg)
-        return
+        #email_admin(plaque)
+        msg = """Hooray! And thank you. We'll geocode your 
+              plaque and you'll see it appear on the map shortly 
+              <a href="%s">here</a>.""" % plaque.page_url
+        self.get(message=msg)
 
     def _get_form_args(self):
 
@@ -419,7 +423,19 @@ class AddPlaque(webapp2.RequestHandler):
         if len(title) > 1500:
             title = title[:1499]
         description = self.request.get('description')
-        image = self.request.POST.get('plaque_image')
+
+        img_file = self.request.POST.get('plaque_image_file')
+        img_url = self.request.POST.get('plaque_image_url')
+
+        if img_file:
+            img_name = img_file.filename
+            img_fh = img_file.file
+        elif img_url:
+            img_name = os.path.basename(img_url)
+            img_fh = urllib.urlopen(img_url)
+        else:
+            raise ValueError("Image '%s' -- '%s' is not valid" % (
+                              img_file, img_url))
 
         # Get and tokenize tags
         tags_str = self.request.get('tags')
@@ -427,9 +443,9 @@ class AddPlaque(webapp2.RequestHandler):
         tags = [re.sub('\s+', ' ', t.strip().lower()) for t in tags_untokenized]
         tags = [t for t in tags if t] # Remove empties
 
-        return location, created_by, title, description, image, tags
+        return location, created_by, title, description, img_name, img_fh, tags
 
-    def _upload_image_to_gcs(self, image_name, image_fh):
+    def _upload_image_to_gcs(self, img_name, img_fh):
         """
         Upload pic into GCS
 
@@ -439,29 +455,18 @@ class AddPlaque(webapp2.RequestHandler):
         inside the with block.
         """
         date_slash_time = datetime.datetime.now().strftime("%Y%m%d/%H%M%S")
-        gcs_fn= '%s/%s/%s' % (GCS_BUCKET, date_slash_time, image_name)
+        gcs_fn= '%s/%s/%s' % (GCS_BUCKET, date_slash_time, img_name)
 
-        ct = mimetypes.guess_type(image_name)[0]
+        ct = mimetypes.guess_type(img_name)[0]
         op = {b'x-goog-acl': b'public-read'}
         with gcs.open(gcs_fn, 'w', content_type=ct, options=op) as gcs_file:
-            image_contents = image_fh.read()
-            gcs_file.write(image_contents)
+            img_contents = img_fh.read()
+            gcs_file.write(img_contents)
 
         blobstore_gs_key = blobstore.create_gs_key('/gs' + gcs_fn)
         gcs_file_url = images.get_serving_url(blobstore_gs_key)
 
         return gcs_fn, gcs_file_url
-
-class AddPlaqueMigrate(AddPlaque):
-    """
-    Add a plaque, but use an URL for the image instead of an uploaded image.
-    Used for scraping the old readtheplaque.com site.
-    """
-    def get(self):
-        raise NotImplementedError("No get method for AddPlaqueMigrate")
-
-    def post(self):
-        self._post(is_migration=True)
 
 # TODO: See:
 #     http://stackoverflow.com/questions/13305302/using-search-api-python-google-app-engine-big-table
@@ -515,11 +520,40 @@ class DeleteEverything(webapp2.RequestHandler):
         images = gcs.listbucket(GCS_BUCKET)
         for image in images:
             num_images += 1
-            gcs.delete(image.filename)
+            try:
+                gcs.delete(image.filename)
+            except:
+                pass
 
         msg = "Deleted %s comments, %s plaques, %s images" % (
                 len(comments), len(plaques), num_images)
+
+        memcache.flush_all()
         self.response.write(msg)
+
+class ViewPending(webapp2.RequestHandler):
+    def get(self):
+        plaques = Plaque.pending_list()
+
+        template = JINJA_ENVIRONMENT.get_template('all.html')
+        template_values = {
+            'all_plaques': plaques,
+            'plaques': plaques,
+            'start_index': 0,
+            'end_index': len(plaques),
+            'mapzoom': 2,
+        }
+        template_text = template.render(template_values)
+        self.response.write(template_text)
+
+class ApprovePending(webapp2.RequestHandler):
+    @ndb.transactional
+    def post(self):
+        plaque_key = self.request.get('plaque_key')
+        plaque = ndb.Key(urlsafe=plaque_key).get()
+        plaque.approved = True
+        plaque.put()
+        self.redirect(plaque.page_url)
 
 class RssFeed(webapp2.RequestHandler):
     def get(self, num_entries=10):

@@ -7,11 +7,11 @@
         {% for iplaque in range(start_index, end_index) %}
             {% if iplaque < plaques|length %}
                 {% set plaque = plaques[iplaque] %}
-                <a href="{{plaque.url}}">
+                <a href="{{plaque.page_url}}">
                     <div class="item">
                         <div class="well">
                             <h2>{{plaque.title}}</h2>
-                            <img src="{{plaque.thumbnail_url}}" class="img-responsive"/>
+                            <img src="{{plaque.img_url_thumbnail}}" class="img-responsive"/>
 
                             <p>{{plaque.description | striptags | wordwrap(50, True) | truncate(200)}}</p>
                             <ul class="list-inline">
@@ -32,7 +32,7 @@
                 {% for plaque in all_plaques %}
                     <li>
                         <small>
-                        <a href="{{plaque.url}}">{{plaque.title}}</a>
+                        <a href="{{plaque.page_url}}">{{plaque.title}}</a>
                         </small>
                     </li>
                 {% endfor %}

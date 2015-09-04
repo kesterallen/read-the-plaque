@@ -9,9 +9,10 @@
 
     <div class="row">
         <div class="col-xs-11">
-            <form action="/add"
-                  method="POST"
-                  enctype="multipart/form-data" >
+            <form 
+                action="/add"
+                method="POST"
+                enctype="multipart/form-data">
 
                 {% if message %}<h2>{{message}}</h2>{% endif %}
 
@@ -26,7 +27,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="plaque_description">Description (transcribe the plaque if you can)</label>
+                    <label for="plaque_description">Tell us about the plaque. Transcribe it if you can.</label>
                     <textarea class="form-control"
                               id="plaque_description"
                               name="description"
@@ -36,13 +37,21 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="plaque_image">Upload your Plaque</label>
-                    <input type="file"
-                           id="plaque_image"
-                           required
-                           name="plaque_image"
-                           >
-                    <p class="help-block">Upload an image of your plaque.</p>
+                    <div class="row">
+                        <div class="col-xs-2">
+                            <label for="plaque_image_file">Upload your Plaque,</label>
+                            <input type="file"
+                                   id="plaque_image_file"
+                                   name="plaque_image_file">
+                        </div>
+                        <div class="col-xs-10">
+                            <label for="plaque_image_url">or a URL of its image (one or the other, please)</label>
+                            <input type="url"
+                                   id="plaque_image_url"
+                                   name="plaque_image_url"
+                                   style="width: 100%;">
+                        </div>
+                    </div>
                 </div>
 
                 <div class="form-group">

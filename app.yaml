@@ -23,13 +23,19 @@ handlers:
 - url: /images
   static_dir: static/images
 
+- url: /pending
+  script: View.app
+  login: admin
+
+- url: /approve
+  script: View.app
+  login: admin
+
 - url: /submit-your-own
   script: View.app
-  login: required
 
 - url: /add
   script: View.app
-  login: required
 
 - url: /.*
   script: View.app
