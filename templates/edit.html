@@ -1,0 +1,96 @@
+{% extends 'parts/base_template.html' %}
+
+{% block content %}
+<script src="https://maps.google.com/maps/api/js?sensor=false"></script>
+<script src="/static/map_picker.js"></script>
+
+<div class="container-fluid">
+    <h1>Plaque Edit Page</h1>
+
+        <form 
+            action="/edit"
+            method="POST"
+            enctype="multipart/form-data">
+
+            <input type="hidden" name="plaque_key" value="{{plaque.key.urlsafe()}}">
+            <div class="col-xs-11">
+            {% if message %}<h2>{{message}}</h2>{% endif %}
+            </div>
+
+            <div class="col-xs-12 col-md-6">
+                <div class="form-group">
+                    <legend>Plaque Name</legend>
+                    <input type="text"
+                           class="form-control"
+                           id="plaque_title"
+                           name="title"
+                           required
+                           value="{{plaque.title}}"
+                           placeholder="Plaque Name">
+                </div>
+
+                <div class="form-group">
+                    <legend>Upload your Plaque (upload file or type/copy a URL):</legend>
+                    <img src="{{plaque.img_url_tiny}}"/>
+                    <div class="row">
+                        <div class="col-xs-12 col-md-4">
+                            <input type="file"
+                                   id="plaque_image_file"
+                                   name="plaque_image_file">
+                        </div>
+                        <div class="col-xs-12 col-md-8">
+                            <input type="url"
+                                   id="plaque_image_url"
+                                   name="plaque_image_url"
+                                   placeholder="Image URL"
+                                   style="width: 100%;"
+                                   >
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <legend>Plaque Tags</legend>
+                    <input type="text"
+                           class="form-control"
+                           id="plaque_tags"
+                           name="tags"
+                           value="{{plaque.tags| join(', ')}}"
+                           placeholder="Tags to characterize the plaque. Multiple tags can be separated by commas.">
+                </div>
+            </div>
+
+            <div class="col-xs-12 col-md-6">
+                <div class="form-group">
+                    <legend>Tell us about the plaque. Transcribe it if you can.</legend>
+                    <textarea class="form-control"
+                              id="plaque_description"
+                              name="description"
+                              required
+                              rows="5">
+                        {{plaque.description}}
+                    </textarea>
+                </div>
+            </div>
+
+            <div class="col-xs-12">
+                <div class="form-group">
+                    <legend>Location</legend>
+                    <input type="text"
+                           class="form-control"
+                           id="plaque_location"
+                           name="location"
+                           required
+                           value="{{plaque.location}}"
+                    <div id="maparea">
+                        <div id="mapitems" style="height: 200px"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xs-11">
+                <button type="submit" class="btn btn-default">Update Plaque Details</button>
+            </div>
+        </form>
+</div>
+<script>map_init();</script>
+{% endblock %}
