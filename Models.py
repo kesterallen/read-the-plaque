@@ -48,11 +48,17 @@ class Plaque(ndb.Model):
     approved = ndb.BooleanProperty(default=False)
     created_on = ndb.DateTimeProperty(auto_now_add=True)
     created_by = ndb.UserProperty()
+    updated_on = ndb.DateTimeProperty(auto_now_add=True)
+    updated_by = ndb.UserProperty()
     old_site_id = ndb.IntegerProperty()
 
     @classmethod
     def num_approved(cls):
-        return len(cls.approved_list())
+        plaques_list = cls.approved_list()
+        if plaques_list:
+            return len(plaques_list)
+        else:
+            return 0
 
     @classmethod
     def approved_list(cls):
@@ -67,6 +73,14 @@ class Plaque(ndb.Model):
         else:
             logging.debug("memcache.get worked for Plaque.approved()")
         return plaques
+
+    @classmethod
+    def num_pending(cls):
+        plaques_list = cls.pending_list()
+        if plaques_list:
+            return len(plaques_list)
+        else:
+            return 0
 
     @classmethod
     def pending_list(cls):

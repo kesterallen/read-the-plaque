@@ -31,6 +31,22 @@ handlers:
   script: View.app
   login: admin
 
+- url: /approveall
+  script: View.app
+  login: admin
+
+- url: /edit
+  script: View.app
+  login: admin
+
+- url: /rotate_image
+  script: View.app
+  login: admin
+
+- url: /update
+  script: View.app
+  login: admin
+
 - url: /submit-your-own
   script: View.app
 
@@ -44,4 +60,6 @@ libraries:
 - name: webapp2
   version: latest
 - name: jinja2
+  version: latest
+- name: PIL
   version: latest

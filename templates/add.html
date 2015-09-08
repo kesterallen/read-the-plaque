@@ -5,19 +5,20 @@
 <script src="/static/map_picker.js"></script>
 
 <div class="container-fluid">
-    <h1>Add a New Plaque</h1>
+    <h1>Add a new Plaque</h1>
 
-    <div class="row">
-        <div class="col-xs-11">
-            <form 
-                action="/add"
-                method="POST"
-                enctype="multipart/form-data">
+        <form 
+            action="/add"
+            method="POST"
+            enctype="multipart/form-data">
 
-                {% if message %}<h2>{{message}}</h2>{% endif %}
+            <div class="col-xs-11">
+            {% if message %}<h2>{{message}}</h2>{% endif %}
+            </div>
 
+            <div class="col-xs-12 col-md-6">
                 <div class="form-group">
-                    <label for="plaque_title">Name</label>
+                    <legend>Plaque Name</legend>
                     <input type="text"
                            class="form-control"
                            id="plaque_title"
@@ -27,35 +28,48 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="plaque_description">Tell us about the plaque. Transcribe it if you can.</label>
-                    <textarea class="form-control"
-                              id="plaque_description"
-                              name="description"
-                              required
-                              rows="3">
-                    </textarea>
-                </div>
-
-                <div class="form-group">
+                    <legend>Upload your Plaque (upload file or type/copy a URL):</legend>
                     <div class="row">
-                        <div class="col-xs-2">
-                            <label for="plaque_image_file">Upload your Plaque,</label>
+                        <div class="col-xs-12 col-md-4">
                             <input type="file"
                                    id="plaque_image_file"
                                    name="plaque_image_file">
                         </div>
-                        <div class="col-xs-10">
-                            <label for="plaque_image_url">or a URL of its image (one or the other, please)</label>
+                        <div class="col-xs-12 col-md-8">
                             <input type="url"
                                    id="plaque_image_url"
                                    name="plaque_image_url"
-                                   style="width: 100%;">
+                                   placeholder="Image URL"
+                                   style="width: 100%;"
+                                   >
                         </div>
                     </div>
                 </div>
-
                 <div class="form-group">
-                    <label for="plaque_location">Location</label>
+                    <legend>Plaque Tags</legend>
+                    <input type="text"
+                           class="form-control"
+                           id="plaque_tags"
+                           name="tags"
+                           placeholder="Tags to characterize the plaque. Multiple tags can be separated by commas.">
+                </div>
+            </div>
+
+            <div class="col-xs-12 col-md-6">
+                <div class="form-group">
+                    <legend>Tell us about the plaque. Transcribe it if you can.</legend>
+                    <textarea class="form-control"
+                              id="plaque_description"
+                              name="description"
+                              required
+                              rows="5">
+                    </textarea>
+                </div>
+            </div>
+
+            <div class="col-xs-12">
+                <div class="form-group">
+                    <legend>Location</legend>
                     <input type="text"
                            class="form-control"
                            id="plaque_location"
@@ -66,20 +80,12 @@
                         <div id="mapitems" style="height: 200px"></div>
                     </div>
                 </div>
+            </div>
 
-                <div class="form-group">
-                    <label for="plaque_tags">Tags</label>
-                    <input type="text"
-                           class="form-control"
-                           id="plaque_tags"
-                           name="tags"
-                           placeholder="Tags to characterize the plaque. Multiple tags can be separated by commas.">
-                </div>
-
-                <button type="submit" class="btn btn-default">Add Plaque</button>
-            </form>
-        </div>
-    </div>
+            <div class="col-xs-11">
+                <button type="submit" class="btn btn-default">Add a new Plaque</button>
+            </div>
+        </form>
 </div>
 <script>map_init();</script>
 {% endblock %}

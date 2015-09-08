@@ -15,7 +15,7 @@ import webapp2
 from google.appengine.api import images
 from google.appengine.api import mail
 from google.appengine.api import memcache
-from google.appengine.api import search 
+from google.appengine.api import search
 from google.appengine.api import users
 from google.appengine.ext import blobstore
 from google.appengine.ext import ndb
@@ -32,7 +32,6 @@ NOTIFICATION_SENDER_EMAIL = ADMIN_EMAIL
 # * Search for plaque text and title
 # * Make plaque submission require login
 #       possibly multiple OAUTH login
-# * GPS picker for submission location
 # * Change .net to .com for final deploy
 
 # The wordpress admin dashboard is pretty easy to use and the process to
@@ -60,7 +59,7 @@ GCS_BUCKET = '/read-the-plaque.appspot.com'
 DEFAULT_PLAQUESET_NAME = 'public'
 DEFAULT_PLAQUES_PER_PAGE = 24
 
-# Load templates from the /templates dir. Check if this works on deploy
+# Load templates from the /templates dir
 JINJA_ENVIRONMENT = jinja2.Environment (
     loader=jinja2.FileSystemLoader(
         os.path.join(os.path.dirname(__file__),
@@ -77,14 +76,14 @@ def email_admin(plaque, comment=None):
         subject='Comment added to plaque {0.title} at {%0.page_url}'.format(plaque)
         msg = """Comment
                  <p>{0.text}</p>
-                 added to {1.title} 
+                 added to {1.title}
                  <a href="http://readtheplaque.net{1.page_url}">
                  here</a>""".format(comment, plaque)
     else:
         subject='New Plaque {0.title} added at {0.page_url}'.format(plaque)
         msg = """<p>Plaque '{0.title}'</p>
                  <p>at {0.page_url}</p>
-                 <p>{0.description}</p> added 
+                 <p>{0.description}</p> added
                  <a href="http://readtheplaque.net{0.page_url}">
                  here</a>""".format(plaque)
 
@@ -139,6 +138,20 @@ def get_footer_items():
 
     return footer_items
 
+def loginout():
+    # Login/Logout link:
+    user = users.get_current_user()
+    if user:
+        loginout = {'is_admin': users.is_current_user_admin(),
+                    'url': users.create_logout_url('/'),
+                    'text': 'Log out'}
+    else:
+        loginout = {'is_admin': users.is_current_user_admin(),
+                    'url': users.create_login_url('/'),
+                    'text': 'Log in'}
+    return loginout
+
+
 class ViewPlaquesPage(webapp2.RequestHandler):
     def get(self, page_num=1, plaques_per_page=DEFAULT_PLAQUES_PER_PAGE):
         """
@@ -161,13 +174,15 @@ class ViewPlaquesPage(webapp2.RequestHandler):
         if plaques_per_page < 1:
             plaques_per_page = 1
 
-        memcache_name = 'view_plaques_page_%s_%s' % (page_num, plaques_per_page)
+        is_admin = users.is_current_user_admin()
+        memcache_name = 'view_plaques_page_%s_%s_%s' % (
+                            page_num, plaques_per_page, is_admin)
         template_text = memcache.get(memcache_name)
         if template_text is None:
             # Grab all plaques for the map
             plaques = Plaque.approved_list()
             start_index = plaques_per_page * (page_num - 1)
-            end_index = start_index + plaques_per_page 
+            end_index = start_index + plaques_per_page
 
             template = JINJA_ENVIRONMENT.get_template('all.html')
             template_values = {
@@ -175,9 +190,11 @@ class ViewPlaquesPage(webapp2.RequestHandler):
                 'plaques': plaques,
                 'pages_list': get_pages_list(),
                 'start_index': start_index,
-                'end_index': end_index, 
+                'end_index': end_index,
+                'num_pending': Plaque.num_pending(),
                 'mapzoom': 2,
                 'footer_items': get_footer_items(),
+                'loginout': loginout(),
             }
 
             template_text = template.render(template_values)
@@ -201,9 +218,15 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
             raise ValueError("No plaques!")
 
         iplaque = random.randint(1, count)
-        plaques = Plaque.query().order(Plaque.created_on).fetch(offset=iplaque,
+        plaques = Plaque.query().filter(Plaque.approved == True
+                               ).order(Plaque.created_on).fetch(offset=iplaque,
                                                                 limit=1)
-        plaque_key = plaques[0].key.urlsafe()
+        try:
+            plaque_key = plaques[0].key.urlsafe()
+        except IndexError as err:
+            logging.error(err)
+            raise IndexError("No plaques available! Try again later!")
+
         return plaque_key
 
     def _get_from_key(self, comment_key=None, plaque_key=None):
@@ -238,7 +261,8 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
             'pages_list': get_pages_list(),
             'mapzoom': 8,
             'footer_items': get_footer_items(),
-            'is_admin': users.is_current_user_admin(),
+            'num_pending': Plaque.num_pending(),
+            'loginout': loginout(),
         }
         self.response.write(template.render(template_values))
 
@@ -303,6 +327,7 @@ class ViewTag(webapp2.RequestHandler):
             'end_index': len(plaques),
             'mapzoom': 2,
             'footer_items': get_footer_items(),
+            'loginout': loginout(),
         }
         self.response.write(template.render(template_values))
 
@@ -346,7 +371,10 @@ class AddPlaque(webapp2.RequestHandler):
     """
     def get(self, message=None):
         template = JINJA_ENVIRONMENT.get_template('add.html')
-        template_values = {'mapzoom': 5}
+        template_values = {
+            'mapzoom': 5,
+            'loginout': loginout(),
+        }
         if message is not None:
             template_values['message'] = message
 
@@ -354,7 +382,7 @@ class AddPlaque(webapp2.RequestHandler):
         self.response.write(template.render(template_values))
 
     @ndb.transactional
-    def post(self):
+    def post(self, is_edit=False):
         """
         We set the same parent key on the 'Plaque' to ensure each Plauqe is in
         the same entity group. Queries across the single entity group will be
@@ -362,24 +390,48 @@ class AddPlaque(webapp2.RequestHandler):
         limited to ~1/second.
         """
 
+        memcache.flush_all()
         try:
-            plaqueset_name = self.request.get('plaqueset_name',
-                                              DEFAULT_PLAQUESET_NAME)
+            if not is_edit:
+                plaqueset_name = self.request.get('plaqueset_name',
+                                                  DEFAULT_PLAQUESET_NAME)
+                plaque = Plaque(parent=plaqueset_key(plaqueset_name))
+            else:
+                plaque_key = self.request.get('plaque_key')
+                plaque = ndb.Key(urlsafe=plaque_key).get()
+
             location, created_by, title, description, img_name, img_fh, tags = \
                 self._get_form_args()
 
-            plaque = Plaque(parent=plaqueset_key(plaqueset_name))
             plaque.location = location
             plaque.title = title
             plaque.description = description
             plaque.tags = tags
+            plaque.approved = users.is_current_user_admin()
 
-            # TODO: make this user-dependent
-            plaque.approved = False
+            # Upload the image for a new plaque, or update the image for an
+            # editted plaque, if specified.
+            if not is_edit:
+                gcs_file_name, gcs_url = self._upload_image_to_gcs(img_name,
+                                                                   img_fh)
+                plaque.pic = gcs_file_name
+                plaque.img_url = gcs_url
+            else:
+                gcs_file_name, gcs_url = self._upload_image_to_gcs(
+                                                  img_name,
+                                                  img_fh,
+                                                  gcs_fn=plaque.pic)
+                plaque.pic = gcs_file_name
+                plaque.img_url = gcs_url
 
-            gcs_file_name, gcs_url = self._upload_image_to_gcs(img_name, img_fh)
-            plaque.pic = gcs_file_name
-            plaque.img_url = gcs_url
+            # Write to the updated_* fields if this is an edit:
+            #
+            if is_edit:
+                plaque.updated_by = users.get_current_user()
+                plaque.updated_on = datetime.datetime.now()
+            else:
+                plaque.updated_by = None
+                plaque.updated_on = None
 
             old_site_id = self.request.get('old_site_id', None)
             if old_site_id is not None:
@@ -389,7 +441,6 @@ class AddPlaque(webapp2.RequestHandler):
                     logging.info('Eating bad ValueError for '
                                  'old_site_id in AddPlaque')
             plaque.put()
-            memcache.flush_all()
         except (BadValueError, ValueError) as err:
             msg = "Sorry, your plaque submission had this error: '%s'" % err
             logging.info(msg)
@@ -399,17 +450,18 @@ class AddPlaque(webapp2.RequestHandler):
                 gcs.delete(image.filename)
             except:
                 pass
+
             self.get(message=msg)
             return
 
         #email_admin(plaque)
-        msg = """Hooray! And thank you. We'll geocode your 
-              plaque and you'll see it appear on the map shortly 
+        msg = """Hooray! And thank you. We'll geocode your
+              plaque and you'll see it appear on the map shortly
               <a href="%s">here</a>.""" % plaque.page_url
         self.get(message=msg)
 
     def _get_form_args(self):
-
+        """Get the arguments from the form and return them."""
         latlng = self.request.get('location')
         lat, lng = [float(l) for l in latlng.split(',')]
         location = ndb.GeoPt(lat, lng)
@@ -427,15 +479,16 @@ class AddPlaque(webapp2.RequestHandler):
         img_file = self.request.POST.get('plaque_image_file')
         img_url = self.request.POST.get('plaque_image_url')
 
-        if img_file:
+        # Prefer the file to the URL, if both are given.
+        #
+        if img_file != '':
             img_name = img_file.filename
             img_fh = img_file.file
-        elif img_url:
+        elif img_url != '':
             img_name = os.path.basename(img_url)
             img_fh = urllib.urlopen(img_url)
-        else:
-            raise ValueError("Image '%s' -- '%s' is not valid" % (
-                              img_file, img_url))
+        # Else: don't do anything (for edits where the image isn't being
+        # updated)
 
         # Get and tokenize tags
         tags_str = self.request.get('tags')
@@ -445,7 +498,7 @@ class AddPlaque(webapp2.RequestHandler):
 
         return location, created_by, title, description, img_name, img_fh, tags
 
-    def _upload_image_to_gcs(self, img_name, img_fh):
+    def _upload_image_to_gcs(self, img_name, img_fh, gcs_fn=None):
         """
         Upload pic into GCS
 
@@ -453,11 +506,17 @@ class AddPlaque(webapp2.RequestHandler):
         outside of the with block; I think this is correct. The
         blobstore.create_gs_key call was erroring out on production when it was
         inside the with block.
+
+        If gcs_fn is specified, overwrite that gcs filename. This is used
+        for updating the picture.
         """
         date_slash_time = datetime.datetime.now().strftime("%Y%m%d/%H%M%S")
-        gcs_fn= '%s/%s/%s' % (GCS_BUCKET, date_slash_time, img_name)
+        if gcs_fn is None:
+            gcs_fn= '%s/%s/%s' % (GCS_BUCKET, date_slash_time, img_name)
 
         ct = mimetypes.guess_type(img_name)[0]
+        if ct is None:
+            ct = 'image/jpeg'
         op = {b'x-goog-acl': b'public-read'}
         with gcs.open(gcs_fn, 'w', content_type=ct, options=op) as gcs_file:
             img_contents = img_fh.read()
@@ -467,6 +526,39 @@ class AddPlaque(webapp2.RequestHandler):
         gcs_file_url = images.get_serving_url(blobstore_gs_key)
 
         return gcs_fn, gcs_file_url
+
+class EditPlaque(AddPlaque):
+    """
+    Edit a plaque entity. Transactional in the _post method.
+    """
+    def get(self, plaque_key=None, message=None):
+        if plaque_key is None:
+            memcache.flush_all()
+            self.redirect('/')
+            return
+        else:
+            plaque = ndb.Key(urlsafe=plaque_key).get()
+            if plaque is None:
+                message = None
+            else:
+                message = "Editing Plaque"
+
+        template = JINJA_ENVIRONMENT.get_template('add.html')
+        template_values = {
+            'plaque': plaque,
+            'mapzoom': 5,
+            'loginout': loginout()
+        }
+        if message is not None:
+            template_values['message'] = message
+
+        template = JINJA_ENVIRONMENT.get_template('edit.html')
+        self.response.write(template.render(template_values))
+
+    def post(self):
+        super(EditPlaque, self).post(is_edit=True)
+        memcache.flush_all()
+
 
 # TODO: See:
 #     http://stackoverflow.com/questions/13305302/using-search-api-python-google-app-engine-big-table
@@ -506,6 +598,25 @@ class Counts(webapp2.RequestHandler):
                 num_comments, num_plaques, num_images)
         self.response.write(msg)
 
+class DeleteOnePlaque(webapp2.RequestHandler):
+    def get(self):
+        raise NotImplementedError("no get in DeleteOnePlaque")
+
+    @ndb.transactional
+    def post(self):
+        """Remove one plaque and its associated Comments and GCS image."""
+        plaque_key = self.request.get('plaque_key')
+        plaque = ndb.Key(urlsafe=plaque_key).get()
+        for comment in plaque.comments:
+            comment.delete()
+        try:
+            gcs.delete(plaque.pic)
+        except:
+            pass
+        plaque.key.delete()
+        memcache.flush_all()
+        self.redirect('/')
+
 class DeleteEverything(webapp2.RequestHandler):
     def get(self):
         comments = Comment.query().fetch()
@@ -542,18 +653,32 @@ class ViewPending(webapp2.RequestHandler):
             'start_index': 0,
             'end_index': len(plaques),
             'mapzoom': 2,
+            'num_pending': Plaque.num_pending(),
+            'loginout': loginout(),
         }
         template_text = template.render(template_values)
         self.response.write(template_text)
 
+class ApproveAllPending(webapp2.RequestHandler):
+    """Approve all pending plaques"""
+    def get(self):
+        plaques = Plaque.pending_list()
+        for plaque in plaques:
+            plaque.approved = True
+            plaque.put()
+        memcache.flush_all()
+        self.redirect('/')
+
 class ApprovePending(webapp2.RequestHandler):
+    """Approve a plaque"""
     @ndb.transactional
     def post(self):
         plaque_key = self.request.get('plaque_key')
         plaque = ndb.Key(urlsafe=plaque_key).get()
         plaque.approved = True
         plaque.put()
-        self.redirect(plaque.page_url)
+        memcache.flush_all()
+        self.redirect('/pending')
 
 class RssFeed(webapp2.RequestHandler):
     def get(self, num_entries=10):
@@ -561,6 +686,6 @@ class RssFeed(webapp2.RequestHandler):
                       ).filter(Plaque.approved == True
                       ).order(-Plaque.created_on
                       ).fetch(limit=num_entries)
-        template = JINJA_ENVIRONMENT.get_template('feed.xml') # TODO: update this
+        template = JINJA_ENVIRONMENT.get_template('feed.xml')
         template_values = {'plaques': plaques}
         self.response.write(template.render(template_values))

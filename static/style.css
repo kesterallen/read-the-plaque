@@ -11,8 +11,7 @@ body { padding-top: 70px; }
     margin: 0 auto;
 }
 
-/* Sticky footer styles
--------------------------------------------------- */
+/* Sticky footer styles */
 html {
     position: relative;
     min-height: 100%;
@@ -31,9 +30,9 @@ body {
     background-color: #f5f5f5;
     padding-top: 10px; /* put a smidge of blank space at the top of the footer */
 }
+/* end Sticky footer styles */
 
 /* Pintrest-like */
-
 *, *:before, *:after {box-sizing:  border-box !important;}
 
 .pinterest-row {
@@ -68,3 +67,4 @@ body {
     background-color: #40495A;
     color: #FFF;
 }
+

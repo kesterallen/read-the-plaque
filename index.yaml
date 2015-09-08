@@ -12,9 +12,15 @@ indexes:
   - name: created_on
     direction: desc
 
+- kind: Plaque
+  properties:
+  - name: approved
+    direction: desc
+  - name: created_on
+    direction: desc
+
 - kind: Comment
   properties:
   - name: approved
   - name: created_on
     direction: desc
-

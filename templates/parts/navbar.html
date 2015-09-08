@@ -34,6 +34,11 @@
                         {% endfor %}
                     </ul>
                 </li>
+
+                {% if loginout.is_admin %}
+                    <li><a href="/pending">Pending ({{num_pending}})</a></li>
+                    <li><a href="/flush">Flush Memcache</a></li>
+                {% endif %}
                 <li><a href="/plaque">Random</a></li>
                 <li><a href="/about">About</a></li>
                 <li><a href="/add">Submit</a></li>

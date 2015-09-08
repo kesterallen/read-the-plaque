@@ -37,14 +37,15 @@ plaque_ids_all = [
     781, 783, 785, 789, 765, 799, 807, 837, 855, 873, 701, 813, 883, 1240, 761,
     875, 889, 869, 779, 735, 697, 504, 516, 685, 687, 815, 853, 825, 817, 791,
     819, 705, 809, 803, 863, 865, 893, 909, 877, 936, 879, 1299, 1303, 1307,
-    1309, 1315, 1319, 1322, 1325,
+    1309, 1315, 1319, 1322, 1325, 723, 729, 
 ]
 
-plaque_ids = plaque_ids_test
+plaque_ids = plaque_ids_all
 
 plaque_ids.sort()
 
-site_url = 'http://10.10.15.40:8080'
+#site_url = 'http://10.10.15.40:8080'
+site_url = 'http://127.0.0.1:8080'
 #site_url = 'http://readtheplaque.net'
 post_url = site_url + '/submit-your-own'
 flush_url = site_url + '/flush'
@@ -136,11 +137,13 @@ def get_page_contents(soup):
 #
 #    return img_filename
 
+print 'Flushing', flush_url
 response = requests.get(flush_url)
 print 'Flush:', response
 
 for iplaque, plaque_id in enumerate(plaque_ids):
     url = 'http://readtheplaque.com/%s' % plaque_id
+    print url
     get_resp = requests.get(url)
     soup = BeautifulSoup(get_resp.text, 'html.parser')
 
@@ -157,15 +160,12 @@ for iplaque, plaque_id in enumerate(plaque_ids):
         'description': body,
         'old_site_id': plaque_id,
     }
-    print post_url, values
     post_resp = requests.post(post_url, data=values)
     if post_resp.status_code != 200:
-        import ipdb; ipdb.set_trace()
         print "FAIL FAIL FAIL",
     print 1+iplaque, '/', len(plaque_ids), url,
     print 'post:', post_url, post_resp
     print title
-    time.sleep(.5)
 
 flush_resp = requests.get(flush_url)
 print 'Flush:', flush_resp
