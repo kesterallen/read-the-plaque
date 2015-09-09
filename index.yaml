@@ -15,6 +15,11 @@ indexes:
 - kind: Plaque
   properties:
   - name: approved
+  - name: created_on
+
+- kind: Plaque
+  properties:
+  - name: approved
     direction: desc
   - name: created_on
     direction: desc

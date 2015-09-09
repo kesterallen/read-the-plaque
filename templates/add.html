@@ -3,6 +3,7 @@
 {% block content %}
 <script src="https://maps.google.com/maps/api/js?sensor=false"></script>
 <script src="/static/map_picker.js"></script>
+<script src="/static/jquery-gmaps-latlon-picker.js"></script>
 
 <div class="container-fluid">
     <h1>Add a new Plaque</h1>
@@ -68,17 +69,16 @@
             </div>
 
             <div class="col-xs-12">
-                <div class="form-group">
+                <div class="gllpLatlonPicker form-group">
                     <legend>Location</legend>
-                    <input type="text"
-                           class="form-control"
-                           id="plaque_location"
-                           name="location"
-                           required
-                           placeholder="Click the plaque's location, or enter its lat/long here.">
-                    <div id="maparea">
-                        <div id="mapitems" style="height: 200px"></div>
-                    </div>
+                    <input type="text" class="gllpSearchField" placeholder="Click the plaque's location on the map, or search for it, or enter its lat/long location" style="width: 90%;">
+                    <input type="button" class="gllpSearchButton" value="search">
+                    <div class="gllpMap" style="width: 100%">Google Maps</div>
+                    Latitude: <input type="text" name="lat" class="gllpLatitude" value="0"/>
+                    Longitude: <input type="text" name="lng" class="gllpLongitude" value="-20"/>
+                    <input hidden type="text" class="gllpZoom" value="2"/>
+                    <input type="button" class="gllpUpdateButton" value="Go to lat/long">
+                    <br/>
                 </div>
             </div>
 
@@ -87,5 +87,4 @@
             </div>
         </form>
 </div>
-<script>map_init();</script>
 {% endblock %}

@@ -27,6 +27,10 @@ from Models import Comment, Plaque
 
 ADMIN_EMAIL = 'kester+readtheplaque@gmail.com'
 NOTIFICATION_SENDER_EMAIL = ADMIN_EMAIL
+ADD_STATE_SUCCESS = 'success'
+ADD_STATE_ERROR = 'error'
+ADD_STATES = {'ADD_STATE_SUCCESS': ADD_STATE_SUCCESS,
+              'ADD_STATE_ERROR': ADD_STATE_ERROR}
 
 # TODO before go-live
 # * Search for plaque text and title
@@ -70,6 +74,17 @@ JINJA_ENVIRONMENT = jinja2.Environment (
 # Set a parent key on the Plaque objects to ensure that they are all in the
 # same entity group. Queries across the single entity group will be consistent.
 # However, the write rate should be limited to ~1/second.
+
+def get_default_template_values(**kwargs):
+    template_values = {
+        'num_pending': Plaque.num_pending(),
+        'footer_items': get_footer_items(),
+        'loginout': loginout(),
+        'pages_list': get_pages_list(),
+    }
+    for k, v in kwargs.items():
+        template_values[k] = v
+    return template_values
 
 def email_admin(plaque, comment=None):
     if comment:
@@ -148,7 +163,7 @@ def loginout():
     else:
         loginout = {'is_admin': users.is_current_user_admin(),
                     'url': users.create_login_url('/'),
-                    'text': 'Log in'}
+                    'text': 'Admin login'}
     return loginout
 
 
@@ -185,17 +200,12 @@ class ViewPlaquesPage(webapp2.RequestHandler):
             end_index = start_index + plaques_per_page
 
             template = JINJA_ENVIRONMENT.get_template('all.html')
-            template_values = {
-                'all_plaques': plaques,
-                'plaques': plaques,
-                'pages_list': get_pages_list(),
-                'start_index': start_index,
-                'end_index': end_index,
-                'num_pending': Plaque.num_pending(),
-                'mapzoom': 2,
-                'footer_items': get_footer_items(),
-                'loginout': loginout(),
-            }
+            template_values = get_default_template_values(
+                                  all_plaques=plaques,
+                                  plaques=plaques,
+                                  start_index=start_index,
+                                  end_index=end_index,
+                                  mapzoom=2)
 
             template_text = template.render(template_values)
             memcache_status = memcache.set(memcache_name, template_text)
@@ -255,15 +265,10 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
             return
 
         template = JINJA_ENVIRONMENT.get_template('one.html')
-        template_values = {
-            'all_plaques': [plaque],
-            'plaques': [plaque],
-            'pages_list': get_pages_list(),
-            'mapzoom': 8,
-            'footer_items': get_footer_items(),
-            'num_pending': Plaque.num_pending(),
-            'loginout': loginout(),
-        }
+        template_values = get_default_template_values(
+                              all_plaques=[plaque],
+                              plaques=[plaque],
+                              mapzoom=8)
         self.response.write(template.render(template_values))
 
 class ViewOnePlaque(ViewOnePlaqueParent):
@@ -273,12 +278,12 @@ class ViewOnePlaque(ViewOnePlaqueParent):
     def get(self, plaque_key=None, ignored_cruft=None):
         self._get_from_key(plaque_key=plaque_key)
 
-class ViewOnePlaqueFromComment(ViewOnePlaqueParent):
-    """
-    Render the single-plaque page from a comment key.
-    """
-    def get(self, comment_key):
-        self._get_from_key(comment_key=comment_key)
+#class ViewOnePlaqueFromComment(ViewOnePlaqueParent):
+#    """
+#    Render the single-plaque page from a comment key.
+#    """
+#    def get(self, comment_key):
+#        self._get_from_key(comment_key=comment_key)
 
 class JsonOnePlaque(ViewOnePlaqueParent):
     """
@@ -301,12 +306,9 @@ class ViewAllTags(webapp2.RequestHandler):
         tags_sized = Plaque.all_tags_sized()
 
         template = JINJA_ENVIRONMENT.get_template('tags.html')
-        template_values = {
-            'tags': tags_sized,
-            'mapzoom': 2,
-            'footer_items': get_footer_items(),
-            'pages_list': get_pages_list(),
-        }
+        template_values = get_default_template_values(
+                              tags=tags_sized,
+                              mapzoom=2)
         self.response.write(template.render(template_values))
 
 class ViewTag(webapp2.RequestHandler):
@@ -319,16 +321,11 @@ class ViewTag(webapp2.RequestHandler):
                                ).order(-Plaque.created_on
                                ).fetch()
         template = JINJA_ENVIRONMENT.get_template('all.html')
-        template_values = {
-            'pages_list': get_pages_list(),
-            'plaques': plaques,
-            'pages_list': get_pages_list(),
-            'start_index': 0,
-            'end_index': len(plaques),
-            'mapzoom': 2,
-            'footer_items': get_footer_items(),
-            'loginout': loginout(),
-        }
+        template_values = get_default_template_values(
+                              plaques=plaques,
+                              start_index=0,
+                              end_index=len(plaques),
+                              mapzoom=2)
         self.response.write(template.render(template_values))
 
 class About(webapp2.RequestHandler):
@@ -337,46 +334,60 @@ class About(webapp2.RequestHandler):
         Render the About page from the common template.
         """
         template = JINJA_ENVIRONMENT.get_template('about.html')
-        template_values = {
-            'all_plaques': Plaque.approved_list(),
-            'pages_list': get_pages_list(),
-            'footer_items': get_footer_items(),
-        }
+        template_values = get_default_template_values(
+                              all_plaques=Plaque.approved_list())
         self.response.write(template.render(template_values))
 
-class AddComment(webapp2.RequestHandler):
-    @ndb.transactional(xg=True)
-    def post(self):
-        plaque_key = self.request.get('plaque_key')
-        plaque = ndb.Key(urlsafe=plaque_key).get()
-
-        comment_text = self.request.get('comment_text')
-        comment = Comment()
-        comment.text = comment_text
-        comment.put()
-
-        if len(plaque.comments) < 1:
-            plaque.comments = [comment.key]
-        else:
-            plaque.comments.append(comment.key)
-        plaque.put()
-        memcache.flush_all()
-
-        #email_admin(plaque, comment)
-        self.redirect(plaque.page_url)
+#class AddComment(webapp2.RequestHandler):
+#    @ndb.transactional(xg=True)
+#    def post(self):
+#        plaque_key = self.request.get('plaque_key')
+#        plaque = ndb.Key(urlsafe=plaque_key).get()
+#
+#        comment_text = self.request.get('comment_text')
+#        comment = Comment()
+#        comment.text = comment_text
+#        comment.put()
+#
+#        if len(plaque.comments) < 1:
+#            plaque.comments = [comment.key]
+#        else:
+#            plaque.comments.append(comment.key)
+#        plaque.put()
+#        memcache.flush_all()
+#
+#        #email_admin(plaque, comment)
+#        self.redirect(plaque.page_url)
 
 class AddPlaque(webapp2.RequestHandler):
     """
     Add a plaque entity. Transactional in the _post method.
     """
+    def _get_message(self, message):
+        if message is None:
+            message = self.request.get('message')
+
+        state = self.request.get('state')
+        if state is not None:
+            if state == ADD_STATE_SUCCESS:
+                message = """
+                    Hooray! And thank you. We'll geocode your
+                    plaque and you'll see it appear on the map shortly
+                    <a href="%s">here</a>.
+                    """ % message
+            elif state == ADD_STATE_ERROR:
+                message = """
+                      Sorry, your plaque submission had this error: '%s'
+                      """ % message
+        return message
+
     def get(self, message=None):
         template = JINJA_ENVIRONMENT.get_template('add.html')
-        template_values = {
-            'mapzoom': 5,
-            'loginout': loginout(),
-        }
+        template_values = get_default_template_values(mapzoom=5)
+        message = self._get_message(message)
         if message is not None:
             template_values['message'] = message
+        message = self.request.get('message')
 
         template = JINJA_ENVIRONMENT.get_template('add.html')
         self.response.write(template.render(template_values))
@@ -417,12 +428,13 @@ class AddPlaque(webapp2.RequestHandler):
                 plaque.pic = gcs_file_name
                 plaque.img_url = gcs_url
             else:
-                gcs_file_name, gcs_url = self._upload_image_to_gcs(
-                                                  img_name,
-                                                  img_fh,
-                                                  gcs_fn=plaque.pic)
-                plaque.pic = gcs_file_name
-                plaque.img_url = gcs_url
+                if img_name is not None:
+                    gcs_file_name, gcs_url = self._upload_image_to_gcs(
+                                                      img_name,
+                                                      img_fh,
+                                                      gcs_fn=plaque.pic)
+                    plaque.pic = gcs_file_name
+                    plaque.img_url = gcs_url
 
             # Write to the updated_* fields if this is an edit:
             #
@@ -441,8 +453,13 @@ class AddPlaque(webapp2.RequestHandler):
                     logging.info('Eating bad ValueError for '
                                  'old_site_id in AddPlaque')
             plaque.put()
+
+            #email_admin(plaque)
+            state = ADD_STATES['ADD_STATE_SUCCESS']
+            msg = plaque.page_url
         except (BadValueError, ValueError) as err:
-            msg = "Sorry, your plaque submission had this error: '%s'" % err
+            msg = err
+            state = ADD_STATES['ADD_STATE_ERROR']
             logging.info(msg)
             # Delete the GCS image, if it exists (the GCS images are not
             # managed by the transaction, apparently)
@@ -451,19 +468,14 @@ class AddPlaque(webapp2.RequestHandler):
             except:
                 pass
 
-            self.get(message=msg)
-            return
-
-        #email_admin(plaque)
-        msg = """Hooray! And thank you. We'll geocode your
-              plaque and you'll see it appear on the map shortly
-              <a href="%s">here</a>.""" % plaque.page_url
-        self.get(message=msg)
+        self.redirect('/add?state=%s&message=%s' % (state, msg))
 
     def _get_form_args(self):
         """Get the arguments from the form and return them."""
-        latlng = self.request.get('location')
-        lat, lng = [float(l) for l in latlng.split(',')]
+        #latlng = self.request.get('location')
+        #lat, lng = [float(l) for l in latlng.split(',')]
+        lat = self.request.get('lat')
+        lng = self.request.get('lng')
         location = ndb.GeoPt(lat, lng)
 
         if users.get_current_user():
@@ -487,8 +499,10 @@ class AddPlaque(webapp2.RequestHandler):
         elif img_url != '':
             img_name = os.path.basename(img_url)
             img_fh = urllib.urlopen(img_url)
-        # Else: don't do anything (for edits where the image isn't being
-        # updated)
+        else:
+            img_name = None
+            img_fh = None
+            #don't do anything (for edits where the image isn't being updated)
 
         # Get and tokenize tags
         tags_str = self.request.get('tags')
@@ -556,8 +570,8 @@ class EditPlaque(AddPlaque):
         self.response.write(template.render(template_values))
 
     def post(self):
-        super(EditPlaque, self).post(is_edit=True)
         memcache.flush_all()
+        super(EditPlaque, self).post(is_edit=True)
 
 
 # TODO: See:
@@ -647,15 +661,12 @@ class ViewPending(webapp2.RequestHandler):
         plaques = Plaque.pending_list()
 
         template = JINJA_ENVIRONMENT.get_template('all.html')
-        template_values = {
-            'all_plaques': plaques,
-            'plaques': plaques,
-            'start_index': 0,
-            'end_index': len(plaques),
-            'mapzoom': 2,
-            'num_pending': Plaque.num_pending(),
-            'loginout': loginout(),
-        }
+        template_values = get_default_template_values(
+                              all_plaques=plaques,
+                              plaques=plaques,
+                              start_index=0,
+                              end_index=len(plaques),
+                              mapzoom=2)
         template_text = template.render(template_values)
         self.response.write(template_text)
 

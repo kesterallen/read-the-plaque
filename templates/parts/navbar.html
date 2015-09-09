@@ -1,4 +1,8 @@
+{% if loginout.is_admin %}
+<nav class="navbar navbar-inverse navbar-fixed-top">
+{% else %}
 <nav class="navbar navbar-default navbar-fixed-top">
+{% endif %}
     <div class="container-fluid">
         <!-- Brand and toggle get grouped for better mobile display -->
         <div class="navbar-header">
@@ -36,7 +40,7 @@
                 </li>
 
                 {% if loginout.is_admin %}
-                    <li><a href="/pending">Pending ({{num_pending}})</a></li>
+                    <li><a href="/pending">Pending <span class="badge">{{num_pending}}</span></a></li>
                     <li><a href="/flush">Flush Memcache</a></li>
                 {% endif %}
                 <li><a href="/plaque">Random</a></li>

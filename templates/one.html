@@ -7,9 +7,8 @@
         <div class="col-xs-12">
             <h1>{{plaque.title}}{% if not plaque.approved %} [Pending] {% endif %}
             {% if loginout.is_admin %}
-                {% if plaque.approved %}
-                    <a class="btn btn-default" role="button" href="/edit/{{plaque.key.urlsafe()}}">Edit</a>
-                {% else %}
+                <a class="btn btn-default" role="button" href="/edit/{{plaque.key.urlsafe()}}">Edit</a>
+                {% if not plaque.approved %}
                     <form class="form-inline" action="/approve" method="POST">
                         <input type="hidden" name="plaque_key" value="{{plaque.key.urlsafe()}}">
                         <button type="submit" class="btn btn-default">Approve</button>
@@ -23,7 +22,7 @@
         <div class="row">
             <div class="col-xs-6">
                 <a href="{{plaque.img_url}}">
-                    <img src="{{plaque.img_url_display}}" class="img-responsive"/>
+                    <img src="{{plaque.img_url_display}}" class="img-responsive center-block"/>
                 </a>
             </div>
             <div class="col-xs-6">
@@ -51,9 +50,10 @@
         <p></p>
         {% include 'parts/map.html' %}
 
-        <h1>Leave a Comment</h1>
+        <!-- <h1>Leave a Comment</h1> -->
         <div class="row">
             <div class="col-xs-11">
+                <!--
                 <form action="/comment"
                       method="POST"
                       enctype="multipart/form-data" >
@@ -71,6 +71,7 @@
                     <input type="hidden" name="plaque_key" value="{{plaque.key.urlsafe()}}">
                     <button type="submit" class="btn btn-default">Make Comment</button>
                 </form>
+                -->
                 {% if loginout.is_admin %}
                     <div class="panel panel-default">
                         <div class="panel-body">

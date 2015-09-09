@@ -68,3 +68,5 @@ body {
     color: #FFF;
 }
 
+/* If the map DIV doesn't have a size set up, it won't appear on the page */
+.gllpMap    { width: 500px; height: 250px; }
