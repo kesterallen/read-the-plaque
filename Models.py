@@ -131,8 +131,6 @@ class Plaque(ndb.Model):
 
         return tag_counts
 
-    def set_pic_and_url(self):
-
     @property
     def img_url_tiny(self):
         """A URL for a square, tiny image for infowindow popups."""

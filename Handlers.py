@@ -69,6 +69,9 @@ JINJA_ENVIRONMENT = jinja2.Environment (
     extensions=['jinja2.ext.autoescape'],
     autoescape=False)#True) # turn off autoescape to allow html redering of descriptions
 
+class SubmitError(Exception):
+    pass
+
 # Set a parent key on the Plaque objects to ensure that they are all in the
 # same entity group. Queries across the single entity group will be consistent.
 # However, the write rate should be limited to ~1/second.
@@ -381,8 +384,8 @@ class AddPlaque(webapp2.RequestHandler):
         if state is not None:
             if state == ADD_STATE_SUCCESS:
                 message = """
-                    Hooray! And thank you. We'll geocode your
-                    plaque and you'll see it appear on the map shortly
+                    Hooray! And thank you. We'll review your plaque and you'll
+                    see it appear on the map shortly
                     <a href="%s">here</a>.
                     """ % message
             elif state == ADD_STATE_ERROR:
@@ -434,10 +437,7 @@ class AddPlaque(webapp2.RequestHandler):
             # editted plaque, if specified.
             is_upload_pic = (is_edit and img_name is not None) or (not is_edit)
             if is_upload_pic:
-                gcs_fn = plaque.pic if is_edit else None
-                gcs_fn, gcs_url = self._upload_image(img_name, img_fh, gcs_fn)
-                plaque.pic = gcs_fn
-                plaque.img_url = gcs_url
+                self._upload_image(img_name, img_fh, plaque)
 
             # Write to the updated_* fields if this is an edit:
             #
@@ -463,14 +463,14 @@ class AddPlaque(webapp2.RequestHandler):
             #email_admin(plaque)
             state = ADD_STATES['ADD_STATE_SUCCESS']
             msg = plaque.page_url
-        except (BadValueError, ValueError) as err:
+        except (BadValueError, ValueError, SubmitError) as err:
             msg = err
             state = ADD_STATES['ADD_STATE_ERROR']
             logging.info(msg)
             # Delete the GCS image, if it exists (the GCS images are not
             # managed by the transaction, apparently)
             try:
-                gcs.delete(image.filename)
+                gcs.delete(plaque.pic)
             except:
                 pass
 
@@ -478,12 +478,14 @@ class AddPlaque(webapp2.RequestHandler):
 
     def _get_form_args(self):
         """Get the arguments from the form and return them."""
-        #latlng = self.request.get('location')
-        #lat, lng = [float(l) for l in latlng.split(',')]
-        lat = self.request.get('lat')
-        lng = self.request.get('lng')
-        location = ndb.GeoPt(lat, lng)
-        print "lat %s lng %s location %s" % (lat, lng, location)
+        try:
+            lat = self.request.get('lat')
+            lng = self.request.get('lng')
+            location = ndb.GeoPt(lat, lng)
+        except:
+            err = SubmitError("The plaque location wasn't specified. Please "
+                              "click the back button and resumbit.")
+            raise err
 
         if users.get_current_user():
             created_by = users.get_current_user()
@@ -519,7 +521,7 @@ class AddPlaque(webapp2.RequestHandler):
 
         return location, created_by, title, description, img_name, img_fh, tags
 
-    def _upload_image(self, img_name, img_fh, gcs_fn=None):
+    def _upload_image(self, img_name, img_fh, plaque):
         """
         Upload pic into GCS
 
@@ -531,25 +533,56 @@ class AddPlaque(webapp2.RequestHandler):
         If gcs_fn is specified, overwrite that gcs filename. This is used
         for updating the picture.
         """
-        # Kill old image:
-        if gcs_fn is not None:
-            gcs.delete(gcs_fn)
+        # Kill old image and URL, if they exist. Tolerate failure in case
+        # this is a redo:
+        if plaque.pic is not None:
+            try:
+                gcs.delete(plaque.pic)
+            except:
+                pass
+        if plaque.img_url is not None:
+            try:
+                images.delete_serving_url(plaque.img_url)
+            except:
+                pass
 
+        # Make GCS filename
         date_slash_time = datetime.datetime.now().strftime("%Y%m%d/%H%M%S")
-        gcs_fn= '%s/%s/%s' % (GCS_BUCKET, date_slash_time, img_name)
+        gcs_filename = '%s/%s/%s' % (GCS_BUCKET, date_slash_time, img_name)
+        plaque.pic = gcs_filename
 
-        ct = mimetypes.guess_type(img_name)[0]
-        if ct is None:
-            ct = 'image/jpeg'
+        # Write image to GCS
+        try:
+            ct, op = self._gcs_extras(img_name)
+            with gcs.open(gcs_filename, 'w', content_type=ct, options=op) as fh:
+                img_contents = img_fh.read()
+                fh.write(img_contents)
+        except AttributeError:
+            submit_err = SubmitError("The image for the plaque was not "
+                                     "specified-- please click the back button "
+                                     "and resubmit.")
+            logging.error(submit_err)
+            raise submit_err
+
+        # Make serving_url for image:
+        blobstore_gs_key = blobstore.create_gs_key('/gs' + gcs_filename)
+        plaque.img_url = images.get_serving_url(blobstore_gs_key)
+
+    def _gcs_extras(self, img_name):
+        """Hide this here to clarify what _upload_image is doing."""
+        ct = 'image/jpeg'
+        try:
+            if ct is None:
+                guess_type = mimetypes.guess_type(img_name)
+                if len(guess_type) > 0:
+                    ct = guess_type[0]
+        except:
+            pass 
         op = {b'x-goog-acl': b'public-read'}
-        with gcs.open(gcs_fn, 'w', content_type=ct, options=op) as gcs_file:
-            img_contents = img_fh.read()
-            gcs_file.write(img_contents)
+        return ct, op
 
-        blobstore_gs_key = blobstore.create_gs_key('/gs' + gcs_fn)
-        gcs_file_url = images.get_serving_url(blobstore_gs_key)
 
-        return gcs_fn, gcs_file_url
+
 
 class EditPlaque(AddPlaque):
     """
@@ -700,6 +733,17 @@ class ApprovePending(webapp2.RequestHandler):
         plaque.put()
         memcache.flush_all()
         self.redirect('/pending')
+
+class DisapprovePlaque(webapp2.RequestHandler):
+    """Disapprove a plaque"""
+    @ndb.transactional
+    def post(self):
+        plaque_key = self.request.get('plaque_key')
+        plaque = ndb.Key(urlsafe=plaque_key).get()
+        plaque.approved = False
+        plaque.put()
+        memcache.flush_all()
+        self.redirect('/')
 
 class RssFeed(webapp2.RequestHandler):
     def get(self, num_entries=10):

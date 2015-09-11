@@ -27,6 +27,10 @@ handlers:
 - url: /images
   static_dir: static/images
 
+- url: /delete
+  script: View.app
+  login: admin
+
 - url: /pending
   script: View.app
   login: admin
@@ -35,15 +39,19 @@ handlers:
   script: View.app
   login: admin
 
+- url: /disapprove
+  script: View.app
+  login: admin
+
+- url: /delete
+  script: View.app
+  login: admin
+
 - url: /approveall
   script: View.app
   login: admin
 
 - url: /edit
-  script: View.app
-  login: admin
-
-- url: /update
   script: View.app
   login: admin
 
