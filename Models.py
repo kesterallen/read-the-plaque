@@ -8,7 +8,7 @@ from google.appengine.ext import ndb
 class Comment(ndb.Model):
     """
     A class to model a user comment about a particular plaque.
-    
+
     Linked to a single Plaque object via the .plaque KeyProperty/FK.
     """
     text = ndb.TextProperty()
@@ -37,12 +37,14 @@ class Plaque(ndb.Model):
     TINY_SIZE_PX = 100
     THUMBNAIL_SIZE_PX = 300
     DISPLAY_SIZE_PX = 1024
+    ALLOWED_ROTATIONS = [90, 180, 270]
 
     title = ndb.StringProperty(required=True) # StringProperty: 1500 char limit
     description = ndb.TextProperty(required=True) # no limit on TextProperty
     location = ndb.GeoPtProperty(required=True)
     pic = ndb.StringProperty()
     img_url = ndb.StringProperty()
+    img_rot = ndb.IntegerProperty(default=0)
     tags = ndb.StringProperty(repeated=True)
     comments = ndb.KeyProperty(repeated=True, kind=Comment)
     approved = ndb.BooleanProperty(default=False)
@@ -84,7 +86,7 @@ class Plaque(ndb.Model):
 
     @classmethod
     def pending_list(cls):
-        """A separate method from approved() so that it will 
+        """A separate method from approved() so that it will
         never be memcached."""
         plaques = Plaque.query().filter(Plaque.approved != True
                                ).order(-Plaque.approved
@@ -129,22 +131,34 @@ class Plaque(ndb.Model):
 
         return tag_counts
 
+    def set_pic_and_url(self):
+
     @property
     def img_url_tiny(self):
         """A URL for a square, tiny image for infowindow popups."""
-        return '%s=s%s-c' % (self.img_url, self.TINY_SIZE_PX)
+        url = '%s=s%s-c' % (self.img_url, self.TINY_SIZE_PX)
+        if self.img_rot in Plaque.ALLOWED_ROTATIONS:
+            url = "%s-r%s" % (url, self.img_rot)
+        return url
 
     @property
     def img_url_thumbnail(self):
         """A URL for a square, THUMBNAIL_SIZE_PX wide image for thumbnails."""
-        return '%s=s%s-c' % (self.img_url, self.THUMBNAIL_SIZE_PX)
+        url = '%s=s%s-c' % (self.img_url, self.THUMBNAIL_SIZE_PX)
+        if self.img_rot in Plaque.ALLOWED_ROTATIONS:
+            url = "%s-r%s" % (url, self.img_rot)
+        return url
 
     @property
     def img_url_display(self):
         """A URL for a display-size image for display."""
-        return '%s=s%s' % (self.img_url, self.DISPLAY_SIZE_PX)
+        url = '%s=s%s' % (self.img_url, self.DISPLAY_SIZE_PX)
+        if self.img_rot in Plaque.ALLOWED_ROTATIONS:
+            url = "%s-r%s" % (url, self.img_rot)
+        return url
 
     @property
     def page_url(self):
         """This plaque's key-based page URL."""
-        return '/plaque/%s' % self.key.urlsafe()
+        url = '/plaque/%s' % self.key.urlsafe()
+        return url

@@ -34,7 +34,9 @@
                     >Plaque Pages<span class="caret"></span></a>
                     <ul class="dropdown-menu scrollable-menu" role="menu">
                         {% for i in pages_list %}
-                            <li><a href="/page/{{i}}">Plaques Page {{i}}</a></li>
+                            <li {% if page_num and page_num == i %}class="active"{% endif %}>
+                                <a href="/page/{{i}}">Plaques Page {{i}}</a>
+                            </li>
                         {% endfor %}
                     </ul>
                 </li>

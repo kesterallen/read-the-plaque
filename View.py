@@ -39,7 +39,6 @@ def main():
         ('/update/?', h.EditPlaque),
         ('/edit/(.+?)/?', h.EditPlaque),
         ('/edit/?', h.EditPlaque),
-        #('/rotate_image/(.+?)', h.RotateImage),
         #('/comment', h.AddComment),
         ('/tag/(.+?)', h.ViewTag),
         ('/tags/?', h.ViewAllTags),
@@ -47,14 +46,14 @@ def main():
         ('/rss', h.RssFeed),
         ('/flush', h.FlushMemcache),
         ('/counts', h.Counts),
-        ('/deleteall', h.DeleteEverything),
+        #('/deleteall', h.DeleteEverything),
         ('/delete', h.DeleteOnePlaque),
         ('/pending', h.ViewPending),
         ('/approve', h.ApprovePending),
         ('/approveall', h.ApproveAllPending),
         ('/', h.ViewPlaquesPage),
-        ('/(.+?)/?', h.ViewOnePlaque), # supports the old_site_id
         ('/(.+?)/(.+?)', h.ViewOnePlaque), # supports the old_site_id
+        ('/(.+?)/?', h.ViewOnePlaque), # supports the old_site_id
     ], debug=True)
 
     app.error_handlers[404] = handle_404

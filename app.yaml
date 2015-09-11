@@ -5,7 +5,11 @@ api_version: 1
 threadsafe: true
 
 handlers:
-- url: /apple-touch-icon.png
+- url: /robots.txt
+  static_files: static/robots.txt
+  upload: static/robots.txt
+
+- url: /apple-touch-icon.*
   static_files: static/images/apple-touch-icon.png
   upload: static/images/apple-touch-icon.png
 
@@ -36,10 +40,6 @@ handlers:
   login: admin
 
 - url: /edit
-  script: View.app
-  login: admin
-
-- url: /rotate_image
   script: View.app
   login: admin
 

@@ -40,13 +40,13 @@ plaque_ids_all = [
     1309, 1315, 1319, 1322, 1325, 723, 729, 1331, 1336,
 ]
 
-plaque_ids = plaque_ids_all
+plaque_ids = [546, 556, 310, 322, 340, 310, 322, 340, 310, 322, 340, 285]
 
 plaque_ids.sort()
 
 #site_url = 'http://10.10.15.40:8080'
-site_url = 'http://127.0.0.1:8080'
-#site_url = 'http://readtheplaque.net'
+#site_url = 'http://127.0.0.1:8080'
+site_url = 'http://readtheplaque.net'
 post_url = site_url + '/submit-your-own'
 flush_url = site_url + '/flush'
 
@@ -87,11 +87,9 @@ def get_gps_location(soup):
             gps_loc = [c.encode('utf-8')
                            for c in meta.attrs['content'].split(';')]
     if gps_loc is None:
-        gps_str = "67,67"
-    else:
-        gps_str = ",".join(gps_loc)
+        gps_loc = [67, 67]
 
-    return gps_str
+    return gps_loc
 
 def get_page_contents(soup):
     #post = soup.find(id='post')
@@ -152,7 +150,8 @@ for iplaque, plaque_id in enumerate(plaque_ids):
     #img_filename = get_image(img_url)
 
     values = {
-        'location': gps_loc,
+        'lat': gps_loc[0],
+        'lng': gps_loc[1],
         'plaque_image_url': img_url,
         'plaque_image_file': '',
         'title': title,
@@ -163,9 +162,9 @@ for iplaque, plaque_id in enumerate(plaque_ids):
     post_resp = requests.post(post_url, data=values)
     if post_resp.status_code != 200:
         print "FAIL FAIL FAIL",
-    print 1+iplaque, '/', len(plaque_ids), url,
-    print 'post:', post_url, post_resp
-    print title
+        print 1+iplaque, '/', len(plaque_ids), url,
+        print 'post:', post_url, post_resp
+        print title
 
 flush_resp = requests.get(flush_url)
 print 'Flush:', flush_resp

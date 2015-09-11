@@ -34,8 +34,6 @@ ADD_STATES = {'ADD_STATE_SUCCESS': ADD_STATE_SUCCESS,
 
 # TODO before go-live
 # * Search for plaque text and title
-# * Make plaque submission require login
-#       possibly multiple OAUTH login
 # * Change .net to .com for final deploy
 
 # The wordpress admin dashboard is pretty easy to use and the process to
@@ -76,12 +74,20 @@ JINJA_ENVIRONMENT = jinja2.Environment (
 # However, the write rate should be limited to ~1/second.
 
 def get_default_template_values(**kwargs):
-    template_values = {
-        'num_pending': Plaque.num_pending(),
-        'footer_items': get_footer_items(),
-        'loginout': loginout(),
-        'pages_list': get_pages_list(),
-    }
+    template_values = memcache.get('default_template_values')
+    if template_values is None:
+        template_values = {
+            'num_pending': Plaque.num_pending(),
+            'footer_items': get_footer_items(),
+            'loginout': loginout(),
+            'pages_list': get_pages_list(),
+        }
+        memcache_status = memcache.set('default_template_values', template_values)
+        if not memcache_status:
+            logging.debug("memcaching for default_template_values failed")
+    else:
+        logging.debug("memcache.get worked for default_template_values")
+
     for k, v in kwargs.items():
         template_values[k] = v
     return template_values
@@ -205,6 +211,7 @@ class ViewPlaquesPage(webapp2.RequestHandler):
                                   plaques=plaques,
                                   start_index=start_index,
                                   end_index=end_index,
+                                  page_num=page_num,
                                   mapzoom=2)
 
             template_text = template.render(template_values)
@@ -244,6 +251,7 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
         Put the single plaque into a list for rendering so that the common
         map functionality can be used unchanged.
         """
+        logging.info("plaque_key=%s" % plaque_key)
         if comment_key is not None:
             comment = ndb.Key(urlsafe=comment_key).get()
             plaque = Plaque.query().filter(Plaque.approved == True
@@ -276,6 +284,8 @@ class ViewOnePlaque(ViewOnePlaqueParent):
     Render the single-plaque page from a plaque key, or get a random plaque.
     """
     def get(self, plaque_key=None, ignored_cruft=None):
+        logging.info("plaque_key=%s" % plaque_key)
+        logging.info("ignored_cruft=%s" % ignored_cruft)
         self._get_from_key(plaque_key=plaque_key)
 
 #class ViewOnePlaqueFromComment(ViewOnePlaqueParent):
@@ -422,25 +432,21 @@ class AddPlaque(webapp2.RequestHandler):
 
             # Upload the image for a new plaque, or update the image for an
             # editted plaque, if specified.
-            if not is_edit:
-                gcs_file_name, gcs_url = self._upload_image_to_gcs(img_name,
-                                                                   img_fh)
-                plaque.pic = gcs_file_name
+            is_upload_pic = (is_edit and img_name is not None) or (not is_edit)
+            if is_upload_pic:
+                gcs_fn = plaque.pic if is_edit else None
+                gcs_fn, gcs_url = self._upload_image(img_name, img_fh, gcs_fn)
+                plaque.pic = gcs_fn
                 plaque.img_url = gcs_url
-            else:
-                if img_name is not None:
-                    gcs_file_name, gcs_url = self._upload_image_to_gcs(
-                                                      img_name,
-                                                      img_fh,
-                                                      gcs_fn=plaque.pic)
-                    plaque.pic = gcs_file_name
-                    plaque.img_url = gcs_url
 
             # Write to the updated_* fields if this is an edit:
             #
             if is_edit:
                 plaque.updated_by = users.get_current_user()
                 plaque.updated_on = datetime.datetime.now()
+                img_rot = self.request.get('img_rot')
+                if img_rot is not None and img_rot != 0:
+                    plaque.img_rot = int(img_rot)
             else:
                 plaque.updated_by = None
                 plaque.updated_on = None
@@ -477,6 +483,7 @@ class AddPlaque(webapp2.RequestHandler):
         lat = self.request.get('lat')
         lng = self.request.get('lng')
         location = ndb.GeoPt(lat, lng)
+        print "lat %s lng %s location %s" % (lat, lng, location)
 
         if users.get_current_user():
             created_by = users.get_current_user()
@@ -512,7 +519,7 @@ class AddPlaque(webapp2.RequestHandler):
 
         return location, created_by, title, description, img_name, img_fh, tags
 
-    def _upload_image_to_gcs(self, img_name, img_fh, gcs_fn=None):
+    def _upload_image(self, img_name, img_fh, gcs_fn=None):
         """
         Upload pic into GCS
 
@@ -524,9 +531,12 @@ class AddPlaque(webapp2.RequestHandler):
         If gcs_fn is specified, overwrite that gcs filename. This is used
         for updating the picture.
         """
+        # Kill old image:
+        if gcs_fn is not None:
+            gcs.delete(gcs_fn)
+
         date_slash_time = datetime.datetime.now().strftime("%Y%m%d/%H%M%S")
-        if gcs_fn is None:
-            gcs_fn= '%s/%s/%s' % (GCS_BUCKET, date_slash_time, img_name)
+        gcs_fn= '%s/%s/%s' % (GCS_BUCKET, date_slash_time, img_name)
 
         ct = mimetypes.guess_type(img_name)[0]
         if ct is None:
@@ -631,30 +641,30 @@ class DeleteOnePlaque(webapp2.RequestHandler):
         memcache.flush_all()
         self.redirect('/')
 
-class DeleteEverything(webapp2.RequestHandler):
-    def get(self):
-        comments = Comment.query().fetch()
-        for comment in comments:
-            comment.key.delete()
-
-        plaques = Plaque.query().fetch()
-        for plaque in plaques:
-            plaque.key.delete()
-
-        num_images = 0
-        images = gcs.listbucket(GCS_BUCKET)
-        for image in images:
-            num_images += 1
-            try:
-                gcs.delete(image.filename)
-            except:
-                pass
-
-        msg = "Deleted %s comments, %s plaques, %s images" % (
-                len(comments), len(plaques), num_images)
-
-        memcache.flush_all()
-        self.response.write(msg)
+#class DeleteEverything(webapp2.RequestHandler):
+#    def get(self):
+#        comments = Comment.query().fetch()
+#        for comment in comments:
+#            comment.key.delete()
+#
+#        plaques = Plaque.query().fetch()
+#        for plaque in plaques:
+#            plaque.key.delete()
+#
+#        num_images = 0
+#        images = gcs.listbucket(GCS_BUCKET)
+#        for image in images:
+#            num_images += 1
+#            try:
+#                gcs.delete(image.filename)
+#            except:
+#                pass
+#
+#        msg = "Deleted %s comments, %s plaques, %s images" % (
+#                len(comments), len(plaques), num_images)
+#
+#        memcache.flush_all()
+#        self.response.write(msg)
 
 class ViewPending(webapp2.RequestHandler):
     def get(self):

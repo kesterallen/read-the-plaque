@@ -18,7 +18,7 @@
                     <![CDATA[
                     <p>
                         <a href="http://readtheplaque.net/{{plaque.page_url}}">
-                            <img src="{{plaque.img_url_thumbnail}}" 
+                            <img src="{{plaque.img_url_thumbnail}}"
                                  alt="{{plaque.title}}, uploaded at {{plaque.created_on}}"
                                  title="{{plaque.title}}, uploaded at {{plaque.created_on}}"
                             />

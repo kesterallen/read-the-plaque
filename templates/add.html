@@ -8,7 +8,7 @@
 <div class="container-fluid">
     <h1>Add a new Plaque</h1>
 
-        <form 
+        <form
             action="/add"
             method="POST"
             enctype="multipart/form-data">
@@ -58,7 +58,11 @@
 
             <div class="col-xs-12 col-md-6">
                 <div class="form-group">
-                    <legend>Tell us about the plaque. Transcribe it if you can.</legend>
+                    <legend>
+                    Tell us about the plaque. Transcribe it if you can.
+                    Include contact information if you'd like us to let you
+                    know when your plaque is published.
+                    </legend>
                     <textarea class="form-control"
                               id="plaque_description"
                               name="description"
@@ -74,10 +78,10 @@
                     <input type="text" class="gllpSearchField" placeholder="Click the plaque's location on the map, or search for it, or enter its lat/long location" style="width: 90%;">
                     <input type="button" class="gllpSearchButton" value="search">
                     <div class="gllpMap" style="width: 100%">Google Maps</div>
-                    Latitude: <input type="text" name="lat" class="gllpLatitude" value="0"/>
-                    Longitude: <input type="text" name="lng" class="gllpLongitude" value="-20"/>
+                    <input hidden type="text" name="lat" class="gllpLatitude" value="0"/>
+                    <input hidden type="text" name="lng" class="gllpLongitude" value="-20"/>
                     <input hidden type="text" class="gllpZoom" value="2"/>
-                    <input type="button" class="gllpUpdateButton" value="Go to lat/long">
+                    <input hidden type="button" class="gllpUpdateButton" value="Go to lat/long">
                     <br/>
                 </div>
             </div>
