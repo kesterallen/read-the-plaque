@@ -6,12 +6,17 @@
 
         var mapOptions = {
             center: {
-                {% if all_plaques|length == 1 %}
-                    lat: {{all_plaques[0].location.lat}},
-                    lng: {{all_plaques[0].location.lon}}
+                {% if mapcenter %}
+                    lat: {{mapcenter['lat']}},
+                    lng: {{mapcenter['lng']}}
                 {% else %}
-                    lat: 0,
-                    lng: -20,
+                    {% if all_plaques|length == 1 %}
+                        lat: {{all_plaques[0].location.lat}},
+                        lng: {{all_plaques[0].location.lon}}
+                    {% else %}
+                        lat: 15,
+                        lng: -25,
+                    {% endif %}
                 {% endif %}
             },
             zoom: {{mapzoom}},

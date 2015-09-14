@@ -25,6 +25,7 @@ import lib.cloudstorage as gcs
 
 from Models import Comment, Plaque
 
+PLAQUE_SEARCH_INDEX_NAME = 'plaque_index'
 ADMIN_EMAIL = 'kester+readtheplaque@gmail.com'
 NOTIFICATION_SENDER_EMAIL = ADMIN_EMAIL
 ADD_STATE_SUCCESS = 'success'
@@ -95,27 +96,15 @@ def get_default_template_values(**kwargs):
         template_values[k] = v
     return template_values
 
-def email_admin(plaque, comment=None):
-    if comment:
-        subject='Comment added to plaque {0.title} at {%0.page_url}'.format(plaque)
-        msg = """Comment
-                 <p>{0.text}</p>
-                 added to {1.title}
-                 <a href="http://readtheplaque.net{1.page_url}">
-                 here</a>""".format(comment, plaque)
-    else:
-        subject='New Plaque {0.title} added at {0.page_url}'.format(plaque)
-        msg = """<p>Plaque '{0.title}'</p>
-                 <p>at {0.page_url}</p>
-                 <p>{0.description}</p> added
-                 <a href="http://readtheplaque.net{0.page_url}">
-                 here</a>""".format(plaque)
-
-    mail.send_mail(sender=NOTIFICATION_SENDER_EMAIL,
-                   to=ADMIN_EMAIL,
-                   subject=subject,
-                   body=msg,
-                   html=msg)
+def email_admin(msg):
+    try:
+        mail.send_mail(sender=NOTIFICATION_SENDER_EMAIL,
+                       to=ADMIN_EMAIL,
+                       subject=msg,
+                       body=msg,
+                       html=msg)
+    except:
+        logging.debug('mail failed: %s' % msg)
 
 def plaqueset_key(plaqueset_name=DEFAULT_PLAQUESET_NAME):
     """
@@ -167,13 +156,25 @@ def loginout():
     user = users.get_current_user()
     if user:
         loginout = {'is_admin': users.is_current_user_admin(),
-                    'url': users.create_logout_url('/'),
+                    'url': users.create_logout_url('/flush'),
                     'text': 'Log out'}
     else:
         loginout = {'is_admin': users.is_current_user_admin(),
-                    'url': users.create_login_url('/'),
+                    'url': users.create_login_url('/flush'),
                     'text': 'Admin login'}
     return loginout
+
+def handle_404(request, response, exception):
+    email_admin('404 error!')
+    template = JINJA_ENVIRONMENT.get_template('error.html')
+    response.write(template.render({'code': 404, 'error_text': exception}))
+    response.set_status(404)
+
+def handle_500(request, response, exception):
+    email_admin('500 error!')
+    template = JINJA_ENVIRONMENT.get_template('error.html')
+    response.write(template.render({'code': 500, 'error_text': exception}))
+    response.set_status(500)
 
 
 class ViewPlaquesPage(webapp2.RequestHandler):
@@ -252,34 +253,46 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
     def _get_from_key(self, comment_key=None, plaque_key=None):
         """
         Put the single plaque into a list for rendering so that the common
-        map functionality can be used unchanged.
+        map functionality can be used unchanged. Attempt to serve a valid
+        plaque, but if the inputs are completely messed up, serve a random
+        plaque.
         """
+        plaque = None
         logging.info("plaque_key=%s" % plaque_key)
         if comment_key is not None:
+            logging.debug("Using comment key")
             comment = ndb.Key(urlsafe=comment_key).get()
             plaque = Plaque.query().filter(Plaque.approved == True
                                   ).filter(Plaque.comments == comment.key
                                   ).get()
         elif plaque_key is not None:
             try:
+                logging.debug("Trying old_site_id")
                 old_site_id = int(plaque_key)
                 plaque = Plaque.query().filter(Plaque.approved == True
                                       ).filter(Plaque.old_site_id == old_site_id
                                       ).get()
             except ValueError as err:
-                plaque = ndb.Key(urlsafe=plaque_key).get()
-        else:
+                logging.debug("Using plaque_key: '%s'" % plaque_key)
+                try:
+                    plaque = ndb.Key(urlsafe=plaque_key).get()
+                except:
+                    pass
+                logging.debug("Using plaque_key, plaque retrieved was: '%s'" % plaque)
+
+        if plaque is None:
             logging.debug("Neither comment_key nor plaque_key is specified. "
                           "Grab a random plaque.")
             key = self._random_plaque_key()
             self.redirect('/plaque/' + key)
             return
 
+        logging.debug("Plaque: %s" % plaque)
         template = JINJA_ENVIRONMENT.get_template('one.html')
         template_values = get_default_template_values(
                               all_plaques=[plaque],
                               plaques=[plaque],
-                              mapzoom=8)
+                              mapzoom=12)
         self.response.write(template.render(template_values))
 
 class ViewOnePlaque(ViewOnePlaqueParent):
@@ -335,6 +348,7 @@ class ViewTag(webapp2.RequestHandler):
                                ).fetch()
         template = JINJA_ENVIRONMENT.get_template('all.html')
         template_values = get_default_template_values(
+                              all_plaques=plaques,
                               plaques=plaques,
                               start_index=0,
                               end_index=len(plaques),
@@ -395,8 +409,9 @@ class AddPlaque(webapp2.RequestHandler):
         return message
 
     def get(self, message=None):
-        template = JINJA_ENVIRONMENT.get_template('add.html')
-        template_values = get_default_template_values(mapzoom=5)
+        maptext = "Click the plaque's location on the map, or search " + \
+                  "for it, or enter its lat/long location"
+        template_values = get_default_template_values(mapzoom=5, maptext=maptext)
         message = self._get_message(message)
         if message is not None:
             template_values['message'] = message
@@ -460,7 +475,18 @@ class AddPlaque(webapp2.RequestHandler):
                                  'old_site_id in AddPlaque')
             plaque.put()
 
-            #email_admin(plaque)
+            # Make the plaque searchable:
+            #
+            try:
+                plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
+                plaque_search_index.put(plaque.to_search_document())
+            except search.Error as err:
+                logging.error(err)
+                raise err
+
+            email_admin(
+                'New plaque! <a href="http://readtheplaque.net%s">Link</a>' % \
+                plaque.page_url)
             state = ADD_STATES['ADD_STATE_SUCCESS']
             msg = plaque.page_url
         except (BadValueError, ValueError, SubmitError) as err:
@@ -581,9 +607,6 @@ class AddPlaque(webapp2.RequestHandler):
         op = {b'x-goog-acl': b'public-read'}
         return ct, op
 
-
-
-
 class EditPlaque(AddPlaque):
     """
     Edit a plaque entity. Transactional in the _post method.
@@ -604,6 +627,7 @@ class EditPlaque(AddPlaque):
         template_values = {
             'plaque': plaque,
             'mapzoom': 5,
+            'maptext': 'Click the map, or type a search here',
             'loginout': loginout()
         }
         if message is not None:
@@ -617,21 +641,74 @@ class EditPlaque(AddPlaque):
         super(EditPlaque, self).post(is_edit=True)
 
 
-# TODO: See:
-#     http://stackoverflow.com/questions/13305302/using-search-api-python-google-app-engine-big-table
-#     https://cloud.google.com/appengine/docs/python/search/ for details
-#
-#class SearchPlaques(webapp2.RequestHandler):
-#    """Run a search in the title and description."""
-#    def get(self):
-#        raise NotImplementedError("No get method for SearchPlaques")
-#
-#    def post(self):
-#        search_term = self.request.get('search_term')
-#        plaques = Plaque.query().filter(Plaque.approved == True
-#                               ).filter(Plaque.tags == tag
-#                               ).order(-Plaque.created_on
-#                               ).fetch()
+class SearchPlaques(webapp2.RequestHandler):
+    """Run a search in the title and description."""
+    def post(self):
+        search_term = self.request.get('search_term')
+        self.get(search_term)
+
+    def get(self, search_term=None):
+        if search_term is None:
+            plaques = []
+        else:
+            plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
+            results = plaque_search_index.search(search_term)
+            plaques = [ndb.Key(urlsafe=r.doc_id).get() for r in results]
+
+        template = JINJA_ENVIRONMENT.get_template('all.html')
+        template_values = get_default_template_values(
+                              all_plaques=plaques,
+                              plaques=plaques,
+                              start_index=0,
+                              end_index=len(plaques),
+                              mapzoom=2)
+        self.response.write(template.render(template_values))
+
+class SearchPlaquesGeo(webapp2.RequestHandler):
+    """Run a geographic search: plaques within radius of center are returned."""
+
+    def get(self, lat=None, lng=None, search_radius_meters=None):
+
+        # Serve the form if a search hasn't been specified:
+        #
+        if lat is None or lng is None or search_radius_meters is None:
+            maptext = 'Click the map, or type a search here'
+            template_values = get_default_template_values(mapzoom=2, maptext=maptext)
+            template = JINJA_ENVIRONMENT.get_template('geosearch.html')
+            self.response.write(template.render(template_values))
+            return
+
+        # Otherwise show the results:
+        #
+        plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
+
+        query_string = 'distance(location, geopoint(%s, %s)) < %s' % (
+                        lat, lng, search_radius_meters)
+        query = search.Query(query_string)
+        results = plaque_search_index.search(query)
+        plaques = [ndb.Key(urlsafe=r.doc_id).get() for r in results]
+
+        template = JINJA_ENVIRONMENT.get_template('all.html')
+        template_values = get_default_template_values(
+                              all_plaques=plaques,
+                              plaques=plaques,
+                              start_index=0,
+                              end_index=len(plaques),
+                              mapzoom=6,
+                              mapcenter={'lat': lat, 'lng': lng},)
+        self.response.write(template.render(template_values))
+
+    def post(self):
+        try:
+            lat = self.request.get('lat')
+            lng = self.request.get('lng')
+            search_radius_meters = self.request.get('search_radius_meters')
+        except:
+            err = SubmitError(
+                    "The search area wasn't specified correctly ((%s, %s) < %s)"
+                    ". Please try again." % (lat, lng, search_radius_meters))
+            raise err
+        self.get(lat, lng, search_radius_meters)
 
 class FlushMemcache(webapp2.RequestHandler):
     def get(self):
@@ -712,6 +789,23 @@ class ViewPending(webapp2.RequestHandler):
                               mapzoom=2)
         template_text = template.render(template_values)
         self.response.write(template_text)
+
+class AddSearchIndexAll(webapp2.RequestHandler):
+    def get(self):
+        plaques = Plaque.query().fetch()
+        plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
+        igood = 0
+        ibad = 0
+        for plaque in plaques:
+            try:
+                plaque_search_index.put(plaque.to_search_document())
+                igood += 1
+            except search.Error as err:
+                ibad += 1
+                logging.error(err)
+            logging.debug('in process: wrote %s good docs, %s failed' % (
+                          igood, ibad))
+        self.response.write('wrote %s good docs, %s failed' % (igood, ibad))
 
 class ApproveAllPending(webapp2.RequestHandler):
     """Approve all pending plaques"""

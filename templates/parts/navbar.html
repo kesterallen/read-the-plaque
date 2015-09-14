@@ -1,4 +1,4 @@
-{% if loginout.is_admin %}
+{% if loginout and loginout.is_admin %}
 <nav class="navbar navbar-inverse navbar-fixed-top">
 {% else %}
 <nav class="navbar navbar-default navbar-fixed-top">
@@ -25,13 +25,19 @@
 
         <div class="collapse navbar-collapse" id="navbar-collapse-1">
             <ul class="nav navbar-nav navbar-right">
+                <form class="navbar-form navbar-left" role="search" action="/search" method="POST">
+                    <div class="form-group">
+                        <input name="search_term" type="text" class="form-control" placeholder="Search Plaques">
+                    </div>
+                </form>
+                <li><a href="/geo">Location Search</a></li>
                 <li class="dropdown">
                     <a href="#"
                        class="dropdown-toggle"
                        data-toggle="dropdown"
                        role="button"
                        aria-expanded="false"
-                    >Plaque Pages<span class="caret"></span></a>
+                    >All Plaques<span class="caret"></span></a>
                     <ul class="dropdown-menu scrollable-menu" role="menu">
                         {% for i in pages_list %}
                             <li {% if page_num and page_num == i %}class="active"{% endif %}>
@@ -41,7 +47,7 @@
                     </ul>
                 </li>
 
-                {% if loginout.is_admin %}
+                {% if loginout and loginout.is_admin %}
                     <li><a href="/pending">Pending <span class="badge">{{num_pending}}</span></a></li>
                     <li><a href="/flush">Flush Memcache</a></li>
                 {% endif %}

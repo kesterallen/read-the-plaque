@@ -13,17 +13,6 @@ JINJA_ENVIRONMENT = jinja2.Environment (
     extensions=['jinja2.ext.autoescape'],
     autoescape=False) # turn off autoescape to allow html redering of descriptions
 
-def handle_404(request, response, exception):
-    template = JINJA_ENVIRONMENT.get_template('error.html')
-    response.write(template.render({'code': 404, 'error_text': exception}))
-    response.set_status(404)
-
-def handle_500(request, response, exception):
-    # TODO: email admin
-    template = JINJA_ENVIRONMENT.get_template('error.html')
-    response.write(template.render({'code': 500, 'error_text': exception}))
-    response.set_status(500)
-
 def main():
     app = webapp2.WSGIApplication([
         ('/page/(.+?)/(.+?)', h.ViewPlaquesPage),
@@ -50,13 +39,21 @@ def main():
         ('/disapprove', h.DisapprovePlaque),
         ('/approve', h.ApprovePending),
         ('/approveall', h.ApproveAllPending),
+        ('/addsearchall', h.AddSearchIndexAll),
+        ('/search/(.+?)', h.SearchPlaques),
+        ('/search/?', h.SearchPlaques),
+        ('/geo/(.*?)/(.*?)/(.*?)/?', h.SearchPlaquesGeo),
+        ('/geo/.+?', h.SearchPlaquesGeo),
+        ('/geo/?', h.SearchPlaquesGeo),
+        ('/s/(.+?)', h.SearchPlaques),
+        ('/s/?', h.SearchPlaques),
         ('/', h.ViewPlaquesPage),
         ('/(.+?)/(.+?)', h.ViewOnePlaque), # supports the old_site_id
         ('/(.+?)/?', h.ViewOnePlaque), # supports the old_site_id
     ], debug=True)
 
-    app.error_handlers[404] = handle_404
-    #app.error_handlers[500] = handle_500
+    app.error_handlers[404] = h.handle_404
+    app.error_handlers[500] = h.handle_500
 
     return app
 

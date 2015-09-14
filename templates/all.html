@@ -2,7 +2,15 @@
 
 {% block content %}
 <div class="container-fluid">
-    {% include 'parts/map.html' %}
+
+    <div class="row">
+        <div class="col-xs-11 col-centered">
+            <div id="map"></div>
+        </div>
+    </div>
+
+    {% if plaques|length == 0 %}<h2>No plaques in that search</h2>{% endif %}
+
     <div class="pinterest-row">
         {% for iplaque in range(start_index, end_index) %}
             {% if iplaque < plaques|length %}
@@ -27,17 +35,29 @@
         {% endfor %}
     </div>
 
-    <div class="row">
-            <ul class="list-inline">
-                {% for plaque in all_plaques %}
-                    <li>
-                        <small>
-                        <a href="{{plaque.page_url}}">{{plaque.title}}</a>
-                        </small>
-                    </li>
-                {% endfor %}
-            </ul>
-    </div>
+    {% if all_plaques|length > 0 %}
+        <div class="panel-group" id="accordion">
+            <div class="panel panel-default" id="panel1">
+
+                <div class="panel-heading">
+                    <h4 class="panel-title">
+                        <a data-toggle="collapse"
+                           data-target="#collapseOne"
+                           href="#collapseOne">All Plaques</a>
+                    </h4>
+                </div>
+
+                <div id="collapseOne" class="panel-collapse collapse">
+                    <div class="panel-body">
+                        {% for plaque in all_plaques %}
+                            <small><a href="{{plaque.page_url}}">{{plaque.title}}</a></small>
+                        {% endfor %}
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    {% endif %}
 
 </div>
 {% endblock %}

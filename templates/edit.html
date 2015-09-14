@@ -80,18 +80,8 @@
                 </div>
             </div>
 
-            <div class="col-xs-12">
-                <div class="gllpLatlonPicker form-group">
-                    <legend>Location</legend>
-                    <input type="text" class="gllpSearchField" placeholder="Click the plaque's location on the map, or search for it, or enter its lat/long location" style="width: 90%;">
-                    <input type="button" class="gllpSearchButton" value="search">
-                    <div class="gllpMap" style="width: 100%">Google Maps</div>
-                    <input hidden type="text" name="lat" class="gllpLatitude" value="{{plaque.location.lat}}"/>
-                    <input hidden type="text" name="lng" class="gllpLongitude" value="{{plaque.location.lon}}"/>
-                    <input hidden type="text" class="gllpZoom" value="2"/>
-                    <input hidden type="button" class="gllpUpdateButton" value="Go to lat/long">
-                    <br/>
-                </div>
+            <div class="col-xs-12 col-md-6">
+                {% include 'parts/map_picker.html' %}
             </div>
 
             <div class="col-xs-11">

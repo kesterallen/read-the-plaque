@@ -4,6 +4,7 @@ from collections import defaultdict
 
 from google.appengine.api import memcache
 from google.appengine.ext import ndb
+from google.appengine.api import search
 
 class Comment(ndb.Model):
     """
@@ -160,3 +161,15 @@ class Plaque(ndb.Model):
         """This plaque's key-based page URL."""
         url = '/plaque/%s' % self.key.urlsafe()
         return url
+
+    def to_search_document(self):
+        doc = search.Document(
+            doc_id = self.key.urlsafe(),
+            fields=[
+                search.TextField(name='title', value=self.title),
+                search.HtmlField(name='description', value=self.description),
+                search.GeoField(name='location', value=search.GeoPoint(self.location.lat,
+                                                                       self.location.lon)),
+            ],
+        )
+        return doc
