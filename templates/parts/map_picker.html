@@ -1,0 +1,11 @@
+<div class="gllpLatlonPicker form-group">
+    <legend>Location</legend>
+    <input type="text" class="gllpSearchField" placeholder="{{maptext}}" style="width: 90%;">
+    <input type="button" class="gllpSearchButton" value="Google Maps Search">
+    <div class="gllpMap" style="width: 100%">Google Maps</div>
+    <input hidden type="text" name="lat" class="gllpLatitude" {% if plaque %}value="{{plaque.location.lat}}"{% endif %}/>
+    <input hidden type="text" name="lng" class="gllpLongitude" {% if plaque %}value="{{plaque.location.lon}}"{% endif %}/>
+    <input hidden type="text" class="gllpZoom" value="{{mapzoom}}"/>
+    <input hidden type="button" class="gllpUpdateButton" value="Go to lat/long">
+    <br/>
+</div>
