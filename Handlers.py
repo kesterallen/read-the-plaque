@@ -292,7 +292,7 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
         template_values = get_default_template_values(
                               all_plaques=[plaque],
                               plaques=[plaque],
-                              mapzoom=12)
+                              mapzoom=15)
         self.response.write(template.render(template_values))
 
 class ViewOnePlaque(ViewOnePlaqueParent):

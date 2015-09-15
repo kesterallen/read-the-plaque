@@ -26,12 +26,16 @@
                 </a>
             </div>
             <div class="col-xs-12 col-md-6">
-                <p>{{plaque.description}}</p>
-                <ul class="list-inline">
-                    {% for tag in plaque.tags %}
-                        <li><a href="/tag/{{tag}}" alt="{{tag}}">{{tag}}</a></li>
-                    {% endfor %}
-                </ul>
+                <div class="panel panel-default">
+                    <div class="panel-body">
+                        <p>{{plaque.description}}</p>
+                        <ul class="list-inline">
+                            {% for tag in plaque.tags %}
+                                <li><a href="/tag/{{tag}}" alt="{{tag}}">{{tag}}</a></li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
                 <p><a class="btn btn-default" role="button" href="/geo/{{plaque.location.lat}}/{{plaque.location.lon}}/50000">Nearby Plaques</a></p>
 
                 <div id="map"></div>

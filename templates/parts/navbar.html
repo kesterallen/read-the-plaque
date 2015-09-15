@@ -24,12 +24,26 @@
                 <p class="navbar-text">
                     a project of <a href="http://99percentinvisible.org/">99% Invisible</a>
                 </p>
-                <form class="navbar-form navbar-left" role="search" action="/search" method="POST">
-                    <div class="form-group">
-                        <input name="search_term" type="text" class="form-control" placeholder="Search Plaques">
-                    </div>
-                </form>
-                <li><a href="/geo">Location Search</a></li>
+
+                <li class="dropdown">
+                    <a href="#"
+                       class="dropdown-toggle"
+                       data-toggle="dropdown"
+                       role="button"
+                       aria-expanded="false"
+                    >Search<span class="caret"></span></a>
+                    <ul class="dropdown-menu" role="menu">
+                        <li>
+                            <form class="navbar-form navbar-left" role="search" action="/search" method="POST">
+                                <div class="form-group">
+                                    <input name="search_term" type="text" class="form-control" placeholder="Search Plaques">
+                                </div>
+                            </form>
+                        </li>
+                        <li><a href="/geo">Location Search</a></li>
+                    </ul>
+                </li>
+
                 <li class="dropdown">
                     <a href="#"
                        class="dropdown-toggle"
