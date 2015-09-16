@@ -35,7 +35,7 @@ $.fn.gMapsLatLonPicker = (function() {
         mapOptions : {
             mapTypeId: google.maps.MapTypeId.ROADMAP,
             mapTypeControl: false,
-            disableDoubleClickZoom: true,
+            disableDoubleClickZoom: false,
             zoomControlOptions: true,
             streetViewControl: false
         },
@@ -199,6 +199,34 @@ $.fn.gMapsLatLonPicker = (function() {
             $(_self.vars.cssID + ".gllpSearchButton").bind("click", function() {
                 performSearch( $(_self.vars.cssID + ".gllpSearchField").val(), false );
             });
+
+            // Set location to browser location
+            $(_self.vars.cssID + ".gllpHereButton").bind("click", function() {
+                self_button = document.getElementById("herebutton");
+                old_self_button_text = self_button.value;
+                self_button.value = "Finding your location, please wait"; 
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(function (position) {
+
+                        var lat = document.getElementById("lat");
+                        lat.value = position.coords.latitude;
+
+                        var lng = document.getElementById("lng");
+                        lng.value = position.coords.longitude;
+
+                        var latlng = new google.maps.LatLng(position.coords.latitude, 
+                                                            position.coords.longitude);
+                        _self.vars.marker.setPosition(latlng);
+                        _self.vars.map.panTo(latlng);
+                        _self.vars.map.setZoom(14);
+                        
+                        self_button.value = old_self_button_text;
+                    });
+                } else { 
+                    alert("Geolocation is not supported by this browser.");
+                }
+            });
+
 
             // Search function by gllp_perform_search listener
             $(document).bind("gllp_perform_search", function(event, object) {

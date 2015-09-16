@@ -96,13 +96,13 @@ def get_default_template_values(**kwargs):
         template_values[k] = v
     return template_values
 
-def email_admin(msg):
+def email_admin(msg, body):
     try:
         mail.send_mail(sender=NOTIFICATION_SENDER_EMAIL,
                        to=ADMIN_EMAIL,
                        subject=msg,
-                       body=msg,
-                       html=msg)
+                       body=body,
+                       html=body)
     except:
         logging.debug('mail failed: %s' % msg)
 
@@ -165,13 +165,13 @@ def loginout():
     return loginout
 
 def handle_404(request, response, exception):
-    email_admin('404 error!')
+    email_admin('404 error!', '404 error!')
     template = JINJA_ENVIRONMENT.get_template('error.html')
     response.write(template.render({'code': 404, 'error_text': exception}))
     response.set_status(404)
 
 def handle_500(request, response, exception):
-    email_admin('500 error!')
+    email_admin('500 error!','500 error!')
     template = JINJA_ENVIRONMENT.get_template('error.html')
     response.write(template.render({'code': 500, 'error_text': exception}))
     response.set_status(500)
@@ -484,9 +484,13 @@ class AddPlaque(webapp2.RequestHandler):
                 logging.error(err)
                 raise err
 
-            email_admin(
-                'New plaque! <a href="http://readtheplaque.net%s">Link</a>' % \
-                plaque.page_url)
+            msg = 'New plaque! %s' %  plaque.page_url
+            body = """
+                <p>New plaque!</p>
+                <p><a href="http://readtheplaque.net%s">Link</a></p>
+                <p><img src="http://readtheplaque.ne/%s"/></p>
+                """ %  (plaque.page_url, plaque.img_url)
+            email_admin(msg, body)
             state = ADD_STATES['ADD_STATE_SUCCESS']
             msg = plaque.page_url
         except (BadValueError, ValueError, SubmitError) as err:
@@ -627,7 +631,7 @@ class EditPlaque(AddPlaque):
         template_values = {
             'plaque': plaque,
             'mapzoom': 5,
-            'maptext': 'Click the map, or type a search here',
+            'maptext': 'Click the map, do a search, or click "Get My Location"',
             'loginout': loginout()
         }
         if message is not None:

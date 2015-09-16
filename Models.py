@@ -166,6 +166,7 @@ class Plaque(ndb.Model):
         doc = search.Document(
             doc_id = self.key.urlsafe(),
             fields=[
+                search.TextField(name='tags', value=" ".join(self.tags)),
                 search.TextField(name='title', value=self.title),
                 search.HtmlField(name='description', value=self.description),
                 search.GeoField(name='location', value=search.GeoPoint(self.location.lat,
