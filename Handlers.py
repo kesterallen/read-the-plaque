@@ -94,6 +94,12 @@ def plaqueset_key(plaqueset_name=DEFAULT_PLAQUESET_NAME):
     """
     return ndb.Key('Plaque', plaqueset_name)
 
+def earliest_approved(cls):
+    item = cls.query(cls.approved == True
+                  ).order(cls.created_on
+                  ).get()
+    return item
+
 def last_five_approved(cls):
     new_items = cls.query(cls.approved == True
                   ).order(-cls.created_on
@@ -213,13 +219,11 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
         raise NotImplementedError("Don't call ViewOnePlaqueParent.get directly")
 
     def _random_plaque_key(self):
-        logging.debug("Neither comment_key nor plaque_key is specified. "
-                      "Grab a random plaque.")
         count = Plaque.query().count()
         if not count:
             raise ValueError("No plaques!")
 
-        iplaque = random.randint(1, count)
+        iplaque = random.randint(0, count-1)
         plaques = Plaque.query().filter(Plaque.approved == True
                                ).order(Plaque.created_on).fetch(offset=iplaque,
                                                                 limit=1)
@@ -274,9 +278,11 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
 
         if plaque is None:
             logging.debug("Neither comment_key nor plaque_key is specified. "
-                          "Grab a random plaque.")
-            key = self._random_plaque_key()
-            plaque = ndb.Key(urlsafe=key).get()
+                          "Serve the first plaque.")
+            #key = self._random_plaque_key()
+            #plaque = ndb.Key(urlsafe=key).get()
+            #self.redirect(plaque.title_page_url)
+            plaque = earliest_approved(Plaque)
             self.redirect(plaque.title_page_url)
             return
 
@@ -295,6 +301,14 @@ class ViewOnePlaque(ViewOnePlaqueParent):
     def get(self, plaque_key=None, ignored_cruft=None):
         self._get_from_key(plaque_key=plaque_key)
 
+class RandomPlaque(ViewOnePlaqueParent):
+    """
+    Render the single-plaque page from a plaque key, or get a random plaque.
+    """
+    def get(self):
+        plaque_key = self._random_plaque_key()
+        self._get_from_key(plaque_key=plaque_key)
+
 #class ViewOnePlaqueFromComment(ViewOnePlaqueParent):
 #    """
 #    Render the single-plaque page from a comment key.
@@ -304,18 +318,26 @@ class ViewOnePlaque(ViewOnePlaqueParent):
 
 class JsonOnePlaque(ViewOnePlaqueParent):
     """
-    Render the single-plaque page from a plaque key, or get a random plaque.
+    Get one plaque's JSON repr.
     """
     def get(self, plaque_key=None):
         if plaque_key is None:
             plaque_key = self._random_plaque_key()
 
         plaque = ndb.Key(urlsafe=plaque_key).get()
-        self.response.write(
-            json.dumps({
-                'plaque_key': plaque.key.urlsafe(),
-                'title': plaque.title,
-            }))
+        self.response.write(json.dumps(plaque.to_dict()))
+
+class JsonAllPlaques(webapp2.RequestHandler):
+    """
+    Get every plaques' JSON repr.
+    """
+    def get(self):
+        plaques = Plaque.query().order(-Plaque.created_on).fetch()
+        jsons = []
+        for plaque in plaques:
+            jsons.append(json.dumps(plaque.to_dict()))
+        
+        self.response.write(json.dumps(jsons))
 
 class ViewAllTags(webapp2.RequestHandler):
     def get(self):
@@ -388,11 +410,13 @@ class AddPlaque(webapp2.RequestHandler):
         state = self.request.get('state')
         if state is not None:
             if state == ADD_STATE_SUCCESS:
-                message = """
-                    Hooray! And thank you. We'll review your plaque and you'll
-                    see it appear on the map shortly
-                    <a href="%s">here</a>.
-                    """ % message
+                if users.is_current_user_admin():
+                    message = """Plaque added by admin:
+                        <a href="%s">here</a>.""" % message
+                else:
+                    message = """Hooray! And thank you. We'll review your
+                        plaque and you'll see it appear on the map shortly."""
+
             elif state == ADD_STATE_ERROR:
                 message = """
                       Sorry, your plaque submission had this error: '%s'
@@ -420,7 +444,8 @@ class AddPlaque(webapp2.RequestHandler):
         limited to ~1/second.
         """
 
-        memcache.flush_all()
+        if users.is_current_user_admin():
+            memcache.flush_all()
         try:
             plaqueset_name = self.request.get('plaqueset_name',
                                               DEFAULT_PLAQUESET_NAME)
@@ -599,7 +624,7 @@ class AddPlaque(webapp2.RequestHandler):
                 if len(guess_type) > 0:
                     ct = guess_type[0]
         except:
-            pass 
+            pass
         op = {b'x-goog-acl': b'public-read'}
         return ct, op
 
@@ -747,6 +772,8 @@ class DeleteOnePlaque(webapp2.RequestHandler):
             pass
         plaque.key.delete()
         memcache.flush_all()
+        email_admin('Plaque %s deleted' % plaque.title_url,
+                    'Plaque %s deleted' % plaque.title_url)
         self.redirect('/')
 
 #class DeleteEverything(webapp2.RequestHandler):
@@ -828,22 +855,22 @@ class ApprovePending(webapp2.RequestHandler):
     """Approve a plaque"""
     @ndb.transactional
     def post(self):
+        memcache.flush_all()
         plaque_key = self.request.get('plaque_key')
         plaque = ndb.Key(urlsafe=plaque_key).get()
         plaque.approved = True
         plaque.put()
-        memcache.flush_all()
         self.redirect('/pending')
 
 class DisapprovePlaque(webapp2.RequestHandler):
     """Disapprove a plaque"""
     @ndb.transactional
     def post(self):
+        memcache.flush_all()
         plaque_key = self.request.get('plaque_key')
         plaque = ndb.Key(urlsafe=plaque_key).get()
         plaque.approved = False
         plaque.put()
-        memcache.flush_all()
         self.redirect('/')
 
 class RssFeed(webapp2.RequestHandler):

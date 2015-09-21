@@ -214,3 +214,24 @@ class Plaque(ndb.Model):
             ],
         )
         return doc
+
+    def to_dict(self):
+        return {
+            'plaque_key': self.key.urlsafe(),
+            'title': self.title,
+            'title_url': self.title_url,
+            'description': self.description,
+            'location': str(self.location),
+            'pic': self.pic,
+            'img_url': self.img_url,
+            'img_rot': self.img_rot,
+            'tags': self.tags,
+            'comments': self.comments,
+            'approved': self.approved,
+            'created_on': str(self.created_on),
+            'created_by': self.created_by,
+            'updated_on': str(self.updated_on),
+            'updated_by': self.updated_by,
+            'old_site_id': self.old_site_id,
+        }
+
