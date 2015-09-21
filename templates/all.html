@@ -15,7 +15,7 @@
         {% for iplaque in range(start_index, end_index) %}
             {% if iplaque < plaques|length %}
                 {% set plaque = plaques[iplaque] %}
-                <a href="{{plaque.page_url}}">
+                <a href="{{plaque.title_page_url}}">
                     <div class="item">
                         <div class="well">
                             <h2>{{plaque.title}}</h2>
@@ -50,7 +50,7 @@
                 <div id="collapseOne" class="panel-collapse collapse">
                     <div class="panel-body">
                         {% for plaque in all_plaques %}
-                            <small><a href="{{plaque.page_url}}">{{plaque.title}}</a></small>
+                            <small><a href="{{plaque.title_page_url}}">{{plaque.title}}</a></small>
                         {% endfor %}
                     </div>
                 </div>

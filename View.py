@@ -11,7 +11,7 @@ JINJA_ENVIRONMENT = jinja2.Environment (
         os.path.join(os.path.dirname(__file__),
                      'templates')),
     extensions=['jinja2.ext.autoescape'],
-    autoescape=False) # turn off autoescape to allow html redering of descriptions
+    autoescape=False) # autoescape off, to allow html redering of descriptions
 
 def main():
     app = webapp2.WSGIApplication([
@@ -40,6 +40,7 @@ def main():
         ('/approve', h.ApprovePending),
         ('/approveall', h.ApproveAllPending),
         ('/addsearchall', h.AddSearchIndexAll),
+        ('/addtitleurlall', h.AddTitleUrlAll),
         ('/search/(.+?)', h.SearchPlaques),
         ('/search/?', h.SearchPlaques),
         ('/geo/(.*?)/(.*?)/(.*?)/?', h.SearchPlaquesGeo),
@@ -53,7 +54,7 @@ def main():
     ], debug=True)
 
     app.error_handlers[404] = h.handle_404
-    app.error_handlers[500] = h.handle_500
+    #app.error_handlers[500] = h.handle_500
 
     return app
 

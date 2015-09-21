@@ -1,3 +1,5 @@
+<script src="/static/nearhere.js"></script>
+
 {% if loginout and loginout.is_admin %}
 <nav class="navbar navbar-inverse navbar-fixed-top">
 {% else %}
@@ -41,6 +43,7 @@
                             </form>
                         </li>
                         <li><a href="/geo">Location Search</a></li>
+                        <li><a onclick="find_near_here()" href="#">Plaques near you</a></li>
                     </ul>
                 </li>
 
@@ -71,3 +74,25 @@
         </div>
     </div>
 </nav>
+
+<!-- Modal -->
+<div class="modal fade" id="locationModal" role="dialog">
+    <div class="modal-dialog">
+
+        <!-- Modal content-->
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h4 class="modal-title">Determining Your Location</h4>
+            </div>
+            <div class="modal-body">
+                <p>Read the Plaque is finding your location. This can take a minute.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+

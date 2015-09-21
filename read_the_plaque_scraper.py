@@ -46,7 +46,7 @@ plaque_ids.sort()
 
 #site_url = 'http://10.10.15.40:8080'
 #site_url = 'http://127.0.0.1:8080'
-site_url = 'http://readtheplaque.net'
+site_url = 'http://readtheplaque.com'
 post_url = site_url + '/submit-your-own'
 flush_url = site_url + '/flush'
 

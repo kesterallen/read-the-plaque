@@ -31,7 +31,7 @@
                 position: {lat: {{plaque.location.lat}},
                            lng: {{plaque.location.lon}}},
                 map: map,
-                url: "{{plaque.page_url}}",
+                url: "{{plaque.title_page_url}}",
                 infowindow: new google.maps.InfoWindow({
                     content: "{{plaque.title|escape}}<p>" + 
                              "<img src='{{plaque.img_url_tiny}}'/>"

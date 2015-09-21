@@ -227,7 +227,6 @@ $.fn.gMapsLatLonPicker = (function() {
                 }
             });
 
-
             // Search function by gllp_perform_search listener
             $(document).bind("gllp_perform_search", function(event, object) {
                 performSearch( $(object).attr('string'), true );

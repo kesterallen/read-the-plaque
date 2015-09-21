@@ -1,6 +1,7 @@
 
-import logging
 from collections import defaultdict
+import logging
+import re
 
 from google.appengine.api import memcache
 from google.appengine.ext import ndb
@@ -41,6 +42,7 @@ class Plaque(ndb.Model):
     ALLOWED_ROTATIONS = [90, 180, 270]
 
     title = ndb.StringProperty(required=True) # StringProperty: 1500 char limit
+    title_url = ndb.StringProperty(required=True)
     description = ndb.TextProperty(required=True) # no limit on TextProperty
     location = ndb.GeoPtProperty(required=True)
     pic = ndb.StringProperty()
@@ -157,10 +159,47 @@ class Plaque(ndb.Model):
         return url
 
     @property
+    def title_page_url(self):
+        """This plaque's key-based page URL."""
+        url = '/plaque/%s' % self.title_url
+        return url
+
     def page_url(self):
         """This plaque's key-based page URL."""
         url = '/plaque/%s' % self.key.urlsafe()
         return url
+
+    def set_title_url(self, ancestor_key, is_edit=False):
+        """
+        Set the title_url. For new plaques, if the title_url already exists on
+        another plaque, add a suffix to make it unique. Keep plaques which are 
+        being edited by an admin the same.
+        """
+        if is_edit:
+            return
+
+        if self.title:
+            title_url = re.sub('[^\w]+', '-', self.title.strip()).lower()
+        else:
+            title_url = ''
+
+        orig_title_url = title_url
+
+        count = 1
+        n_matches= Plaque.num_same_title_urls(title_url, ancestor_key)
+        while n_matches > 0:
+            count += 1
+            title_url = "%s%s" % (orig_title_url, count)
+            n_matches = Plaque.num_same_title_urls(title_url, ancestor_key)
+
+        self.title_url = title_url
+
+    @classmethod
+    def num_same_title_urls(cls, title_url, ancestor_key):
+        query = Plaque.query(ancestor=ancestor_key
+                     ).filter(Plaque.title_url == title_url)
+        num_plaques = query.count()
+        return num_plaques
 
     def to_search_document(self):
         doc = search.Document(
@@ -169,8 +208,9 @@ class Plaque(ndb.Model):
                 search.TextField(name='tags', value=" ".join(self.tags)),
                 search.TextField(name='title', value=self.title),
                 search.HtmlField(name='description', value=self.description),
-                search.GeoField(name='location', value=search.GeoPoint(self.location.lat,
-                                                                       self.location.lon)),
+                search.GeoField(name='location',
+                                value=search.GeoPoint(self.location.lat,
+                                                      self.location.lon)),
             ],
         )
         return doc

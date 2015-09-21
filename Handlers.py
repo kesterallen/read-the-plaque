@@ -33,26 +33,6 @@ ADD_STATE_ERROR = 'error'
 ADD_STATES = {'ADD_STATE_SUCCESS': ADD_STATE_SUCCESS,
               'ADD_STATE_ERROR': ADD_STATE_ERROR}
 
-# TODO before go-live
-# * Search for plaque text and title
-# * Change .net to .com for final deploy
-
-# The wordpress admin dashboard is pretty easy to use and the process to
-# publish pending the pending plaques is straightforward.
-#
-# Here is my proposed plan of action:
-#
-# 0) Disable comments entirely. They appear to be at least 99.9% spam, with
-#    over twenty thousand pending comments.
-# 1) Publish the ~200 pending plaque posts. This will take a couple months at
-#    the level of effort that I can give to this.
-# 2) Go through the ~100 plaques on the #readtheplaque hashtag, post those.
-# 3) Copy all of the data from the wordpress site to my revamp of the site.
-#    Verify that the data is identical.
-# 4) Switch the domain to point to the new site.
-# 5) Announce a relauch of the site, from both Roman and Alexis
-
-
 # GCS_BUCKET configuration: This appears to work for the bucket named
 # 'read-the-plaque.appspot.com', but it is different from surlyfritter. I
 # suspect I did something different/wrong in the setup, but not sure.
@@ -68,7 +48,7 @@ JINJA_ENVIRONMENT = jinja2.Environment (
         os.path.join(os.path.dirname(__file__),
                      'templates')),
     extensions=['jinja2.ext.autoescape'],
-    autoescape=False)#True) # turn off autoescape to allow html redering of descriptions
+    autoescape=False) # turn off autoescape to allow html descriptions
 
 class SubmitError(Exception):
     pass
@@ -86,7 +66,8 @@ def get_default_template_values(**kwargs):
             'loginout': loginout(),
             'pages_list': get_pages_list(),
         }
-        memcache_status = memcache.set('default_template_values', template_values)
+        memcache_status = memcache.set('default_template_values',
+                                       template_values)
         if not memcache_status:
             logging.debug("memcaching for default_template_values failed")
     else:
@@ -246,7 +227,8 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
             plaque_key = plaques[0].key.urlsafe()
         except IndexError as err:
             logging.error(err)
-            raise IndexError("No plaques available! Try again later!")
+            raise IndexError("This plaque has not been reviewed yet. "
+                             "Please try again later!")
 
         return plaque_key
 
@@ -273,18 +255,29 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
                                       ).filter(Plaque.old_site_id == old_site_id
                                       ).get()
             except ValueError as err:
-                logging.debug("Using plaque_key: '%s'" % plaque_key)
-                try:
-                    plaque = ndb.Key(urlsafe=plaque_key).get()
-                except:
-                    pass
-                logging.debug("Using plaque_key, plaque retrieved was: '%s'" % plaque)
+                # Get by title, allowing only admins to see unapproved ones:
+                logging.debug("Using plaque.title_url: '%s'" % plaque_key)
+                query = Plaque.query().filter(Plaque.title_url == plaque_key)
+                if not users.is_current_user_admin():
+                    query = query.filter(Plaque.approved == True)
+                logging.debug("query is %s " % query)
+                plaque = query.get()
+                logging.debug("plaque is %s " % plaque)
+                if plaque is None:
+                    try:
+                        logging.debug("Using plaque_key: '%s'" % plaque_key)
+                        plaque = ndb.Key(urlsafe=plaque_key).get()
+                        logging.debug("Using plaque_key, "
+                                      "plaque retrieved was: '%s'" % plaque)
+                    except:
+                        pass
 
         if plaque is None:
             logging.debug("Neither comment_key nor plaque_key is specified. "
                           "Grab a random plaque.")
             key = self._random_plaque_key()
-            self.redirect('/plaque/' + key)
+            plaque = ndb.Key(urlsafe=key).get()
+            self.redirect(plaque.title_page_url)
             return
 
         logging.debug("Plaque: %s" % plaque)
@@ -300,8 +293,6 @@ class ViewOnePlaque(ViewOnePlaqueParent):
     Render the single-plaque page from a plaque key, or get a random plaque.
     """
     def get(self, plaque_key=None, ignored_cruft=None):
-        logging.info("plaque_key=%s" % plaque_key)
-        logging.info("ignored_cruft=%s" % ignored_cruft)
         self._get_from_key(plaque_key=plaque_key)
 
 #class ViewOnePlaqueFromComment(ViewOnePlaqueParent):
@@ -384,7 +375,7 @@ class About(webapp2.RequestHandler):
 #        memcache.flush_all()
 #
 #        #email_admin(plaque, comment)
-#        self.redirect(plaque.page_url)
+#        self.redirect(plaque.title_url)
 
 class AddPlaque(webapp2.RequestHandler):
     """
@@ -411,7 +402,7 @@ class AddPlaque(webapp2.RequestHandler):
     def get(self, message=None):
         maptext = "Click the plaque's location on the map, or search " + \
                   "for it, or enter its lat/long location"
-        template_values = get_default_template_values(mapzoom=5, maptext=maptext)
+        template_values = get_default_template_values(mapzoom=1, maptext=maptext)
         message = self._get_message(message)
         if message is not None:
             template_values['message'] = message
@@ -431,9 +422,9 @@ class AddPlaque(webapp2.RequestHandler):
 
         memcache.flush_all()
         try:
+            plaqueset_name = self.request.get('plaqueset_name',
+                                              DEFAULT_PLAQUESET_NAME)
             if not is_edit:
-                plaqueset_name = self.request.get('plaqueset_name',
-                                                  DEFAULT_PLAQUESET_NAME)
                 plaque = Plaque(parent=plaqueset_key(plaqueset_name))
             else:
                 plaque_key = self.request.get('plaque_key')
@@ -444,6 +435,7 @@ class AddPlaque(webapp2.RequestHandler):
 
             plaque.location = location
             plaque.title = title
+            plaque.set_title_url(plaqueset_key(plaqueset_name), is_edit)
             plaque.description = description
             plaque.tags = tags
             plaque.approved = users.is_current_user_admin()
@@ -484,15 +476,15 @@ class AddPlaque(webapp2.RequestHandler):
                 logging.error(err)
                 raise err
 
-            msg = 'New plaque! %s' %  plaque.page_url
+            msg = 'New plaque! %s' %  plaque.title_page_url
             body = """
                 <p>New plaque!</p>
-                <p><a href="http://readtheplaque.net%s">Link</a></p>
-                <p><img src="http://readtheplaque.ne/%s"/></p>
-                """ %  (plaque.page_url, plaque.img_url)
+                <p><a href="http://readtheplaque.com%s">Link</a></p>
+                <p><img src="%s"/></p>
+                """ %  (plaque.title_page_url, plaque.img_url)
             email_admin(msg, body)
             state = ADD_STATES['ADD_STATE_SUCCESS']
-            msg = plaque.page_url
+            msg = plaque.title_page_url
         except (BadValueError, ValueError, SubmitError) as err:
             msg = err
             state = ADD_STATES['ADD_STATE_ERROR']
@@ -677,7 +669,8 @@ class SearchPlaquesGeo(webapp2.RequestHandler):
         #
         if lat is None or lng is None or search_radius_meters is None:
             maptext = 'Click the map, or type a search here'
-            template_values = get_default_template_values(mapzoom=2, maptext=maptext)
+            template_values = get_default_template_values(mapzoom=2,
+                                                          maptext=maptext)
             template = JINJA_ENVIRONMENT.get_template('geosearch.html')
             self.response.write(template.render(template_values))
             return
@@ -691,11 +684,12 @@ class SearchPlaquesGeo(webapp2.RequestHandler):
         query = search.Query(query_string)
         results = plaque_search_index.search(query)
         plaques = [ndb.Key(urlsafe=r.doc_id).get() for r in results]
+        approved_plaques = [p for p in plaques if p is not None and p.approved]
 
         template = JINJA_ENVIRONMENT.get_template('all.html')
         template_values = get_default_template_values(
-                              all_plaques=plaques,
-                              plaques=plaques,
+                              all_plaques=approved_plaques,
+                              plaques=approved_plaques,
                               start_index=0,
                               end_index=len(plaques),
                               mapzoom=6,
@@ -810,6 +804,15 @@ class AddSearchIndexAll(webapp2.RequestHandler):
             logging.debug('in process: wrote %s good docs, %s failed' % (
                           igood, ibad))
         self.response.write('wrote %s good docs, %s failed' % (igood, ibad))
+
+class AddTitleUrlAll(webapp2.RequestHandler):
+    def get(self):
+        plaques = Plaque.query().fetch()
+        for plaque in plaques:
+            plaque.set_title_url()
+            plaque.put()
+        memcache.flush_all()
+        self.redirect('/')
 
 class ApproveAllPending(webapp2.RequestHandler):
     """Approve all pending plaques"""
