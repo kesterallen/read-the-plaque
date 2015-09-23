@@ -152,13 +152,15 @@ def loginout():
     return loginout
 
 def handle_404(request, response, exception):
-    email_admin('404 error!', '500 error! %s %s %s' % (request, response, exception))
+    email_admin('404 error!', '404 error!\n\n%s\n\n%s\n\n%s' %
+                              (request, response, exception))
     template = JINJA_ENVIRONMENT.get_template('error.html')
     response.write(template.render({'code': 404, 'error_text': exception}))
     response.set_status(404)
 
 def handle_500(request, response, exception):
-    email_admin('500 error!', '500 error! %s %s %s' % (request, response, exception))
+    email_admin('500 error!', '500 error!\n\n%s\n\n%s\n\n%s' %
+                              (request, response, exception))
     template = JINJA_ENVIRONMENT.get_template('error.html')
     response.write(template.render({'code': 500, 'error_text': exception}))
     response.set_status(500)
@@ -334,7 +336,7 @@ class JsonAllPlaques(webapp2.RequestHandler):
         jsons = []
         for plaque in plaques:
             jsons.append(json.dumps(plaque.to_dict()))
-        
+
         self.response.write(json.dumps(jsons))
 
 class ViewAllTags(webapp2.RequestHandler):
@@ -699,14 +701,25 @@ class SearchPlaques(webapp2.RequestHandler):
 class SearchPlaquesGeo(webapp2.RequestHandler):
     """Run a geographic search: plaques within radius of center are returned."""
 
-    def get(self, lat=None, lng=None, search_radius_meters=None):
+    def get(self, lat=None, lng=None, search_radius_meters=None, redir=False):
 
         # Serve the form if a search hasn't been specified:
         #
-        if lat is None or lng is None or search_radius_meters is None:
+        search_not_specified = (lat is None or lat == '') or \
+                               (lng is None or lng == '') or \
+                               (search_radius_meters is None or \
+                                search_radius_meters == '')
+        if search_not_specified:
             maptext = 'Click the map, or type a search here'
+            if redir:
+                step1text = '<span style="color:red">Click the map to pick where to search</span>'
+            else:
+                step1text = 'Click the map to pick where to search'
+
+
             template_values = get_default_template_values(mapzoom=2,
-                                                          maptext=maptext)
+                                                          maptext=maptext,
+                                                          step1text=step1text)
             template = JINJA_ENVIRONMENT.get_template('geosearch.html')
             self.response.write(template.render(template_values))
             return
@@ -742,7 +755,7 @@ class SearchPlaquesGeo(webapp2.RequestHandler):
                     "The search area wasn't specified correctly ((%s, %s) < %s)"
                     ". Please try again." % (lat, lng, search_radius_meters))
             raise err
-        self.get(lat, lng, search_radius_meters)
+        self.get(lat, lng, search_radius_meters, redir=True)
 
 class FlushMemcache(webapp2.RequestHandler):
     def get(self):
