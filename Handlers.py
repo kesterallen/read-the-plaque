@@ -43,7 +43,7 @@ DEFAULT_PLAQUESET_NAME = 'public'
 DEFAULT_PLAQUES_PER_PAGE = 24
 
 # Load templates from the /templates dir
-JINJA_ENVIRONMENT = jinja2.Environment (
+JINJA_ENVIRONMENT = jinja2.Environment(
     loader=jinja2.FileSystemLoader(
         os.path.join(os.path.dirname(__file__),
                      'templates')),
@@ -87,7 +87,7 @@ def email_admin(msg, body):
     except:
         logging.debug('mail failed: %s' % msg)
 
-def plaqueset_key(plaqueset_name=DEFAULT_PLAQUESET_NAME):
+def get_plaqueset_key(plaqueset_name=DEFAULT_PLAQUESET_NAME):
     """
     Constructs a Datastore key for a Plaque entity. Use plaqueset_name as
     the key.
@@ -152,13 +152,13 @@ def loginout():
     return loginout
 
 def handle_404(request, response, exception):
-    email_admin('404 error!', '404 error!')
+    email_admin('404 error!', '500 error! %s %s %s' % (request, response, exception))
     template = JINJA_ENVIRONMENT.get_template('error.html')
     response.write(template.render({'code': 404, 'error_text': exception}))
     response.set_status(404)
 
 def handle_500(request, response, exception):
-    email_admin('500 error!','500 error!')
+    email_admin('500 error!', '500 error! %s %s %s' % (request, response, exception))
     template = JINJA_ENVIRONMENT.get_template('error.html')
     response.write(template.render({'code': 500, 'error_text': exception}))
     response.set_status(500)
@@ -278,10 +278,8 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
 
         if plaque is None:
             logging.debug("Neither comment_key nor plaque_key is specified. "
-                          "Serve the first plaque.")
-            #key = self._random_plaque_key()
-            #plaque = ndb.Key(urlsafe=key).get()
-            #self.redirect(plaque.title_page_url)
+                          "Serve the first plaque, so that memcache will "
+                          "always serve the same thing.")
             plaque = earliest_approved(Plaque)
             self.redirect(plaque.title_page_url)
             return
@@ -449,48 +447,11 @@ class AddPlaque(webapp2.RequestHandler):
         try:
             plaqueset_name = self.request.get('plaqueset_name',
                                               DEFAULT_PLAQUESET_NAME)
-            if not is_edit:
-                plaque = Plaque(parent=plaqueset_key(plaqueset_name))
-            else:
-                plaque_key = self.request.get('plaque_key')
-                plaque = ndb.Key(urlsafe=plaque_key).get()
+            plaqueset_key = get_plaqueset_key(plaqueset_name)
 
-            location, created_by, title, description, img_name, img_fh, tags = \
-                self._get_form_args()
-
-            plaque.location = location
-            plaque.title = title
-            plaque.set_title_url(plaqueset_key(plaqueset_name), is_edit)
-            plaque.description = description
-            plaque.tags = tags
-            plaque.approved = users.is_current_user_admin()
-
-            # Upload the image for a new plaque, or update the image for an
-            # editted plaque, if specified.
-            is_upload_pic = (is_edit and img_name is not None) or (not is_edit)
-            if is_upload_pic:
-                self._upload_image(img_name, img_fh, plaque)
-
-            # Write to the updated_* fields if this is an edit:
+            # Create new plaque entity:
             #
-            if is_edit:
-                plaque.updated_by = users.get_current_user()
-                plaque.updated_on = datetime.datetime.now()
-                img_rot = self.request.get('img_rot')
-                if img_rot is not None and img_rot != 0:
-                    plaque.img_rot = int(img_rot)
-            else:
-                plaque.updated_by = None
-                plaque.updated_on = None
-
-            old_site_id = self.request.get('old_site_id', None)
-            if old_site_id is not None:
-                try:
-                    plaque.old_site_id = int(old_site_id)
-                except ValueError as err:
-                    logging.info('Eating bad ValueError for '
-                                 'old_site_id in AddPlaque')
-            plaque.put()
+            plaque = self._create_or_update_plaque(is_edit, plaqueset_key)
 
             # Make the plaque searchable:
             #
@@ -501,6 +462,8 @@ class AddPlaque(webapp2.RequestHandler):
                 logging.error(err)
                 raise err
 
+            # Notify admin:
+            #
             msg = 'New plaque! %s' %  plaque.title_page_url
             body = """
                 <p>New plaque!</p>
@@ -522,6 +485,55 @@ class AddPlaque(webapp2.RequestHandler):
                 pass
 
         self.redirect('/add?state=%s&message=%s' % (state, msg))
+
+    def _create_or_update_plaque(self, is_edit, plaqueset_key):
+        """
+        Create a new plaque entity if it does not exist, or update one if it
+        does.
+        """
+        if not is_edit:
+            plaque = Plaque(parent=plaqueset_key)
+        else:
+            plaque_key = self.request.get('plaque_key')
+            plaque = ndb.Key(urlsafe=plaque_key).get()
+
+        location, created_by, title, description, img_name, img_fh, tags = \
+            self._get_form_args()
+
+        plaque.location = location
+        plaque.title = title
+        plaque.set_title_url(plaqueset_key, is_edit)
+        plaque.description = description
+        plaque.tags = tags
+        plaque.approved = users.is_current_user_admin()
+
+        # Upload the image for a new plaque, or update the image for an
+        # editted plaque, if specified.
+        is_upload_pic = (is_edit and img_name is not None) or (not is_edit)
+        if is_upload_pic:
+            self._upload_image(img_name, img_fh, plaque)
+
+        # Write to the updated_* fields if this is an edit:
+        #
+        if is_edit:
+            plaque.updated_by = users.get_current_user()
+            plaque.updated_on = datetime.datetime.now()
+            img_rot = self.request.get('img_rot')
+            if img_rot is not None and img_rot != 0:
+                plaque.img_rot = int(img_rot)
+        else:
+            plaque.updated_by = None
+            plaque.updated_on = None
+
+        old_site_id = self.request.get('old_site_id', None)
+        if old_site_id is not None:
+            try:
+                plaque.old_site_id = int(old_site_id)
+            except ValueError as err:
+                logging.info('Eating bad ValueError for '
+                             'old_site_id in AddPlaque')
+        plaque.put()
+        return plaque
 
     def _get_form_args(self):
         """Get the arguments from the form and return them."""
@@ -563,7 +575,7 @@ class AddPlaque(webapp2.RequestHandler):
         # Get and tokenize tags
         tags_str = self.request.get('tags')
         tags_untokenized = tags_str.split(',')
-        tags = [re.sub('\s+', ' ', t.strip().lower()) for t in tags_untokenized]
+        tags = [re.sub(r'\s+', ' ', t.strip().lower()) for t in tags_untokenized]
         tags = [t for t in tags if t] # Remove empties
 
         return location, created_by, title, description, img_name, img_fh, tags
@@ -634,7 +646,6 @@ class EditPlaque(AddPlaque):
     """
     def get(self, plaque_key=None, message=None):
         if plaque_key is None:
-            memcache.flush_all()
             self.redirect('/')
             return
         else:
