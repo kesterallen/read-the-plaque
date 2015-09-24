@@ -24,9 +24,9 @@
         }
         var icon = {
             url: "/images/red-dot.png",
-            scaledSize: new google.maps.Size(16, 16),
-            origin: new google.maps.Point(0,0), // origin
-            anchor: new google.maps.Point(0, 0) // anchor
+            scaledSize: new google.maps.Size({{icon_size}}, {{icon_size}}),
+            origin: new google.maps.Point(0, 0), // origin -- top left
+            anchor: new google.maps.Point({{icon_size / 2}}, {{icon_size}}) // anchor -- bottom middle
         };
         var map = new google.maps.Map(mapCanvas, mapOptions)
 

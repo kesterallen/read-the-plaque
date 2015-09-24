@@ -41,6 +41,7 @@ GCS_BUCKET = '/read-the-plaque.appspot.com'
 
 DEFAULT_PLAQUESET_NAME = 'public'
 DEFAULT_PLAQUES_PER_PAGE = 24
+DEFAULT_MAP_ICON_SIZE_PIX = 16
 
 # Load templates from the /templates dir
 JINJA_ENVIRONMENT = jinja2.Environment(
@@ -65,6 +66,7 @@ def get_default_template_values(**kwargs):
             'footer_items': get_footer_items(),
             'loginout': loginout(),
             'pages_list': get_pages_list(),
+            'icon_size': DEFAULT_MAP_ICON_SIZE_PIX,
         }
         memcache_status = memcache.set('default_template_values',
                                        template_values)
@@ -291,6 +293,7 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
         template_values = get_default_template_values(
                               all_plaques=[plaque],
                               plaques=[plaque],
+                              icon_size=32,
                               mapzoom=15)
         self.response.write(template.render(template_values))
 
