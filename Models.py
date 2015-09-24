@@ -228,10 +228,10 @@ class Plaque(ndb.Model):
             'tags': self.tags,
             'comments': self.comments,
             'approved': self.approved,
-            'created_on': str(self.created_on),
-            'created_by': self.created_by,
-            'updated_on': str(self.updated_on),
-            'updated_by': self.updated_by,
+            #'created_on': str(self.created_on),
+            #'created_by': self.created_by,
+            #'updated_on': str(self.updated_on),
+            #'updated_by': self.updated_by,
             'old_site_id': self.old_site_id,
         }
 

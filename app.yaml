@@ -5,6 +5,10 @@ api_version: 1
 threadsafe: true
 
 handlers:
+- url: /.*php
+  static_files: static/nophp.txt
+  upload: static/nophp.txt
+
 - url: /robots.txt
   static_files: static/robots.txt
   upload: static/robots.txt

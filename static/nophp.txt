@@ -1,0 +1,1 @@
+This site is no longer a WordPress PHP site

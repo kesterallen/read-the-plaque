@@ -22,15 +22,22 @@
             zoom: {{mapzoom}},
             mapTypeId: google.maps.MapTypeId.ROADMAP
         }
+        var icon = {
+            url: "/images/red-dot.png",
+            scaledSize: new google.maps.Size(16, 16),
+            origin: new google.maps.Point(0,0), // origin
+            anchor: new google.maps.Point(0, 0) // anchor
+        };
         var map = new google.maps.Map(mapCanvas, mapOptions)
 
         var markers = [];
 
         {% for plaque in all_plaques %}
             markers.push(new google.maps.Marker({
+                map: map,
+                icon: icon,
                 position: {lat: {{plaque.location.lat}},
                            lng: {{plaque.location.lon}}},
-                map: map,
                 url: "{{plaque.title_page_url}}",
                 infowindow: new google.maps.InfoWindow({
                     content: "{{plaque.title|escape}}<p>" + 
