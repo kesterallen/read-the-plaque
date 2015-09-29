@@ -39,6 +39,7 @@ class Plaque(ndb.Model):
     TINY_SIZE_PX = 100
     THUMBNAIL_SIZE_PX = 300
     DISPLAY_SIZE_PX = 1024
+    BIG_SIZE_PX = 4096
     ALLOWED_ROTATIONS = [90, 180, 270]
 
     title = ndb.StringProperty(required=True) # StringProperty: 1500 char limit
@@ -154,6 +155,14 @@ class Plaque(ndb.Model):
     def img_url_display(self):
         """A URL for a display-size image for display."""
         url = '%s=s%s' % (self.img_url, self.DISPLAY_SIZE_PX)
+        if self.img_rot in Plaque.ALLOWED_ROTATIONS:
+            url = "%s-r%s" % (url, self.img_rot)
+        return url
+
+    @property
+    def img_url_big(self):
+        """A URL for a big rotated image."""
+        url = '%s=s%s' % (self.img_url, self.BIG_SIZE_PX)
         if self.img_rot in Plaque.ALLOWED_ROTATIONS:
             url = "%s-r%s" % (url, self.img_rot)
         return url

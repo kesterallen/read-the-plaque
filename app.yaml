@@ -9,6 +9,14 @@ handlers:
   static_files: static/nophp.txt
   upload: static/nophp.txt
 
+- url: /wp-content.*
+  static_files: static/nophp.txt
+  upload: static/nophp.txt
+
+- url: /wp/wp-content.*
+  static_files: static/nophp.txt
+  upload: static/nophp.txt
+
 - url: /robots.txt
   static_files: static/robots.txt
   upload: static/robots.txt

@@ -247,62 +247,75 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
         plaque, but if the inputs are completely messed up, serve a random
         plaque.
         """
-        plaque = None
-        logging.info("plaque_key=%s" % plaque_key)
-        if comment_key is not None:
-            logging.debug("Using comment key")
-            comment = ndb.Key(urlsafe=comment_key).get()
-            plaque = Plaque.query().filter(Plaque.approved == True
-                                  ).filter(Plaque.comments == comment.key
-                                  ).get()
-        elif plaque_key is not None:
-            try:
-                logging.debug("Trying old_site_id")
-                old_site_id = int(plaque_key)
+        memcache_name = 'view_one_%s' % plaque_key
+        page_text = memcache.get(memcache_name)
+        if page_text is None:
+            plaque = None
+            logging.info("plaque_key=%s" % plaque_key)
+            if comment_key is not None:
+                logging.debug("Using comment key")
+                comment = ndb.Key(urlsafe=comment_key).get()
                 plaque = Plaque.query().filter(Plaque.approved == True
-                                      ).filter(Plaque.old_site_id == old_site_id
+                                      ).filter(Plaque.comments == comment.key
                                       ).get()
-            except ValueError as err:
-                # Get by title, allowing only admins to see unapproved ones:
-                logging.debug("Using plaque.title_url: '%s'" % plaque_key)
-                query = Plaque.query().filter(Plaque.title_url == plaque_key)
-                if not users.is_current_user_admin():
-                    query = query.filter(Plaque.approved == True)
-                logging.debug("query is %s " % query)
-                plaque = query.get()
-                logging.debug("plaque is %s " % plaque)
-                if plaque is None:
-                    try:
-                        logging.debug("Using plaque_key: '%s'" % plaque_key)
-                        plaque = ndb.Key(urlsafe=plaque_key).get()
-                        logging.debug("Using plaque_key, "
-                                      "plaque retrieved was: '%s'" % plaque)
-                    except:
-                        pass
+            elif plaque_key is not None:
+                try:
+                    logging.debug("Trying old_site_id")
+                    old_site_id = int(plaque_key)
+                    plaque = Plaque.query().filter(Plaque.approved == True
+                                          ).filter(Plaque.old_site_id == old_site_id
+                                          ).get()
+                except ValueError as err:
+                    # Get by title, allowing only admins to see unapproved ones:
+                    logging.debug("Using plaque.title_url: '%s'" % plaque_key)
+                    query = Plaque.query().filter(Plaque.title_url == plaque_key)
+                    if not users.is_current_user_admin():
+                        query = query.filter(Plaque.approved == True)
+                    logging.debug("query is %s " % query)
+                    plaque = query.get()
+                    if plaque is None:
+                        try:
+                            logging.debug("Using plaque_key: '%s'" % plaque_key)
+                            plaque = ndb.Key(urlsafe=plaque_key).get()
+                            logging.debug("Using plaque_key, "
+                                          "plaque retrieved was: '%s'" % plaque)
+                        except:
+                            pass
 
-        if plaque is None:
-            logging.debug("Neither comment_key nor plaque_key is specified. "
-                          "Serve the first plaque, so that memcache will "
-                          "always serve the same thing.")
-            plaque = earliest_approved(Plaque)
-            self.redirect(plaque.title_page_url)
-            return
+            if plaque is None:
+                logging.debug("Neither comment_key nor plaque_key is specified. "
+                              "Serve the first plaque, so that memcache will "
+                              "always serve the same thing.")
+                plaque = earliest_approved(Plaque)
+                self.redirect(plaque.title_page_url)
+                return
 
-        logging.debug("Plaque: %s" % plaque)
-        template = JINJA_ENVIRONMENT.get_template('one.html')
-        template_values = get_default_template_values(
-                              all_plaques=[plaque],
-                              plaques=[plaque],
-                              icon_size=32,
-                              mapzoom=15)
-        self.response.write(template.render(template_values))
+            logging.debug("Plaque: %s" % plaque)
+            template = JINJA_ENVIRONMENT.get_template('one.html')
+            template_values = get_default_template_values(
+                                  all_plaques=[plaque],
+                                  plaques=[plaque],
+                                  icon_size=32,
+                                  mapzoom=15)
+
+            page_text = template.render(template_values)
+            memcache_status = memcache.set(memcache_name, page_text)
+            if not memcache_status:
+                logging.debug("memcaching for _get_from_key failed for %s" %
+                              memcache_name)
+        else:
+            logging.debug("memcache.get worked for _get_from_key for %s" %
+                          memcache_name)
+            
+        return page_text
 
 class ViewOnePlaque(ViewOnePlaqueParent):
     """
     Render the single-plaque page from a plaque key, or get a random plaque.
     """
     def get(self, plaque_key=None, ignored_cruft=None):
-        self._get_from_key(plaque_key=plaque_key)
+        page_text = self._get_from_key(plaque_key=plaque_key)
+        self.response.write(page_text)
 
 class RandomPlaque(ViewOnePlaqueParent):
     """
@@ -310,14 +323,16 @@ class RandomPlaque(ViewOnePlaqueParent):
     """
     def get(self):
         plaque_key = self._random_plaque_key()
-        self._get_from_key(plaque_key=plaque_key)
+        page_text = self._get_from_key(plaque_key=plaque_key)
+        self.response.write(page_text)
 
 #class ViewOnePlaqueFromComment(ViewOnePlaqueParent):
 #    """
 #    Render the single-plaque page from a comment key.
 #    """
 #    def get(self, comment_key):
-#        self._get_from_key(comment_key=comment_key)
+#        page_text = self._get_from_key(comment_key=comment_key)
+#        self.response.write(page_text)
 
 class JsonOnePlaque(ViewOnePlaqueParent):
     """
