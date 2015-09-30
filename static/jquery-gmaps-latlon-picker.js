@@ -202,6 +202,7 @@ $.fn.gMapsLatLonPicker = (function() {
 
             // Set location to browser location
             $(_self.vars.cssID + ".gllpHereButton").bind("click", function() {
+                $("#locationModal").modal();
                 self_button = document.getElementById("herebutton");
                 old_self_button_text = self_button.value;
                 self_button.value = "Finding your location, please wait"; 

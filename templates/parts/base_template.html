@@ -2,9 +2,12 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<link rel="stylesheet" href="/static/bootstrap-3.3.5.min.css">
-<script src="/static/jquery-1.11.3.min.js"></script>
-<script src="/static/bootstrap-3.3.5.min.js"></script>
+<!--<link rel="stylesheet" href="/static/bootstrap-3.3.5.min.css">-->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+<!--<script src="/static/jquery-1.11.3.min.js"></script>-->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script> 
+<!--<script src="/static/bootstrap-3.3.5.min.js"></script>-->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
 <link rel="stylesheet" href="/static/style.css">
 <link rel="icon" href="/images/favicon.ico">
 <script>
@@ -21,7 +24,7 @@
     {% include 'parts/map_setup.html' %}
 {% endif %}
 
-<script src="//tinymce.cachefly.net/4.2/tinymce.min.js"></script>
+<script src="http://tinymce.cachefly.net/4.2/tinymce.min.js"></script>
 <script>tinymce.init({selector:'textarea'});</script>
 
 {% if plaques %}
