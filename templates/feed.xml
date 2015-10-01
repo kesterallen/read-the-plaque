@@ -9,21 +9,19 @@
 
         {% for plaque in plaques %}
             <item>
-                <title>{{plaque.title}} uploaded at {{plaque.created_on}}</title>
+                <title>{{plaque.title}}</title>
                 <link>http://readtheplaque.com{{plaque.title_page_url}}</link>
                 <guid>http://readtheplaque.com{{plaque.title_page_url}}</guid>
                 <pubDate>{{plaque.created_on}}</pubDate>
                 <description>
-                    {{plaque.title}} uploaded at {{plaque.created_on}}
+                    {{plaque.title}}
                     <![CDATA[
                     <p>
                         <a href="http://readtheplaque.com{{plaque.title_page_url}}">
-                            <img src="{{plaque.img_url_thumbnail}}"
-                                 alt="{{plaque.title}}, uploaded at {{plaque.created_on}}"
-                                 title="{{plaque.title}}, uploaded at {{plaque.created_on}}"
-                            />
+                            <img src="{{plaque.img_url_thumbnail}}" alt="{{plaque.title}}" title="{{plaque.title}}"/>
                         </a>
                     </p>
+                    <p>{{plaque.description}}</p>
                     ]]>
                 </description>
             </item>

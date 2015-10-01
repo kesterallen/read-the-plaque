@@ -33,13 +33,13 @@
     <meta name="twitter:site"        content="@readtheplaque"/>
     <meta name="twitter:creator"     content="@readtheplaque"/>
     <meta name="twitter:url"         content="http://readtheplaque.com{{plaques[0].title_page_url}}"/>
-    <meta name="twitter:title"       content="{{plaques[0].title | escape}}"/>
-    <meta name="twitter:description" content="{{plaques[0].description | escape}}"/>
+    <meta name="twitter:title"       content="{{plaques[0].title | striptags | escape}}"/>
+    <meta name="twitter:description" content="{{plaques[0].description | striptags | escape}}"/>
     <meta name="twitter:image"       content="{{plaques[0].img_url_thumbnail}}"/>
 
     <!-- Facebook preview-->
-    <meta property="og:title"        content="{{plaques[0].title | escape}}"/>
-    <meta property="og:description"  content="{{plaques[0].description | escape}}"/>
+    <meta property="og:title"        content="{{plaques[0].title | striptags | escape}}"/>
+    <meta property="og:description"  content="{{plaques[0].description | striptags | escape}}"/>
     <meta property="og:type"         content="blog"/>
     <meta property="og:image"        content="{{plaques[0].img_url_thumbnail}}"/>
     <meta property="og:site_name"    content="Read the Plaque"/>
