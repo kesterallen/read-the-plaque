@@ -40,7 +40,7 @@ ADD_STATES = {'ADD_STATE_SUCCESS': ADD_STATE_SUCCESS,
 GCS_BUCKET = '/read-the-plaque.appspot.com'
 
 DEFAULT_PLAQUESET_NAME = 'public'
-DEFAULT_PLAQUES_PER_PAGE = 24
+DEFAULT_PLAQUES_PER_PAGE = 12
 DEFAULT_MAP_ICON_SIZE_PIX = 16
 
 # Load templates from the /templates dir
@@ -174,6 +174,10 @@ def handle_500(request, response, exception):
 
 
 class ViewPlaquesPage(webapp2.RequestHandler):
+    def head(self, page_num=1, plaques_per_page=DEFAULT_PLAQUES_PER_PAGE):
+        self.get(page_num=1, plaques_per_page=DEFAULT_PLAQUES_PER_PAGE)
+        self.response.clear()
+
     def get(self, page_num=1, plaques_per_page=DEFAULT_PLAQUES_PER_PAGE):
         """
         View the nth plaques_per_page plaques on a grid.
@@ -214,6 +218,7 @@ class ViewPlaquesPage(webapp2.RequestHandler):
                                   page_num=page_num,
                                   mapzoom=2)
 
+            print plaques
             template_text = template.render(template_values)
             memcache_status = memcache.set(memcache_name, template_text)
             if not memcache_status:
@@ -318,6 +323,10 @@ class ViewOnePlaque(ViewOnePlaqueParent):
     """
     Render the single-plaque page from a plaque key, or get a random plaque.
     """
+    def head(self, plaque_key=None, ignored_cruft=None):
+        self.get(plaque_key=None, ignored_cruft=None)
+        self.response.clear()
+
     def get(self, plaque_key=None, ignored_cruft=None):
         page_text = self._get_from_key(plaque_key=plaque_key)
         self.response.write(page_text)
@@ -740,7 +749,7 @@ class SearchPlaquesGeo(webapp2.RequestHandler):
                 step1text = 'Click the map to pick where to search'
 
 
-            template_values = get_default_template_values(mapzoom=2,
+            template_values = get_default_template_values(mapzoom=10,
                                                           maptext=maptext,
                                                           step1text=step1text)
             template = JINJA_ENVIRONMENT.get_template('geosearch.html')
