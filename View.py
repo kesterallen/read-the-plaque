@@ -15,11 +15,13 @@ JINJA_ENVIRONMENT = jinja2.Environment (
 
 def main():
     app = webapp2.WSGIApplication([
-        ('/page/(.+?)/(.+?)', h.ViewPlaquesPage),
+        ('/page/(.+?)/(.+?)/(.+?)/?', h.ViewPlaquesPage),
+        ('/page/(.+?)/(.+?)/?', h.ViewPlaquesPage),
         ('/page/(.+?)/?', h.ViewPlaquesPage),
         ('/page/?', h.ViewPlaquesPage),
         ('/plaque/(.+?)/?', h.ViewOnePlaque),
         ('/plaque/?', h.ViewOnePlaque),
+        ('/randompage.*', h.RandomPlaquesPage),
         ('/random.*', h.RandomPlaque),
         #('/plaque_comment/(.+?)', h.ViewOnePlaqueFromComment),
         ('/jp/?', h.JsonOnePlaque),

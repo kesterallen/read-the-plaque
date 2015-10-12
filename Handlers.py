@@ -37,7 +37,7 @@ ADD_STATES = {'ADD_STATE_SUCCESS': ADD_STATE_SUCCESS,
 # 'read-the-plaque.appspot.com', but it is different from surlyfritter. I
 # suspect I did something different/wrong in the setup, but not sure.
 #
-GCS_BUCKET = '/read-the-plaque.appspot.com'
+GCS_BUCKET = '/read-the-plaque.appspot.com' # Don't change this to, say, readtheplaque.com
 
 DEFAULT_PLAQUESET_NAME = 'public'
 DEFAULT_PLAQUES_PER_PAGE = 12
@@ -113,9 +113,9 @@ def random_five_approved(cls):
     random.shuffle(items)
     return items[:5]
 
-def get_pages_list(plaques_per_page=DEFAULT_PLAQUES_PER_PAGE):
+def get_pages_list(per_page=DEFAULT_PLAQUES_PER_PAGE):
     num_pages = int(math.ceil(float(Plaque.num_approved()) /
-                              float(plaques_per_page)))
+                              float(per_page)))
     pages_list = [1+p for p in range(num_pages)]
     return pages_list
 
@@ -150,11 +150,11 @@ def loginout():
     user = users.get_current_user()
     if user:
         loginout = {'is_admin': users.is_current_user_admin(),
-                    'url': users.create_logout_url('/flush'),
+                    'url': users.create_logout_url('http://readtheplaque.com/flush'),
                     'text': 'Log out'}
     else:
         loginout = {'is_admin': users.is_current_user_admin(),
-                    'url': users.create_login_url('/flush'),
+                    'url': users.create_login_url('http://readtheplaque.com/flush'),
                     'text': 'Admin login'}
     return loginout
 
@@ -174,13 +174,13 @@ def handle_500(request, response, exception):
 
 
 class ViewPlaquesPage(webapp2.RequestHandler):
-    def head(self, page_num=1, plaques_per_page=DEFAULT_PLAQUES_PER_PAGE):
-        self.get(page_num=1, plaques_per_page=DEFAULT_PLAQUES_PER_PAGE)
+    def head(self, page_num=1, per_page=DEFAULT_PLAQUES_PER_PAGE, is_random=False):
+        self.get(page_num=1, per_page=DEFAULT_PLAQUES_PER_PAGE)
         self.response.clear()
 
-    def get(self, page_num=1, plaques_per_page=DEFAULT_PLAQUES_PER_PAGE):
+    def _get(self, page_num=1, per_page=DEFAULT_PLAQUES_PER_PAGE, is_random=False):
         """
-        View the nth plaques_per_page plaques on a grid.
+        View the nth per_page plaques on a grid.
         page_num is a one-based integer
         """
         try:
@@ -192,22 +192,31 @@ class ViewPlaquesPage(webapp2.RequestHandler):
             page_num = 1
 
         try:
-            plaques_per_page = int(plaques_per_page)
+            per_page = int(per_page)
         except ValueError as err:
             logging.error(err)
-            plaques_per_page = DEFAULT_PLAQUES_PER_PAGE
-        if plaques_per_page < 1:
-            plaques_per_page = 1
+            per_page = DEFAULT_PLAQUES_PER_PAGE
+        if per_page < 1:
+            per_page = 1
 
         is_admin = users.is_current_user_admin()
+        logging.debug("User is admin: %s" % is_admin)
         memcache_name = 'view_plaques_page_%s_%s_%s' % (
-                            page_num, plaques_per_page, is_admin)
-        template_text = memcache.get(memcache_name)
+            page_num, per_page, is_admin)
+        if is_random:
+            template_text = None
+        else:
+            template_text = memcache.get(memcache_name)
+            logging.debug("memcaching worked for ViewPlaquesPage %s" % memcache_name)
+
+        # TODO: the loginout information is being cached, but shouldn't be
         if template_text is None:
             # Grab all plaques for the map
             plaques = Plaque.approved_list()
-            start_index = plaques_per_page * (page_num - 1)
-            end_index = start_index + plaques_per_page
+            if is_random:
+                random.shuffle(plaques)
+            start_index = per_page * (page_num - 1)
+            end_index = start_index + per_page
 
             template = JINJA_ENVIRONMENT.get_template('all.html')
             template_values = get_default_template_values(
@@ -218,14 +227,21 @@ class ViewPlaquesPage(webapp2.RequestHandler):
                                   page_num=page_num,
                                   mapzoom=2)
 
-            print plaques
             template_text = template.render(template_values)
-            memcache_status = memcache.set(memcache_name, template_text)
-            if not memcache_status:
-                logging.debug("memcaching for ViewPlaquesPage failed")
-        else:
-            logging.debug("memcaching worked for ViewPlaquesPage")
+            if not is_random:
+                memcache_status = memcache.set(memcache_name, template_text)
+                if not memcache_status:
+                    logging.debug("memcaching failed for ViewPlaquesPage %s" % 
+                        memcache_name)
+                else:
+                    logging.debug(
+                        "memcaching set worked for ViewPlaquesPage %s" % 
+                        memcache_name)
 
+        return template_text
+
+    def get(self, page_num=1, per_page=DEFAULT_PLAQUES_PER_PAGE, is_random=False):
+        template_text = self._get()
         self.response.write(template_text)
 
 class ViewOnePlaqueParent(webapp2.RequestHandler):
@@ -257,7 +273,8 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
         plaque, but if the inputs are completely messed up, serve a random
         plaque.
         """
-        memcache_name = 'view_one_%s' % plaque_key
+        is_admin = users.is_current_user_admin()
+        memcache_name = 'view_one_%s_%s' % (plaque_key, is_admin)
         page_text = memcache.get(memcache_name)
         if page_text is None:
             plaque = None
@@ -331,14 +348,22 @@ class ViewOnePlaque(ViewOnePlaqueParent):
         page_text = self._get_from_key(plaque_key=plaque_key)
         self.response.write(page_text)
 
+class RandomPlaquesPage(ViewPlaquesPage):
+    """
+    Get a page of random plaques.
+    """
+    def get(self):
+        page_text = self._get(is_random=True)
+        self.response.write(page_text)
+
 class RandomPlaque(ViewOnePlaqueParent):
     """
-    Render the single-plaque page from a plaque key, or get a random plaque.
+    Get a random plaque.
     """
     def get(self):
         plaque_key = self._random_plaque_key()
-        page_text = self._get_from_key(plaque_key=plaque_key)
-        self.response.write(page_text)
+        plaque = ndb.Key(urlsafe=plaque_key).get()
+        self.redirect(plaque.title_page_url)
 
 #class ViewOnePlaqueFromComment(ViewOnePlaqueParent):
 #    """
@@ -498,12 +523,13 @@ class AddPlaque(webapp2.RequestHandler):
 
             # Notify admin:
             #
-            msg = 'New plaque! %s' %  plaque.title_page_url
+            post_type = 'Updated' if is_edit else 'New'
+            msg = '%s plaque! %s' %  (post_type, plaque.title_page_url)
             body = """
-                <p>New plaque!</p>
+                <p>%s plaque!</p>
                 <p><a href="http://readtheplaque.com%s">Link</a></p>
                 <p><img src="%s"/></p>
-                """ %  (plaque.title_page_url, plaque.img_url)
+                """ %  (post_type, plaque.title_page_url, plaque.img_url)
             email_admin(msg, body)
             state = ADD_STATES['ADD_STATE_SUCCESS']
             msg = plaque.title_page_url
