@@ -40,7 +40,7 @@ ADD_STATES = {'ADD_STATE_SUCCESS': ADD_STATE_SUCCESS,
 GCS_BUCKET = '/read-the-plaque.appspot.com' # Don't change this to, say, readtheplaque.com
 
 DEFAULT_PLAQUESET_NAME = 'public'
-DEFAULT_PLAQUES_PER_PAGE = 12
+DEFAULT_PLAQUES_PER_PAGE = 24
 DEFAULT_MAP_ICON_SIZE_PIX = 16
 
 # Load templates from the /templates dir
@@ -241,7 +241,7 @@ class ViewPlaquesPage(webapp2.RequestHandler):
         return template_text
 
     def get(self, page_num=1, per_page=DEFAULT_PLAQUES_PER_PAGE, is_random=False):
-        template_text = self._get()
+        template_text = self._get(page_num, per_page, is_random)
         self.response.write(template_text)
 
 class ViewOnePlaqueParent(webapp2.RequestHandler):
