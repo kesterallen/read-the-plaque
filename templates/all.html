@@ -9,6 +9,11 @@
         </div>
     </div>
 
+    {% if all_plaques %}
+        {% include 'parts/map_setup.html' %}
+    {% endif %}
+
+
     {% if plaques|length == 0 %}<h2>No plaques in that search</h2>{% endif %}
 
     <div class="pinterest-row">

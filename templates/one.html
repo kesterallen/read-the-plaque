@@ -37,6 +37,10 @@
                 <p><a class="btn btn-primary" role="button" href="/geo/{{plaque.location.lat}}/{{plaque.location.lon}}/50000">Nearby Plaques</a></p>
 
                 <div id="map"></div>
+
+                {% if all_plaques %}
+                    {% include 'parts/map_setup.html' %}
+                {% endif %}
             </div>
         </div>
 

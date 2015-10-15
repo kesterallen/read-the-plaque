@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from collections import defaultdict
 import datetime
 import jinja2
 import json
@@ -11,6 +12,7 @@ import random
 import re
 import urllib
 import webapp2
+
 
 from google.appengine.api import images
 from google.appengine.api import mail
@@ -150,11 +152,11 @@ def loginout():
     user = users.get_current_user()
     if user:
         loginout = {'is_admin': users.is_current_user_admin(),
-                    'url': users.create_logout_url('http://readtheplaque.com/flush'),
+                    'url': users.create_logout_url('/flush'),
                     'text': 'Log out'}
     else:
         loginout = {'is_admin': users.is_current_user_admin(),
-                    'url': users.create_login_url('http://readtheplaque.com/flush'),
+                    'url': users.create_login_url('/flush'),
                     'text': 'Admin login'}
     return loginout
 
@@ -476,7 +478,7 @@ class AddPlaque(webapp2.RequestHandler):
 
             elif state == ADD_STATE_ERROR:
                 message = """
-                      Sorry, your plaque submission had this error: '%s'
+                      Sorry, your plaque submission had this error: <font color="red">'%s'</font>
                       """ % message
         return message
 
@@ -775,7 +777,7 @@ class SearchPlaquesGeo(webapp2.RequestHandler):
                 step1text = 'Click the map to pick where to search'
 
 
-            template_values = get_default_template_values(mapzoom=10,
+            template_values = get_default_template_values(mapzoom=5,
                                                           maptext=maptext,
                                                           step1text=step1text)
             template = JINJA_ENVIRONMENT.get_template('geosearch.html')
@@ -826,6 +828,7 @@ class FlushMemcache(webapp2.RequestHandler):
 
 class Counts(webapp2.RequestHandler):
     def get(self):
+        find_orphans = self.request.get('find_orphans')
         num_comments = Comment.query().count()
         num_plaques = Plaque.query().count()
         num_images = 0
@@ -833,8 +836,26 @@ class Counts(webapp2.RequestHandler):
         for image in images:
             num_images += 1
 
-        msg = "There are %s comments, %s plaques, %s images" % (
-                num_comments, num_plaques, num_images)
+        orphan_pics = set()
+        pics_count = defaultdict(int)
+        pics = set()
+
+        if find_orphans == 'true':
+            # Record which pics are linked to a plaque:
+            plaques = Plaque.query().fetch()
+            for plaque in plaques:
+                pics.add(plaque.pic)
+                pics_count[plaque.pic] += 1
+
+            # Find pics that aren't:
+            for pic in images:
+                if pic not in pics:
+                    orphan_pics.add(pic)
+        else:
+            orphan_pics.add("didn't check for orphans")
+
+        msg = "There are %s comments, %s plaques, %s images, orphan pics: %s<hr>%s" % (
+                num_comments, num_plaques, num_images, orphan_pics, pics_count)
         self.response.write(msg)
 
 class DeleteOnePlaque(webapp2.RequestHandler):
