@@ -731,7 +731,6 @@ class EditPlaque(AddPlaque):
         self.response.write(template.render(template_values))
 
     def post(self):
-        memcache.flush_all()
         super(EditPlaque, self).post(is_edit=True)
 
 

@@ -34,6 +34,7 @@
                         </ul>
                     </div>
                 </div>
+                <p>Originally added {{plaque.created_on.strftime('%Y-%m-%d')}}.</p>
                 <p><a class="btn btn-primary" role="button" href="/geo/{{plaque.location.lat}}/{{plaque.location.lon}}/50000">Nearby Plaques</a></p>
 
                 <div id="map"></div>
