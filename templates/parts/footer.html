@@ -73,7 +73,7 @@
                class="twitter-share-button"
                data-count="none"
                {% if plaques %}
-                   data-text="Always read the plaque: '{{plaques[0].title | truncate(90)}}' #readtheplaque"
+                   data-text="'{{plaques[0].title | truncate(90)}}' Always #readtheplaque"
                    data-url="http://readtheplaque.com{{plaques[0].title_page_url}}"
                {% else %}
                    data-text="Always read the plaque. #readtheplaque"
@@ -84,7 +84,6 @@
             <a href="/rss"><img src="/images/rss.gif" alt="rss icon"/></a>
 
             <!-- Hook for FB Share button-->
-            <!--
             <script async>(function(d, s, id) {
                 var js, fjs = d.getElementsByTagName(s)[0];
                 if (d.getElementById(id)) return;
@@ -93,7 +92,6 @@
                 fjs.parentNode.insertBefore(js, fjs);
             }(document, 'script', 'facebook-jssdk'));</script>
             <div class="fb-share-button" data-layout="button"></div>
-            -->
             Site by <a href="http://twitter.com/kesterallen">@kesterallen</a>
             {% if loginout %}<a href="{{loginout.url}}">{{loginout.text}}</a>{% endif %}
         </div>

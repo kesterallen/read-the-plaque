@@ -257,8 +257,8 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
 
         iplaque = random.randint(0, count-1)
         plaques = Plaque.query().filter(Plaque.approved == True
-                               ).order(Plaque.created_on).fetch(offset=iplaque,
-                                                                limit=1)
+                               ).order(Plaque.created_on
+                               ).fetch(offset=iplaque, limit=1)
         try:
             plaque_key = plaques[0].key.urlsafe()
         except IndexError as err:
