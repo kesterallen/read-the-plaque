@@ -44,6 +44,7 @@ def main():
         ('/approve', h.ApprovePending),
         ('/approveall', h.ApproveAllPending),
         ('/addsearchall', h.AddSearchIndexAll),
+        ('/deletesearch/(.+?)', h.DeleteOneSearchIndex),
         ('/addtitleurlall', h.AddTitleUrlAll),
         ('/search/(.+?)', h.SearchPlaques),
         ('/search/?', h.SearchPlaques),

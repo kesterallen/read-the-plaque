@@ -870,8 +870,17 @@ class DeleteOnePlaque(webapp2.RequestHandler):
             comment.delete()
         try:
             gcs.delete(plaque.pic)
+
+            #TODO: delete search index for this document
+            #plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
+            #results = plaque_search_index.search(search_term)
+            #for result in results:
+            #    plaques = [ndb.Key(urlsafe=r.doc_id).get() for r in results]
+            #    plaque_search_index.delete(result.doc_id)
+
         except:
             pass
+        # TODO: delete search.Index
         plaque.key.delete()
         memcache.flush_all()
         email_admin('Plaque %s deleted' % plaque.title_url,
@@ -916,6 +925,16 @@ class ViewPending(webapp2.RequestHandler):
                               mapzoom=2)
         template_text = template.render(template_values)
         self.response.write(template_text)
+
+class DeleteOneSearchIndex(webapp2.RequestHandler):
+    def get(self, doc_id):
+        plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
+        try:
+            plaque_search_index.delete(doc_id)
+        except search.Error:
+            msg = "Error removing doc id %s" % doc_id
+            logging.exception(msg)
+            self.response.write(msg)
 
 class AddSearchIndexAll(webapp2.RequestHandler):
     def get(self):
