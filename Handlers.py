@@ -115,6 +115,18 @@ def random_five_approved(cls):
     random.shuffle(items)
     return items[:5]
 
+def random_tags(num=5):
+    tags = set()
+    for p in Plaque.query(Plaque.approved == True).fetch():
+        for t in p.tags:
+            tags.add(t)
+
+    tags = list(tags)
+    random.shuffle(tags)
+    if len(tags) > num:
+        tags = tags[:num]
+    return tags
+
 def get_pages_list(per_page=DEFAULT_PLAQUES_PER_PAGE):
     num_pages = int(math.ceil(float(Plaque.num_approved()) /
                               float(per_page)))
@@ -128,14 +140,7 @@ def get_footer_items():
     """
     footer_items = memcache.get('get_footer_items')
     if footer_items is None:
-        tags = set()
-        for p in Plaque.query(Plaque.approved == True).fetch():
-            for t in p.tags:
-                tags.add(t)
-        while len(tags) > 5:
-            tags.pop()
-
-        footer_items = {'tags': tags,
+        footer_items = {'tags': random_tags(),
                         'new_plaques': random_five_approved(Plaque),
                         'new_comments': last_five_approved(Comment)}
 
