@@ -24,7 +24,7 @@
         <div class="collapse navbar-collapse" id="navbar-collapse-1">
             <ul class="nav navbar-nav navbar-right">
                 <p class="navbar-text">
-                    a project of <a href="http://99percentinvisible.org/">99% Invisible</a>
+                    a <a href="http://99percentinvisible.org/">99% Invisible</a> project
                 </p>
 
                 <li class="dropdown">
@@ -36,9 +36,9 @@
                     >Search<span class="caret"></span></a>
                     <ul class="dropdown-menu" role="menu">
                         <li>
-                            <form class="navbar-form navbar-left" role="search" action="/search" method="POST">
+                            <form class="navbar-form navbar-left" style="width: auto; display: inline-block;" role="search" action="/search" method="POST">
                                 <div class="form-group">
-                                    <input name="search_term" type="text" class="form-control" placeholder="Search Plaques">
+                                    <input name="search_term" type="text" class="form-control" placeholder="Search plaque text">
                                 </div>
                             </form>
                         </li>
@@ -53,7 +53,7 @@
                        data-toggle="dropdown"
                        role="button"
                        aria-expanded="false"
-                    >All Plaques<span class="caret"></span></a>
+                    >Pages<span class="caret"></span></a>
                     <ul class="dropdown-menu scrollable-menu" role="menu">
                         {% for i in pages_list %}
                             <li {% if page_num and page_num == i %}class="active"{% endif %}>
@@ -68,6 +68,7 @@
                     <li><a href="/flush">Flush Memcache</a></li>
                 {% endif %}
 
+                <!--
                 <li class="dropdown">
                     <a href="#"
                        class="dropdown-toggle"
@@ -80,6 +81,8 @@
                         <li><a href="/randompage">Set of plaques</a></li>
                     </ul>
                 </li>
+                -->
+                <li><a href="/randompage">Random</a></li>
                 <li><a href="/about">About</a></li>
                 <li><a href="/add">Submit</a></li>
             </ul>

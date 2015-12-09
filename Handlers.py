@@ -220,29 +220,31 @@ class ViewPlaquesPage(webapp2.RequestHandler):
         if template_text is None:
             # Grab all plaques for the map
             plaques = Plaque.approved_list()
+            map_plaques = plaques
             if is_random:
                 random.shuffle(plaques)
+                map_plaques = plaques[:per_page]
             start_index = per_page * (page_num - 1)
             end_index = start_index + per_page
 
             template = JINJA_ENVIRONMENT.get_template('all.html')
             template_values = get_default_template_values(
-                                  all_plaques=plaques,
+                                  all_plaques=map_plaques,
                                   plaques=plaques,
                                   start_index=start_index,
                                   end_index=end_index,
                                   page_num=page_num,
-                                  mapzoom=2)
+                                  mapzoom=1)
 
             template_text = template.render(template_values)
             if not is_random:
                 memcache_status = memcache.set(memcache_name, template_text)
                 if not memcache_status:
-                    logging.debug("memcaching failed for ViewPlaquesPage %s" % 
+                    logging.debug("memcaching failed for ViewPlaquesPage %s" %
                         memcache_name)
                 else:
                     logging.debug(
-                        "memcaching set worked for ViewPlaquesPage %s" % 
+                        "memcaching set worked for ViewPlaquesPage %s" %
                         memcache_name)
 
         return template_text
@@ -330,7 +332,7 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
                                   all_plaques=[plaque],
                                   plaques=[plaque],
                                   icon_size=32,
-                                  mapzoom=15)
+                                  mapzoom=16)
 
             page_text = template.render(template_values)
             memcache_status = memcache.set(memcache_name, page_text)
@@ -340,7 +342,7 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
         else:
             logging.debug("memcache.get worked for _get_from_key for %s" %
                           memcache_name)
-            
+
         return page_text
 
 class ViewOnePlaque(ViewOnePlaqueParent):
@@ -411,7 +413,7 @@ class ViewAllTags(webapp2.RequestHandler):
         template = JINJA_ENVIRONMENT.get_template('tags.html')
         template_values = get_default_template_values(
                               tags=tags_sized,
-                              mapzoom=2)
+                              mapzoom=1)
         self.response.write(template.render(template_values))
 
 class ViewTag(webapp2.RequestHandler):
@@ -429,7 +431,7 @@ class ViewTag(webapp2.RequestHandler):
                               plaques=plaques,
                               start_index=0,
                               end_index=len(plaques),
-                              mapzoom=2)
+                              mapzoom=4)
         self.response.write(template.render(template_values))
 
 class About(webapp2.RequestHandler):
@@ -604,13 +606,27 @@ class AddPlaque(webapp2.RequestHandler):
 
     def _get_form_args(self):
         """Get the arguments from the form and return them."""
+
+        lat = self.request.get('lat')
+        lng = self.request.get('lng')
+
+        if lat is None or lng is None or lat == '' or lng == '':
+            geo_search_term = self.request.get('searchfield')
+            geo_url = 'http://maps.googleapis.com/maps/api/geocode/'
+            url = geo_url + 'json?address=' + geo_search_term
+            geo_fh = urllib.urlopen(url)
+            geo_json = json.load(geo_fh)
+
+            if geo_json['results']:
+                loc_json = geo_json['results'][0]['geometry']['location']
+                lat = loc_json['lat']
+                lng = loc_json['lng']
+
         try:
-            lat = self.request.get('lat')
-            lng = self.request.get('lng')
             location = ndb.GeoPt(lat, lng)
         except:
             err = SubmitError("The plaque location wasn't specified. Please "
-                              "click the back button and resumbit.")
+                              "click the back button and resubmit.")
             raise err
 
         if users.get_current_user():
@@ -746,11 +762,14 @@ class SearchPlaques(webapp2.RequestHandler):
         self.get(search_term)
 
     def get(self, search_term=None):
+        logging.debug('search term is "%s"' % search_term)
         if search_term is None:
             plaques = []
         else:
+            search_term = '"%s"' % search_term.replace('"', '')
             plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
             results = plaque_search_index.search(search_term)
+            logging.debug('search results are "%s"' % results)
             plaques = [ndb.Key(urlsafe=r.doc_id).get() for r in results]
 
         template = JINJA_ENVIRONMENT.get_template('all.html')
@@ -759,37 +778,27 @@ class SearchPlaques(webapp2.RequestHandler):
                               plaques=plaques,
                               start_index=0,
                               end_index=len(plaques),
-                              mapzoom=2)
+                              mapzoom=1)
         self.response.write(template.render(template_values))
 
 class SearchPlaquesGeo(webapp2.RequestHandler):
     """Run a geographic search: plaques within radius of center are returned."""
 
-    def get(self, lat=None, lng=None, search_radius_meters=None, redir=False):
-
-        # Serve the form if a search hasn't been specified:
-        #
-        search_not_specified = (lat is None or lat == '') or \
-                               (lng is None or lng == '') or \
-                               (search_radius_meters is None or \
-                                search_radius_meters == '')
-        if search_not_specified:
-            maptext = 'Click the map, or type a search here'
-            if redir:
-                step1text = '<span style="color:red">Click the map to pick where to search</span>'
-            else:
-                step1text = 'Click the map to pick where to search'
+    def _serve_form(self, redir):
+        maptext = 'Click the map, or type a search here'
+        if redir:
+            step1text = '<span style="color:red">Click the map to pick where to search</span>'
+        else:
+            step1text = 'Click the map to pick where to search'
 
 
-            template_values = get_default_template_values(mapzoom=5,
-                                                          maptext=maptext,
-                                                          step1text=step1text)
-            template = JINJA_ENVIRONMENT.get_template('geosearch.html')
-            self.response.write(template.render(template_values))
-            return
+        template_values = get_default_template_values(mapzoom=1,
+                                                      maptext=maptext,
+                                                      step1text=step1text)
+        template = JINJA_ENVIRONMENT.get_template('geosearch.html')
+        self.response.write(template.render(template_values))
 
-        # Otherwise show the results:
-        #
+    def _serve_response(self, lat, lng, search_radius_meters):
         plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
 
         query_string = 'distance(location, geopoint(%s, %s)) < %s' % (
@@ -808,6 +817,20 @@ class SearchPlaquesGeo(webapp2.RequestHandler):
                               mapzoom=6,
                               mapcenter={'lat': lat, 'lng': lng},)
         self.response.write(template.render(template_values))
+
+    def get(self, lat=None, lng=None, search_radius_meters=None, redir=False):
+
+        # Serve the form if a search hasn't been specified, otherwise show the
+        # results:
+        #
+        search_not_specified = (lat is None or lat == '') or \
+                               (lng is None or lng == '') or \
+                               (search_radius_meters is None or \
+                                search_radius_meters == '')
+        if search_not_specified:
+            self._serve_form(redir)
+        else:
+            self._serve_response(lat, lng, search_radius_meters)
 
     def post(self):
         try:

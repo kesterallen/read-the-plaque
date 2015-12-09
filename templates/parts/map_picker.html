@@ -1,9 +1,7 @@
 <div class="gllpLatlonPicker form-group">
-    <input type="text" class="gllpSearchField" id="searchfield" placeholder="{{maptext}}" style="width: 60%;">
-    <input type="button" class="gllpSearchButton" value="Google Maps Search"/>
-    <!--<button class="btn btn-default" onclick="getOwnLocation()">Get My Location</button>-->
+    <input type="text" class="gllpSearchField" id="searchfield" name="searchfield" placeholder="{{maptext}}" style="width: 60%;">
+    <input type="button" class="gllpSearchButton" value="Search Google Maps"/>
     <input type="button" id="herebutton" class="gllpHereButton" value="Near You">
-    <!--<input type="button" onclick="getOwnLocation()" value="Near You">-->
     <br/>
     <div class="gllpMap" style="width: 100%">Google Maps</div>
     <input hidden type="text" id="lat" name="lat" class="gllpLatitude" {% if plaque %}value="{{plaque.location.lat}}"{% endif %}/>
