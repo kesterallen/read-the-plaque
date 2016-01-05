@@ -771,6 +771,7 @@ class SearchPlaques(webapp2.RequestHandler):
             results = plaque_search_index.search(search_term)
             logging.debug('search results are "%s"' % results)
             plaques = [ndb.Key(urlsafe=r.doc_id).get() for r in results]
+            plaques = [p for p in plaques if p is not None]
 
         template = JINJA_ENVIRONMENT.get_template('all.html')
         template_values = get_default_template_values(
@@ -814,7 +815,7 @@ class SearchPlaquesGeo(webapp2.RequestHandler):
                               plaques=approved_plaques,
                               start_index=0,
                               end_index=len(plaques),
-                              mapzoom=6,
+                              mapzoom=7,
                               mapcenter={'lat': lat, 'lng': lng},)
         self.response.write(template.render(template_values))
 
