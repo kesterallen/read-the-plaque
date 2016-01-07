@@ -39,10 +39,11 @@ ADD_STATES = {'ADD_STATE_SUCCESS': ADD_STATE_SUCCESS,
 # 'read-the-plaque.appspot.com', but it is different from surlyfritter. I
 # suspect I did something different/wrong in the setup, but not sure.
 #
-GCS_BUCKET = '/read-the-plaque.appspot.com' # Don't change this to, say, readtheplaque.com
+GCS_BUCKET = '/read-the-plaque.appspot.com' 
+# Don't change this to, say, readtheplaque.com
 
 DEFAULT_PLAQUESET_NAME = 'public'
-DEFAULT_PLAQUES_PER_PAGE = 24
+DEFAULT_NUM_PER_PAGE = 24
 DEFAULT_MAP_ICON_SIZE_PIX = 16
 
 # Load templates from the /templates dir
@@ -127,7 +128,7 @@ def random_tags(num=5):
         tags = tags[:num]
     return tags
 
-def get_pages_list(per_page=DEFAULT_PLAQUES_PER_PAGE):
+def get_pages_list(per_page=DEFAULT_NUM_PER_PAGE):
     num_pages = int(math.ceil(float(Plaque.num_approved()) /
                               float(per_page)))
     pages_list = [1+p for p in range(num_pages)]
@@ -181,11 +182,11 @@ def handle_500(request, response, exception):
 
 
 class ViewPlaquesPage(webapp2.RequestHandler):
-    def head(self, page_num=1, per_page=DEFAULT_PLAQUES_PER_PAGE, is_random=False):
-        self.get(page_num=1, per_page=DEFAULT_PLAQUES_PER_PAGE)
+    def head(self, page_num=1, per_page=DEFAULT_NUM_PER_PAGE, is_random=False):
+        self.get(page_num=1, per_page=DEFAULT_NUM_PER_PAGE)
         self.response.clear()
 
-    def _get(self, page_num=1, per_page=DEFAULT_PLAQUES_PER_PAGE, is_random=False):
+    def _get(self, page_num=1, per_page=DEFAULT_NUM_PER_PAGE, is_random=False):
         """
         View the nth per_page plaques on a grid.
         page_num is a one-based integer
@@ -202,7 +203,7 @@ class ViewPlaquesPage(webapp2.RequestHandler):
             per_page = int(per_page)
         except ValueError as err:
             logging.error(err)
-            per_page = DEFAULT_PLAQUES_PER_PAGE
+            per_page = DEFAULT_NUM_PER_PAGE
         if per_page < 1:
             per_page = 1
 
@@ -214,7 +215,8 @@ class ViewPlaquesPage(webapp2.RequestHandler):
             template_text = None
         else:
             template_text = memcache.get(memcache_name)
-            logging.debug("memcaching worked for ViewPlaquesPage %s" % memcache_name)
+            logging.debug("memcaching worked for ViewPlaquesPage %s" % 
+                memcache_name)
 
         # TODO: the loginout information is being cached, but shouldn't be
         if template_text is None:
@@ -249,7 +251,7 @@ class ViewPlaquesPage(webapp2.RequestHandler):
 
         return template_text
 
-    def get(self, page_num=1, per_page=DEFAULT_PLAQUES_PER_PAGE, is_random=False):
+    def get(self, page_num=1, per_page=DEFAULT_NUM_PER_PAGE, is_random=False):
         template_text = self._get(page_num, per_page, is_random)
         self.response.write(template_text)
 
@@ -298,9 +300,10 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
                 try:
                     logging.debug("Trying old_site_id")
                     old_site_id = int(plaque_key)
-                    plaque = Plaque.query().filter(Plaque.approved == True
-                                          ).filter(Plaque.old_site_id == old_site_id
-                                          ).get()
+                    plaque = Plaque.query(
+                        ).filter(Plaque.approved == True
+                        ).filter(Plaque.old_site_id == old_site_id
+                        ).get()
                 except ValueError as err:
                     # Get by title, allowing only admins to see unapproved ones:
                     logging.debug("Using plaque.title_url: '%s'" % plaque_key)
@@ -485,8 +488,9 @@ class AddPlaque(webapp2.RequestHandler):
 
             elif state == ADD_STATE_ERROR:
                 message = """
-                      Sorry, your plaque submission had this error: <font color="red">'%s'</font>
-                      """ % message
+                    Sorry, your plaque submission had this error: 
+                    <font color="red">'%s'</font>
+                    """ % message
         return message
 
     def get(self, message=None):
@@ -657,8 +661,8 @@ class AddPlaque(webapp2.RequestHandler):
 
         # Get and tokenize tags
         tags_str = self.request.get('tags')
-        tags_untokenized = tags_str.split(',')
-        tags = [re.sub(r'\s+', ' ', t.strip().lower()) for t in tags_untokenized]
+        tags_split = tags_str.split(',')
+        tags = [re.sub(r'\s+', ' ', t.strip().lower()) for t in tags_split]
         tags = [t for t in tags if t] # Remove empties
 
         return location, created_by, title, description, img_name, img_fh, tags
@@ -787,11 +791,9 @@ class SearchPlaquesGeo(webapp2.RequestHandler):
 
     def _serve_form(self, redir):
         maptext = 'Click the map, or type a search here'
+        step1text = 'Click the map to pick where to search'
         if redir:
-            step1text = '<span style="color:red">Click the map to pick where to search</span>'
-        else:
-            step1text = 'Click the map to pick where to search'
-
+            step1text = '<span style="color:red">%s</span>' % step1text
 
         template_values = get_default_template_values(mapzoom=1,
                                                       maptext=maptext,
