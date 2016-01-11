@@ -648,7 +648,7 @@ class AddPlaque(webapp2.RequestHandler):
 
         # Prefer the file to the URL, if both are given.
         #
-        if img_file != '':
+        if img_file != '' and img_file is not None:
             img_name = img_file.filename
             img_fh = img_file.file
         elif img_url != '':
