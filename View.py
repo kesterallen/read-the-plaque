@@ -15,6 +15,7 @@ JINJA_ENVIRONMENT = jinja2.Environment (
 
 def main():
     app = webapp2.WSGIApplication([
+        ('/admin', h.AdminLogin),
         ('/page/(.+?)/(.+?)/(.+?)/?', h.ViewPlaquesPage),
         ('/page/(.+?)/(.+?)/?', h.ViewPlaquesPage),
         ('/page/(.+?)/?', h.ViewPlaquesPage),

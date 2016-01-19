@@ -29,7 +29,7 @@ from Models import Comment, Plaque
 
 PLAQUE_SEARCH_INDEX_NAME = 'plaque_index'
 ADMIN_EMAIL = 'kester+readtheplaque@gmail.com'
-NOTIFICATION_SENDER_EMAIL = ADMIN_EMAIL
+NOTIFICATION_SENDER_EMAIL = 'kester@gmail.com'
 ADD_STATE_SUCCESS = 'success'
 ADD_STATE_ERROR = 'error'
 ADD_STATES = {'ADD_STATE_SUCCESS': ADD_STATE_SUCCESS,
@@ -89,8 +89,8 @@ def email_admin(msg, body):
                        subject=msg,
                        body=body,
                        html=body)
-    except:
-        logging.debug('mail failed: %s' % msg)
+    except Exception as err:
+        logging.debug('mail failed: %s, %s' % (msg, err))
 
 def get_plaqueset_key(plaqueset_name=DEFAULT_PLAQUESET_NAME):
     """
@@ -260,7 +260,7 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
         raise NotImplementedError("Don't call ViewOnePlaqueParent.get directly")
 
     def _random_plaque_key(self):
-        count = Plaque.query().count()
+        count = Plaque.query().filter(Plaque.approved == True).count()
         if not count:
             raise ValueError("No plaques!")
 
@@ -272,8 +272,8 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
             plaque_key = plaques[0].key.urlsafe()
         except IndexError as err:
             logging.error(err)
-            raise IndexError("This plaque has not been reviewed yet. "
-                             "Please try again later!")
+            raise IndexError("This plaque (%s of %s) has not been reviewed yet. "
+                             "Please try again later!" % (iplaque, plaques))
 
         return plaque_key
 
@@ -347,6 +347,11 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
                           memcache_name)
 
         return page_text
+
+class AdminLogin(webapp2.RequestHandler):
+    def get(self):
+        url = users.create_login_url('/flush'),
+        self.response.write("<a href='%s'>Login</a>" % url)
 
 class ViewOnePlaque(ViewOnePlaqueParent):
     """
@@ -523,10 +528,12 @@ class AddPlaque(webapp2.RequestHandler):
 
             # Create new plaque entity:
             #
+            logging.info('creating or updating plaque entity')
             plaque = self._create_or_update_plaque(is_edit, plaqueset_key)
 
             # Make the plaque searchable:
             #
+            logging.info('making search document')
             try:
                 plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
                 plaque_search_index.put(plaque.to_search_document())
@@ -536,6 +543,7 @@ class AddPlaque(webapp2.RequestHandler):
 
             # Notify admin:
             #
+            logging.info('creating email')
             post_type = 'Updated' if is_edit else 'New'
             msg = '%s plaque! %s' %  (post_type, plaque.title_page_url)
             body = """
@@ -543,6 +551,7 @@ class AddPlaque(webapp2.RequestHandler):
                 <p><a href="http://readtheplaque.com%s">Link</a></p>
                 <p><img src="%s"/></p>
                 """ %  (post_type, plaque.title_page_url, plaque.img_url)
+            logging.info('sending email')
             email_admin(msg, body)
             state = ADD_STATES['ADD_STATE_SUCCESS']
             msg = plaque.title_page_url
@@ -914,8 +923,8 @@ class DeleteOnePlaque(webapp2.RequestHandler):
         # TODO: delete search.Index
         plaque.key.delete()
         memcache.flush_all()
-        email_admin('Plaque %s deleted' % plaque.title_url,
-                    'Plaque %s deleted' % plaque.title_url)
+        email_admin('Deleted plaque %s' % plaque.title_url,
+                    'Deleted plaque %s' % plaque.title_url)
         self.redirect('/')
 
 #class DeleteEverything(webapp2.RequestHandler):
