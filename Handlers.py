@@ -61,97 +61,7 @@ class SubmitError(Exception):
 # same entity group. Queries across the single entity group will be consistent.
 # However, the write rate should be limited to ~1/second.
 
-def bounding_square_zoom(plaques):
-    if len(plaques) <= 1:
-        zoom = 20
-    else:
-        size = bounding_square_size(plaques)
-        # Protect against passing a very small size into
-        # map_zoom_from_distance, which will get a math domain error from a
-        # log(0):
-        if size < 10.0:
-            zoom = 20
-        else:
-            zoom = int(map_zoom_from_distance(size))
-
-    return zoom
-
-def bounding_square_center(plaques):
-    """
-    Return the lat/lng of the bounding square around the input plaques, in degrees.
-    """
-    if plaques is None or len(plaques) == 0:
-        return {'lat': 15, 'lng': -25}
-
-    nplaques = float(len(plaques))
-    midlat = float(sum([p.location.lat for p in plaques])) / nplaques
-    midlng = float(sum([p.location.lon for p in plaques])) / nplaques
-
-    logging.info('mid point of plaques is %s %s' % (midlat, midlng))
-    return {'lat': midlat, 'lng': midlng}
-
-def bounding_square_size(plaques):
-    """
-    Return the largest side of the bounding square around the
-    input plaques, in meters.
-
-    Gmap zoom : Size of square in meters
-    20 : 1128.497220
-    19 : 2256.994440
-    18 : 4513.988880
-    17 : 9027.977761
-    16 : 18055.955520
-    15 : 36111.911040
-    14 : 72223.822090
-    13 : 144447.644200
-    12 : 288895.288400
-    11 : 577790.576700
-    10 : 1155581.153000
-    9  : 2311162.307000
-    8  : 4622324.614000
-    7  : 9244649.227000
-    6  : 18489298.450000
-    5  : 36978596.910000
-    4  : 73957193.820000
-    3  : 147914387.600000
-    2  : 295828775.300000
-    1  : 591657550.500000
-    """
-    if plaques is None or len(plaques) == 0:
-        return 0.0
-
-    lats = [p.location.lat for p in plaques]
-    lngs = [p.location.lon for p in plaques]
-
-    delta_lat = max(lats) - min(lats)
-    delta_lng = max(lngs) - min(lngs)
-
-    distance_lat_km = 111.0 * delta_lat
-    #TODO:  this is the ~40deg measure: wrong in most cases
-    distance_lng_km =  78.0 * delta_lng
-
-    distance_m = 1000.0 * max(distance_lat_km, distance_lng_km)
-
-    return distance_m
-
-def map_zoom_from_distance(distance):
-    """Experimentally determined"""
-    ntiles = 10.0
-    zoom = 20.0 - math.log(ntiles*distance/1128.8) / math.log(2.0)
-    return zoom
-
 def get_default_template_values(**kwargs):
-    zoom = None
-    mapcenter = None
-    if 'all_plaques' in kwargs.keys():
-        if 'start_index' in kwargs['all_plaques']:
-            plaques = kwargs['all_plaques'][start_index:end_index]
-        else:
-            plaques = kwargs['all_plaques']
-        zoom = bounding_square_zoom(plaques)
-        mapcenter = bounding_square_center(plaques)
-        logging.info("MAP BOUNDING SQUARE ZOOM IS %s, CENTER IS %s" % (zoom, mapcenter))
-
     template_values = memcache.get('default_template_values')
     if template_values is None:
         template_values = {
@@ -168,10 +78,6 @@ def get_default_template_values(**kwargs):
     else:
         logging.debug("memcache.get worked for default_template_values")
 
-    if zoom is not None:
-        template_values['mapzoom'] = zoom
-    if mapcenter is not None:
-        template_values['mapcenter'] = mapcenter
     for k, v in kwargs.items():
         template_values[k] = v
     return template_values
@@ -329,7 +235,7 @@ class ViewPlaquesPage(webapp2.RequestHandler):
                                   start_index=start_index,
                                   end_index=end_index,
                                   page_num=page_num,
-                                  )#mapzoom=1)
+                              )
 
             template_text = template.render(template_values)
             if not is_random:
@@ -428,7 +334,7 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
                                   all_plaques=[plaque],
                                   plaques=[plaque],
                                   icon_size=32,
-                                  )#mapzoom=16)
+                              )
 
             page_text = template.render(template_values)
             memcache_status = memcache.set(memcache_name, page_text)
@@ -512,10 +418,7 @@ class ViewAllTags(webapp2.RequestHandler):
         tags_sized = Plaque.all_tags_sized()
 
         template = JINJA_ENVIRONMENT.get_template('tags.html')
-        template_values = get_default_template_values(
-                              tags=tags_sized,
-                              mapzoom=1) # keep this mapzoom here,
-                                         #since this only renders the tags text
+        template_values = get_default_template_values(tags=tags_sized)
         self.response.write(template.render(template_values))
 
 class ViewTag(webapp2.RequestHandler):
@@ -533,7 +436,7 @@ class ViewTag(webapp2.RequestHandler):
                               plaques=plaques,
                               start_index=0,
                               end_index=len(plaques),
-                              )#mapzoom=4)
+                          )
         self.response.write(template.render(template_values))
 
 class About(webapp2.RequestHandler):
@@ -595,7 +498,7 @@ class AddPlaque(webapp2.RequestHandler):
     def get(self, message=None):
         maptext = "Click the plaque's location on the map, or search " + \
                   "for it, or enter its lat/lng location"
-        template_values = get_default_template_values(mapzoom=1, maptext=maptext)
+        template_values = get_default_template_values(maptext=maptext)
         message = self._get_message(message)
         if message is not None:
             template_values['message'] = message
@@ -641,9 +544,14 @@ class AddPlaque(webapp2.RequestHandler):
             post_type = 'Updated' if is_edit else 'New'
             msg = '%s plaque! %s' %  (post_type, plaque.title_page_url)
             body = """
-                <p>%s plaque!</p>
-                <p><a href="http://readtheplaque.com%s">Link</a></p>
-                <p><img src="%s"/></p>
+                <p>
+                    %s plaque!
+                </p>
+                <p>
+                    <a href="http://readtheplaque.com%s">
+                        <img src="%s"/>
+                    </a>
+                </p>
                 """ %  (post_type, plaque.title_page_url, plaque.img_url)
             logging.info('sending email')
             email_admin(msg, body)
@@ -848,7 +756,6 @@ class EditPlaque(AddPlaque):
         template = JINJA_ENVIRONMENT.get_template('add.html')
         template_values = {
             'plaque': plaque,
-            'mapzoom': 5,
             'maptext': 'Click the map, do a search, or click "Get My Location"',
             'loginout': loginout()
         }
@@ -886,7 +793,7 @@ class SearchPlaques(webapp2.RequestHandler):
                               plaques=plaques,
                               start_index=0,
                               end_index=len(plaques),
-                              )#mapzoom=1)
+                          )
         self.response.write(template.render(template_values))
 
 class SearchPlaquesGeo(webapp2.RequestHandler):
@@ -898,8 +805,7 @@ class SearchPlaquesGeo(webapp2.RequestHandler):
         if redir:
             step1text = '<span style="color:red">%s</span>' % step1text
 
-        template_values = get_default_template_values(mapzoom=1,
-                                                      maptext=maptext,
+        template_values = get_default_template_values(maptext=maptext,
                                                       step1text=step1text)
         template = JINJA_ENVIRONMENT.get_template('geosearch.html')
         self.response.write(template.render(template_values))
@@ -921,7 +827,7 @@ class SearchPlaquesGeo(webapp2.RequestHandler):
                               start_index=0,
                               end_index=len(plaques),
                               mapcenter={'lat': lat, 'lng': lng},
-                              )#mapzoom=7)
+                          )
         self.response.write(template.render(template_values))
 
     def get(self, lat=None, lng=None, search_radius_meters=None, redir=False):
@@ -1056,7 +962,7 @@ class ViewPending(webapp2.RequestHandler):
                               plaques=plaques,
                               start_index=0,
                               end_index=len(plaques),
-                              )#mapzoom=2)
+                          )
         template_text = template.render(template_values)
         self.response.write(template_text)
 

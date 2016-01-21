@@ -3,41 +3,26 @@
 <script>
     function initialize() {
         var mapCanvas = document.getElementById('map');
+        var mapOptions = { mapTypeId: google.maps.MapTypeId.ROADMAP }
+        var map = new google.maps.Map(mapCanvas, mapOptions)
 
-        var mapOptions = {
-            center: {
-                {% if mapcenter %}
-                    lat: {{mapcenter['lat']}},
-                    lng: {{mapcenter['lng']}}
-                {% else %}
-                    {% if all_plaques|length == 1 %}
-                        lat: {{all_plaques[0].location.lat}},
-                        lng: {{all_plaques[0].location.lon}}
-                    {% else %}
-                        lat: 15,
-                        lng: -25,
-                    {% endif %}
-                {% endif %}
-            },
-            zoom: {{mapzoom}},
-            mapTypeId: google.maps.MapTypeId.ROADMAP
-        }
         var icon = {
             url: "/images/red-dot.png",
             scaledSize: new google.maps.Size({{icon_size}}, {{icon_size}}),
             origin: new google.maps.Point(0, 0), // origin -- top left
             anchor: new google.maps.Point({{icon_size / 2}}, {{icon_size}}) // anchor -- bottom middle
         };
-        var map = new google.maps.Map(mapCanvas, mapOptions)
 
         var markers = [];
 
+        var bounds = new google.maps.LatLngBounds();
         {% for plaque in all_plaques %}
+            var point = new google.maps.LatLng({{plaque.location.lat}}, {{plaque.location.lon}});
+            bounds.extend(point);
             markers.push(new google.maps.Marker({
                 map: map,
                 icon: icon,
-                position: {lat: {{plaque.location.lat}},
-                           lng: {{plaque.location.lon}}},
+                position: point,
                 url: "{{plaque.title_page_url}}",
                 infowindow: new google.maps.InfoWindow({
                     content: "{{plaque.title|escape}}<p>" + 
@@ -55,6 +40,8 @@
                 return function() { window.location.href = this.url; }
             }({{loop.index0}}));
         {% endfor %}
+
+        map.fitBounds(bounds);
     }
 </script>
 
