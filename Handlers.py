@@ -369,7 +369,7 @@ class RandomPlaquesPage(ViewPlaquesPage):
     Get a page of random plaques.
     """
     def get(self):
-        page_text = self._get(is_random=True)
+        page_text = self._get(per_page=6, is_random=True)
         self.response.write(page_text)
 
 class RandomPlaque(ViewOnePlaqueParent):
@@ -526,6 +526,7 @@ class AddPlaque(webapp2.RequestHandler):
             # Create new plaque entity:
             #
             logging.info('creating or updating plaque entity')
+            import pdb; pdb.set_trace()
             plaque = self._create_or_update_plaque(is_edit, plaqueset_key)
 
             # Make the plaque searchable:
@@ -542,17 +543,21 @@ class AddPlaque(webapp2.RequestHandler):
             #
             logging.info('creating email')
             post_type = 'Updated' if is_edit else 'New'
-            msg = '%s plaque! %s' %  (post_type, plaque.title_page_url)
+            user = users.get_current_user()
+            name = "anon" if user is None else user.nickname()
+            msg = '%s %s plaque! %s' %  (name, post_type, plaque.title_page_url)
             body = """
                 <p>
-                    %s plaque!
-                </p>
-                <p>
-                    <a href="http://readtheplaque.com%s">
-                        <img src="%s"/>
+                    <a href="http://readtheplaque.com{1.title_page_url}">
+                        {0} plaque!
                     </a>
                 </p>
-                """ %  (post_type, plaque.title_page_url, plaque.img_url)
+                <p>
+                    <a href="http://readtheplaque.com{1.title_page_url}">
+                        <img src="{1.img_url}"/>
+                    </a>
+                </p>
+                """.format(post_type, plaque)
             logging.info('sending email')
             email_admin(msg, body)
             state = ADD_STATES['ADD_STATE_SUCCESS']
@@ -690,18 +695,21 @@ class AddPlaque(webapp2.RequestHandler):
         If gcs_fn is specified, overwrite that gcs filename. This is used
         for updating the picture.
         """
-        # Kill old image and URL, if they exist. Tolerate failure in case
-        # this is a redo:
-        if plaque.pic is not None:
-            try:
-                gcs.delete(plaque.pic)
-            except:
-                pass
-        if plaque.img_url is not None:
-            try:
-                images.delete_serving_url(plaque.img_url)
-            except:
-                pass
+
+#       Turn this off while Tony Bonomolo is editing:
+#
+#        # Kill old image and URL, if they exist. Tolerate failure in case
+#        # this is a redo:
+#        if plaque.pic is not None:
+#            try:
+#                gcs.delete(plaque.pic)
+#            except:
+#                pass
+#        if plaque.img_url is not None:
+#            try:
+#                images.delete_serving_url(plaque.img_url)
+#            except:
+#                pass
 
         # Make GCS filename
         date_slash_time = datetime.datetime.now().strftime("%Y%m%d/%H%M%S")
@@ -897,35 +905,35 @@ class Counts(webapp2.RequestHandler):
                 num_comments, num_plaques, num_images, orphan_pics, pics_count)
         self.response.write(msg)
 
-class DeleteOnePlaque(webapp2.RequestHandler):
-    def get(self):
-        raise NotImplementedError("no get in DeleteOnePlaque")
-
-    @ndb.transactional
-    def post(self):
-        """Remove one plaque and its associated Comments and GCS image."""
-        plaque_key = self.request.get('plaque_key')
-        plaque = ndb.Key(urlsafe=plaque_key).get()
-        for comment in plaque.comments:
-            comment.delete()
-        try:
-            gcs.delete(plaque.pic)
-
-            #TODO: delete search index for this document
-            #plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
-            #results = plaque_search_index.search(search_term)
-            #for result in results:
-            #    plaques = [ndb.Key(urlsafe=r.doc_id).get() for r in results]
-            #    plaque_search_index.delete(result.doc_id)
-
-        except:
-            pass
-        # TODO: delete search.Index
-        plaque.key.delete()
-        memcache.flush_all()
-        email_admin('Deleted plaque %s' % plaque.title_url,
-                    'Deleted plaque %s' % plaque.title_url)
-        self.redirect('/')
+#class DeleteOnePlaque(webapp2.RequestHandler):
+#    def get(self):
+#        raise NotImplementedError("no get in DeleteOnePlaque")
+#
+#    @ndb.transactional
+#    def post(self):
+#        """Remove one plaque and its associated Comments and GCS image."""
+#        plaque_key = self.request.get('plaque_key')
+#        plaque = ndb.Key(urlsafe=plaque_key).get()
+#        for comment in plaque.comments:
+#            comment.delete()
+#        try:
+#            gcs.delete(plaque.pic)
+#
+#            #TODO: delete search index for this document
+#            #plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
+#            #results = plaque_search_index.search(search_term)
+#            #for result in results:
+#            #    plaques = [ndb.Key(urlsafe=r.doc_id).get() for r in results]
+#            #    plaque_search_index.delete(result.doc_id)
+#
+#        except:
+#            pass
+#        # TODO: delete search.Index
+#        plaque.key.delete()
+#        memcache.flush_all()
+#        email_admin('Deleted plaque %s' % plaque.title_url,
+#                    'Deleted plaque %s' % plaque.title_url)
+#        self.redirect('/')
 
 #class DeleteEverything(webapp2.RequestHandler):
 #    def get(self):

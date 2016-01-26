@@ -39,7 +39,7 @@ def main():
         ('/flush', h.FlushMemcache),
         ('/counts', h.Counts),
         #('/deleteall', h.DeleteEverything),
-        ('/delete', h.DeleteOnePlaque),
+        #('/delete', h.DeleteOnePlaque),
         ('/pending', h.ViewPending),
         ('/disapprove', h.DisapprovePlaque),
         ('/approve', h.ApprovePending),

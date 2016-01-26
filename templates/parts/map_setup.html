@@ -17,7 +17,9 @@
 
         var bounds = new google.maps.LatLngBounds();
         {% for plaque in all_plaques %}
+
             var point = new google.maps.LatLng({{plaque.location.lat}}, {{plaque.location.lon}});
+
             bounds.extend(point);
             markers.push(new google.maps.Marker({
                 map: map,
@@ -42,6 +44,8 @@
         {% endfor %}
 
         map.fitBounds(bounds);
+        //google.maps.event.addListenerOnce(map, "zoom_changed", function() { console.log(map.getZoom()); });
+        //google.maps.event.addListenerOnce(map, "center_changed", function() { console.log(map.getCenter()); });
     }
 </script>
 
