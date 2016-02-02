@@ -24,6 +24,14 @@ indexes:
   - name: created_on
     direction: desc
 
+- kind: Plaque
+  properties:
+  - name: approved
+  - name: updated_on
+    direction: desc
+  - name: created_on
+    direction: desc
+
 - kind: Comment
   properties:
   - name: approved

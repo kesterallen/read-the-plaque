@@ -71,7 +71,8 @@ class Plaque(ndb.Model):
         plaques = memcache.get('approved')
         if plaques is None:
             plaques = Plaque.query().filter(Plaque.approved == True
-                                   ).order(-Plaque.created_on
+                                   ).order(-Plaque.updated_on,
+                                           -Plaque.created_on
                                    ).fetch()
             memcache_status = memcache.set('approved', plaques)
             if not memcache_status:
@@ -243,4 +244,8 @@ class Plaque(ndb.Model):
             #'updated_by': self.updated_by,
             'old_site_id': self.old_site_id,
         }
+
+class FeaturedPlaque(ndb.Model):
+    created_on = ndb.DateTimeProperty(auto_now_add=True)
+    plaque = ndb.KeyProperty(repeated=False, kind=Plaque)
 

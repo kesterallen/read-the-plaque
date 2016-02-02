@@ -3,7 +3,11 @@
 <script>
     function initialize() {
         var mapCanvas = document.getElementById('map');
-        var mapOptions = { mapTypeId: google.maps.MapTypeId.ROADMAP }
+        var mapOptions = {
+            mapTypeId: google.maps.MapTypeId.ROADMAP ,
+            minZoom: 1,
+            maxZoom: 19,
+        }
         var map = new google.maps.Map(mapCanvas, mapOptions)
 
         var icon = {

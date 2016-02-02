@@ -1,37 +1,5 @@
 
-/* Don't underline links */
-a { text-decoration: none; }
-
-/* Prevent navbar overlap */
-body { padding-top: 70px; }
-
-/* Center column class (used by the map) */
-.col-centered {
-    float: none;
-    margin: 0 auto;
-}
-
-/* Sticky footer styles */
-html {
-    position: relative;
-    min-height: 100%;
-}
-body {
-    /* Margin bottom by footer height */
-    margin-bottom: 300px;
-    padding-bottom: 10px; /* put a smidge of blank space at the bottom, just before the footer*/
-}
-.footer {
-    width: 100%;
-    /* Set the fixed height of the footer here */
-    height: 300px;
-    background-color: #f5f5f5;
-    padding-top: 10px; /* put a smidge of blank space at the top of the footer */
-}
-/* end Sticky footer styles */
-
 /* Pintrest-like */
-*, *:before, *:after {box-sizing:  border-box !important;}
 
 .pinterest-row {
     -moz-column-width: 18em;
@@ -54,19 +22,87 @@ body {
     position:relative;
     display: block;
 }
-/* end Pintrest-like */
+
+.thumbnail.right-caption > img {
+    float: left;
+    margin-right: 9px;
+}
+
+.bg {
+    background: url('https://pbs.twimg.com/profile_banners/3321788408/1440106466/1500x500') no-repeat center center;
+    position: fixed;
+    width: 100%;
+    height: 350px; /*same height as jumbotron */
+    top:0;
+    left:0;
+    z-index: -1;
+}
+
+.jumbotron {
+    background: url('https://pbs.twimg.com/profile_banners/3321788408/1440106466/1500x500') no-repeat center center;
+    background-size: cover;
+    height: 350px;
+    color: #40495A;
+    text-shadow: #444 0 1px 1px;
+}
+
+.jumbotron > h1 {
+    display: inline;
+}
+
+
+/* Make navbar buttons stand out more when hovered */
+/* TODO: this isn't working */
+.navbar-nav > a:hover, .navbar-nav > a:focus {
+    background-color: #40495A;
+    background-color: #40495A;
+    color: #FFF;
+}
+
+
+/* Center column class (used by the map) */
+.col-centered {
+    float: none;
+    margin: 0 auto;
+}
+
+/* Sticky footer styles */
+html {
+    position: relative;
+    min-height: 100%;
+}
+
+/* Prevent navbar overlap */
+/* Margin bottom by footer height */
+/* put a smidge of blank space at the bottom, just before the footer*/
+body {
+    margin-bottom: 300px;
+    padding-bottom: 10px;
+}
+
+.footer {
+    width: 100%;
+    /* Set the fixed height of the footer here */
+    height: 300px;
+    background-color: #f5f5f5;
+    padding-top: 10px; /* put a smidge of blank space at the top of the footer */
+}
+/* end Sticky footer styles */
 
 #map {
     height: 400px;
 }
 
-/* Make navbar buttons stand out more when hovered */
-.navbar-default .navbar-nav > li > a:hover, .navbar-default .navbar-nav > li > a:focus {
-    background-color: #40495A;
-    color: #FFF;
-}
-
 /* If the map DIV doesn't have a size set up, it won't appear on the page */
 .gllpMap    { width: 500px; height: 250px; }
 
-.navbar-brand-bigger { font-size: 50px; }
+.thumbnail.right-caption {
+    float: left;
+}
+
+.thumbnail.right-caption > .caption {
+    padding: 4px;
+}
+
+/* end Pintrest-like */
+

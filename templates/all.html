@@ -3,19 +3,40 @@
 {% block content %}
 <div class="container-fluid">
 
-    <div class="row">
-        <div class="col-xs-12 col-centered">
-            <div id="map"></div>
-        </div>
-    </div>
+    <!-- Render the featured plaque pane and a small map, if it exists. Otherwise draw the larger map at the bottom of the page -->
+    {% if featured_plaque %}
+        <div class="row">
+            <div class="col-xs-12 col-sm-5 col-centered">
+                <div style="height: 350;" id="map"></div>
+            </div>
 
-    <div class="row">
-        <div class="col-xs-12 col-med-6 col-centered">
-            {% if all_plaques %}
-                {% include 'parts/map_setup.html' %}
-            {% endif %}
+            <a class="col-xs-12 col-sm-7 featured" href="{{featured_plaque.title_page_url}}">
+                <div class="item">
+
+                    <div class="thumbnail right-caption">
+                        <h1>Featured Plaque:</h1>
+
+                        <img src="{{featured_plaque.img_url_thumbnail}}"/>
+
+                        <div class="caption">
+                            <h2>{{featured_plaque.title}}</h2>
+
+                            {{featured_plaque.description | striptags | wordwrap(100, True) | truncate(400)}}
+
+                            <p>
+                                <ul class="list-inline">
+                                    {% for tag in featured_plaque.tags %}
+                                        <li>{{tag | truncate(15, True)}}</li>
+                                    {% endfor %}
+                                </ul>
+                            </p>
+                        </div>
+                    </div>
+
+                </div>
+            </a>
         </div>
-    </div>
+    {% endif %}
 
     {% if plaques|length == 0 %}<h2>No plaques in that search</h2>{% endif %}
 
@@ -26,7 +47,7 @@
                 <a href="{{plaque.title_page_url}}">
                     <div class="item">
                         <div class="well">
-                            <h2>{{plaque.title}}</h2>
+                            <h3>{{plaque.title}}</h3>
                             <img src="{{plaque.img_url_thumbnail}}" class="img-responsive"/>
 
                             <p>{{plaque.description | striptags | wordwrap(50, True) | truncate(200)}}</p>
@@ -67,5 +88,16 @@
         </div>
     {% endif %}
 
+    <!-- If there is no featured plaque, draw the larger map at the bottom of the page -->
+    {% if not featured_plaque %}
+        <div class="row">
+            <div class="col-xs-12 col-centered">
+                <div style="height: 150;" id="map"></div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Set up the map, if necessary -->
+    {% if all_plaques %} {% include 'parts/map_setup.html' %} {% endif %}
 </div>
 {% endblock %}
