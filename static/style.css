@@ -43,7 +43,7 @@
     background-size: cover;
     height: 350px;
     color: #40495A;
-    text-shadow: #444 0 1px 1px;
+    text-shadow: 2px 2px 2px #004;
 }
 
 .jumbotron > h1 {

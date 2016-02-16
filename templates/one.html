@@ -8,6 +8,7 @@
             <h1>{{plaque.title}}{% if not plaque.approved %} [Pending] {% endif %}
             {% if loginout.is_admin %}
                 <a class="btn btn-default" role="button" href="/edit/{{plaque.key.urlsafe()}}">Edit</a>
+                <a class="btn btn-default" role="button" href="/setfeatured/{{plaque.key.urlsafe()}}">Set as Featured Plaque</a>
                 {% if not plaque.approved %}
                     <form class="form-inline" action="/approve" method="POST">
                         <input type="hidden" name="plaque_key" value="{{plaque.key.urlsafe()}}">
@@ -28,9 +29,7 @@
                     <div class="panel-body">
                         <p>{{plaque.description}}</p>
                         <ul class="list-inline">
-                            {% for tag in plaque.tags %}
-                                <li><a href="/tag/{{tag}}" alt="{{tag}}">{{tag}}</a></li>
-                            {% endfor %}
+                            {% for tag in plaque.tags %} <li><a href="/tag/{{tag}}" alt="{{tag}}">{{tag}}</a></li> {% endfor %}
                         </ul>
                     </div>
                 </div>
@@ -39,12 +38,9 @@
 
                 <div id="map"></div>
 
-                {% if all_plaques %}
-                    {% include 'parts/map_setup.html' %}
-                {% endif %}
+                {% if all_plaques %} {% include 'parts/big_map_dynamic.html' %} {% endif %}
             </div>
         </div>
-
 
         {% for comment_key in plaque.comments %}
             {% set comment = comment_key.get() %}
@@ -62,25 +58,6 @@
         <!-- <h1>Leave a Comment</h1> -->
         <div class="row">
             <div class="col-xs-11">
-                <!--
-                <form action="/comment"
-                      method="POST"
-                      enctype="multipart/form-data" >
-
-                    <div class="form-group">
-                        <label for="comment_text">Comment</label>
-                        <textarea class="form-control"
-                                  id="comment_text"
-                                  name="comment_text"
-                                  placeholder="Add your comment here."
-                                  required
-                                  rows="3">
-                        </textarea>
-                    </div>
-                    <input type="hidden" name="plaque_key" value="{{plaque.key.urlsafe()}}">
-                    <button type="submit" class="btn btn-default">Make Comment</button>
-                </form>
-                -->
                 {% if loginout.is_admin %}
                     {% if plaque.approved %}
                         <div class="panel panel-default">
@@ -94,12 +71,10 @@
                     {% else %}
                         <div class="panel panel-default">
                             <div class="panel-body">
-                                <!--
                                 <form class="form-inline" action="/delete" method="POST">
                                     <input type="hidden" name="plaque_key" value="{{plaque.key.urlsafe()}}">
                                     <button type="submit" class="btn btn-danger">Delete this Plaque</button>
                                 </form>
-                                -->
                             </div>
                         </div>
                     {% endif %}

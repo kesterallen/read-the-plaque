@@ -4,35 +4,16 @@
         <div class="col-md-6 col-xs-12">
             <ul class="list-group">
                 <li class="list-group-item active">Selected Plaques</li>
-                {% for plaque in footer_items.new_plaques %}
-                    <li class="list-group-item">
+                {% for plaque in footer_items.new_plaques %} <li class="list-group-item">
                         <a href="{{plaque.title_page_url}}">{{plaque.title}}</a>
-                    </li>
-                {% endfor %}
+                </li> {% endfor %}
             </ul>
         </div>
-
-        <!--
-        <div class="col-lg-4 col-md-4 col-sm-12 col-xs-12">
-            <ul class="list-group">
-                <li class="list-group-item active">Recent Comments</li>
-                {% for comment in footer_items.new_comments %}
-                    <li class="list-group-item">
-                        <a href="/plaque_comment/{{comment.key.urlsafe()}}">
-                            {{comment.text | truncate(50, True)}}
-                        </a>
-                    </li>
-                {% endfor %}
-            </ul>
-        </div>
-        -->
 
         <div class="col-md-6 col-xs-12">
             <ul class="list-group">
                 <a href="/tags"><li class="list-group-item active">Tags (click here for all tags)</li></a>
-                {% for tag in footer_items.tags %}
-                    <li class="list-group-item"><a href="/tag/{{tag}}">{{tag}}</a></li>
-                {% endfor %}
+                {% for tag in footer_items.tags %} <li class="list-group-item"><a href="/tag/{{tag}}">{{tag}}</a></li> {% endfor %}
             </ul>
         </div>
     </div>
@@ -59,12 +40,8 @@
                 js.id = id;
                 js.src = "https://platform.twitter.com/widgets.js";
                 fjs.parentNode.insertBefore(js, fjs);
-                             
                 t._e = [];
-                t.ready = function(f) {
-                    t._e.push(f);
-                };
-                                        
+                t.ready = function(f) { t._e.push(f); };
                 return t;
             }(document, "script", "twitter-wjs"));
             </script>

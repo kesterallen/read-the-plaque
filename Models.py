@@ -3,6 +3,8 @@ from collections import defaultdict
 import logging
 import re
 
+FETCH_LIMIT_PLAQUES = 500
+
 from google.appengine.api import memcache
 from google.appengine.ext import ndb
 from google.appengine.api import search
@@ -67,13 +69,21 @@ class Plaque(ndb.Model):
             return 0
 
     @classmethod
-    def approved_list(cls):
+    def approved_list(cls, limit=FETCH_LIMIT_PLAQUES, disable_memcache=False):
+        #MEMCACHE TODO: set template_values to None to turn off memcaching
+        if disable_memcache:
+            plaques = Plaque.query().filter(Plaque.approved == True
+                                   ).order(#-Plaque.updated_on,
+                                           -Plaque.created_on
+                                   ).fetch(limit=limit)
+            return plaques
+
         plaques = memcache.get('approved')
         if plaques is None:
             plaques = Plaque.query().filter(Plaque.approved == True
-                                   ).order(-Plaque.updated_on,
+                                   ).order(#-Plaque.updated_on,
                                            -Plaque.created_on
-                                   ).fetch()
+                                   ).fetch(limit=limit)
             memcache_status = memcache.set('approved', plaques)
             if not memcache_status:
                 logging.debug("memcaching for Plaque.approved() failed")
@@ -96,7 +106,7 @@ class Plaque(ndb.Model):
         plaques = Plaque.query().filter(Plaque.approved != True
                                ).order(-Plaque.approved
                                ).order(-Plaque.created_on
-                               ).fetch()
+                               ).fetch(limit=FETCH_LIMIT_PLAQUES)
         return plaques
 
     @classmethod
@@ -105,6 +115,7 @@ class Plaque(ndb.Model):
         Return a dict of the tags and their display-layer font sizes. Done
         here to speed rendering and to make the whole thing memcacheable.
         """
+        #MEMCACHE TODO: set template_values to None to turn off memcaching
         tag_counts = memcache.get('all_tags_sized')
         if tag_counts is None:
             tag_counts = defaultdict(int)

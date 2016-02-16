@@ -43,6 +43,10 @@ handlers:
   script: View.app
   login: admin
 
+- url: /setfeatured
+  script: View.app
+  login: admin
+
 - url: /pending
   script: View.app
   login: admin
@@ -52,10 +56,6 @@ handlers:
   login: admin
 
 - url: /disapprove
-  script: View.app
-  login: admin
-
-- url: /delete
   script: View.app
   login: admin
 

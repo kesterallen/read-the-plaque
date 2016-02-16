@@ -1,0 +1,31 @@
+<script>
+function initialize() {
+    var mapCanvas = document.getElementById('map');
+    var mapOptions = {mapTypeId: google.maps.MapTypeId.ROADMAP, minZoom: 1, maxZoom: 19};
+    var map = new google.maps.Map(mapCanvas, mapOptions);
+
+    var ic = {
+        url: "/images/red-dot.png",
+        scaledSize: new google.maps.Size({{icon_size}}, {{icon_size}}),
+        origin: new google.maps.Point(0, 0), // origin -- top left
+        anchor: new google.maps.Point({{icon_size / 2}}, {{icon_size}}) // anchor -- bottom middle
+    };
+
+    var bounds = new google.maps.LatLngBounds();
+    var ms = []; // markers
+    {% for plaque in all_plaques %}
+ms.push(new google.maps.Marker({map: map, icon: ic, position: new google.maps.LatLng({{plaque.location.lat}}, {{plaque.location.lon}}), url: "{{plaque.title_page_url}}", infowindow: new google.maps.InfoWindow({content: "{{plaque.title|escape}}<p><img src='{{plaque.img_url_tiny}}'/>"})}));{% endfor %}
+
+    for (i = 0; i < ms.length; i++) {
+        google.maps.event.addListener(ms[i], 'mouseover', function(j) { return function() { ms[j].infowindow.open(map, ms[j]); } }(i));
+        google.maps.event.addListener(ms[i], 'mouseout', function(j) { return function() { ms[j].infowindow.close(); } }(i));
+        google.maps.event.addListener(ms[i], 'click', function(j) { return function() { window.location.href = this.url; } }(i));
+        bounds.extend(ms[i].position);
+    }
+    map.fitBounds(bounds);
+}
+</script>
+
+<script>
+initialize();
+</script>

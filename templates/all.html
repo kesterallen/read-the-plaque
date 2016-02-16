@@ -64,7 +64,27 @@
         {% endfor %}
     </div>
 
+    <!-- If there is no featured plaque, draw the larger map at the bottom of the page -->
+    {% if not featured_plaque %}
+        <div class="row">
+            <div class="col-xs-10 col-sm-8 col-centered">
+                <div style="height: 150;" id="map"></div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Set up the map, if necessary -->
+    {% if static_map %} 
+        {% include 'parts/big_map_static.html' %} 
+    {% else %}
+        {% if all_plaques %} 
+            {% include 'parts/big_map_dynamic.html' %} 
+        {% endif %}
+    {% endif %}
+
+    <!-- Links to all plaques -->
     {% if all_plaques|length > 0 %}
+        <br/>
         <div class="panel-group" id="accordion">
             <div class="panel panel-default" id="panel1">
 
@@ -78,26 +98,12 @@
 
                 <div id="collapseOne" class="panel-collapse collapse">
                     <div class="panel-body">
-                        {% for plaque in all_plaques %}
-                            <small><a href="{{plaque.title_page_url}}">{{plaque.title}}</a></small>
-                        {% endfor %}
+                        {% for plaque in all_plaques %} <small><a href="{{plaque.title_page_url}}">{{plaque.title}}</a></small> {% endfor %}
                     </div>
                 </div>
 
             </div>
         </div>
     {% endif %}
-
-    <!-- If there is no featured plaque, draw the larger map at the bottom of the page -->
-    {% if not featured_plaque %}
-        <div class="row">
-            <div class="col-xs-12 col-centered">
-                <div style="height: 150;" id="map"></div>
-            </div>
-        </div>
-    {% endif %}
-
-    <!-- Set up the map, if necessary -->
-    {% if all_plaques %} {% include 'parts/map_setup.html' %} {% endif %}
 </div>
 {% endblock %}

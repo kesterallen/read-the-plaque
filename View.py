@@ -16,10 +16,10 @@ JINJA_ENVIRONMENT = jinja2.Environment (
 def main():
     app = webapp2.WSGIApplication([
         ('/admin', h.AdminLogin),
-        ('/page/(.+?)/(.+?)/(.+?)/?', h.ViewPlaquesPageFeatured),
-        ('/page/(.+?)/(.+?)/?', h.ViewPlaquesPageFeatured),
-        ('/page/(.+?)/?', h.ViewPlaquesPageFeatured),
-        ('/page/?', h.ViewPlaquesPageFeatured),
+        ('/page/(.+?)/(.+?)/(.+?)/?', h.ViewPlaquesPage),
+        ('/page/(.+?)/(.+?)/?', h.ViewPlaquesPage),
+        ('/page/(.+?)/?', h.ViewPlaquesPage),
+        ('/page/?', h.ViewPlaquesPage),
         #('/test/?', h.ViewPlaquesTest),
         ('/plaque/(.+?)/?', h.ViewOnePlaque),
         ('/plaque/?', h.ViewOnePlaque),
@@ -40,7 +40,7 @@ def main():
         ('/flush', h.FlushMemcache),
         ('/counts', h.Counts),
         #('/deleteall', h.DeleteEverything),
-        #('/delete', h.DeleteOnePlaque),
+        ('/delete', h.DeleteOnePlaque),
         ('/pending', h.ViewPending),
         ('/disapprove', h.DisapprovePlaque),
         ('/approve', h.ApprovePending),
@@ -55,7 +55,12 @@ def main():
         ('/geo/?', h.SearchPlaquesGeo),
         ('/s/(.+?)', h.SearchPlaques),
         ('/s/?', h.SearchPlaques),
-        ('/', h.ViewPlaquesPageFeatured),
+        ('/setupdated', h.SetUpdatedOn),
+        ('/setfeatured/(.*?)', h.SetFeatured),
+
+        ('/map/?', h.RenderMapSetup),
+
+        ('/', h.ViewPlaquesPage),
         ('/(.+?)/(.+?)', h.ViewOnePlaque), # supports the old_site_id
         ('/(.+?)/?', h.ViewOnePlaque), # supports the old_site_id
     ], debug=True)

@@ -55,11 +55,7 @@
                        aria-expanded="false"
                     >Pages<span class="caret"></span></a>
                     <ul class="dropdown-menu scrollable-menu" role="menu">
-                        {% for i in pages_list %}
-                            <li {% if page_num and page_num == i %}class="active"{% endif %}>
-                                <a href="/page/{{i}}">Plaques Page {{i}}</a>
-                            </li>
-                        {% endfor %}
+                        {% for i in pages_list %} <li {% if page_num and page_num == i %}class="active"{% endif %}> <a href="/page/{{i}}">Plaques Page {{i}}</a> </li> {% endfor %}
                     </ul>
                 </li>
 
