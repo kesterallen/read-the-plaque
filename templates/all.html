@@ -6,11 +6,11 @@
     <!-- Render the featured plaque pane and a small map, if it exists. Otherwise draw the larger map at the bottom of the page -->
     {% if featured_plaque %}
         <div class="row">
-            <div class="col-xs-12 col-sm-5 col-centered">
+            <div class="col-xs-12 col-sm-7 col-centered">
                 <div style="height: 350;" id="map"></div>
             </div>
 
-            <a class="col-xs-12 col-sm-7 featured" href="{{featured_plaque.title_page_url}}">
+            <a class="col-xs-12 col-sm-5 featured" href="{{featured_plaque.title_page_url}}">
                 <div class="item">
 
                     <div class="thumbnail right-caption">
@@ -73,13 +73,8 @@
         </div>
     {% endif %}
 
-    <!-- Set up the map, if necessary -->
-    {% if static_map %} 
-        {% include 'parts/big_map_static.html' %} 
-    {% else %}
-        {% if all_plaques %} 
-            {% include 'parts/big_map_dynamic.html' %} 
-        {% endif %}
+    {% if all_plaques %} 
+        {% include 'parts/big_map_dynamic.html' %} 
     {% endif %}
 
     <!-- Links to all plaques -->
@@ -98,7 +93,9 @@
 
                 <div id="collapseOne" class="panel-collapse collapse">
                     <div class="panel-body">
-                        {% for plaque in all_plaques %} <small><a href="{{plaque.title_page_url}}">{{plaque.title}}</a></small> {% endfor %}
+                        <small>
+{% for plaque in all_plaques %}<a href="{{plaque.title_page_url}}">{{plaque.title}}</a>{% endfor %}
+                        </small>
                     </div>
                 </div>
 

@@ -26,3 +26,7 @@ retrieved using a strongly consistent (ancestor) query.
 [5]: http://webapp-improved.appspot.com/
 [6]: http://jinja.pocoo.org/docs/
 [7]: http://twitter.github.com/bootstrap/
+
+Update:
+    ../appcfg.py update . && curl readtheplaque.com/flush && curl readtheplaque.com/alljp >| static/plaques.json && ../appcfg.py update .  && curl readtheplaque.com
+

@@ -1,5 +1,5 @@
 <div class="gllpLatlonPicker form-group">
-    <input type="text" class="gllpSearchField" id="searchfield" name="searchfield" placeholder="{{maptext}}" style="width: 60%;">
+    <input type="text" class="gllpSearchField" id="searchfield" name="searchfield" {% if maptext %} placeholder="{{maptext}}" {% else %} value="{{plaque.location.lat}}, {{plaque.location.lon}}" {% endif %} style="width: 60%;">
     <input type="button" class="gllpSearchButton" value="Search Google Maps"/>
     <input type="button" id="herebutton" class="gllpHereButton" value="Near You">
     <br/>

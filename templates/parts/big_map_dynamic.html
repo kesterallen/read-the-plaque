@@ -1,7 +1,7 @@
 <script>
-function initialize() {
+function draw_map(plaques_json) {
     var mapCanvas = document.getElementById('map');
-    var mapOptions = {mapTypeId: google.maps.MapTypeId.ROADMAP, minZoom: 1, maxZoom: 19};
+    var mapOptions = {mapTypeId: google.maps.MapTypeId.ROADMAP, center: {lat: -15.0, lng: 0.0}, minZoom: 0, maxZoom: 19};
     var map = new google.maps.Map(mapCanvas, mapOptions);
 
     var ic = {
@@ -12,20 +12,49 @@ function initialize() {
     };
 
     var bounds = new google.maps.LatLngBounds();
-    var ms = []; // markers
-    {% for plaque in all_plaques %}
-ms.push(new google.maps.Marker({map: map, icon: ic, position: new google.maps.LatLng({{plaque.location.lat}}, {{plaque.location.lon}}), url: "{{plaque.title_page_url}}", infowindow: new google.maps.InfoWindow({content: "{{plaque.title|escape}}<p><img src='{{plaque.img_url_tiny}}'/>"})}));{% endfor %}
+    var markers = [];
 
-    for (i = 0; i < ms.length; i++) {
-        google.maps.event.addListener(ms[i], 'mouseover', function(j) { return function() { ms[j].infowindow.open(map, ms[j]); } }(i));
-        google.maps.event.addListener(ms[i], 'mouseout', function(j) { return function() { ms[j].infowindow.close(); } }(i));
-        google.maps.event.addListener(ms[i], 'click', function(j) { return function() { window.location.href = this.url; } }(i));
-        bounds.extend(ms[i].position);
+    for (i = 0; i < plaques_json.length; i++) {
+        plaque = plaques_json[i];
+        marker = new google.maps.Marker({
+            map: map,
+            icon: ic,
+            position: new google.maps.LatLng(plaque.lat, plaque.lng),
+            url: plaque.title_page_url,
+            infowindow: new google.maps.InfoWindow(
+                {content: plaque.title + "<p><img src='" + plaque.img_url_tiny + "'/>"})
+        });
+        markers.push(marker);
+
+        google.maps.event.addListener(markers[i], 'mouseover', function(j) { return function() { markers[j].infowindow.open(map, markers[j]); } }(i));
+        google.maps.event.addListener(markers[i], 'mouseout', function(j) { return function() { markers[j].infowindow.close(); } }(i));
+        google.maps.event.addListener(markers[i], 'click', function(j) { return function() { window.location.href = this.url; } }(i));
+        bounds.extend(markers[i].position);
     }
     map.fitBounds(bounds);
+}
+
+function initialize() {
+    $('#map').append('<img alt="loading" title="temporary map image" class="img-responsive" src="/static/map_snapshot.png"/>');
+
+    {% if jp_plaques_str %}
+    var jp_url = '/alljp/{{jp_plaques_str}}';
+    {% else %}
+    var jp_url = '/static/plaques.json';
+    {% endif %}
+    
+    $.ajax({
+        url: jp_url,
+        dataType: 'json',
+        success: function(json) {
+            draw_map(json);
+        },
+        //error: function(request, status, error) {
+        //}
+    });
 }
 </script>
 
 <script>
-initialize();
+    initialize();
 </script>
