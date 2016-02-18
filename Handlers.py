@@ -69,7 +69,7 @@ def get_default_template_values(**kwargs):
             'num_pending': Plaque.num_pending(),
             'footer_items': get_footer_items(),
             'loginout': loginout(),
-            'pages_list': get_pages_list(),
+            #'pages_list': get_pages_list(),
             'icon_size': DEFAULT_MAP_ICON_SIZE_PIX,
         }
         memcache_status = memcache.set('default_template_values',
@@ -369,10 +369,6 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
                 self.redirect(plaque.title_page_url)
                 return
 
-            logging.info("Plaque in _get_from_key: %s" % plaque)
-            logging.info("Plaque in _get_from_key: %s" % plaque)
-            logging.info("Plaque in _get_from_key: %s" % plaque)
-            logging.info("Plaque in _get_from_key: %s" % plaque)
             template = JINJA_ENVIRONMENT.get_template('one.html')
             template_values = get_default_template_values(
                                   all_plaques=[plaque],
