@@ -1,3 +1,5 @@
+<script src="/static/markerclusterer.js"></script>
+
 <script>
 function draw_map(plaques_json) {
     var mapCanvas = document.getElementById('map');
@@ -32,7 +34,16 @@ function draw_map(plaques_json) {
         bounds.extend(markers[i].position);
     }
     map.fitBounds(bounds);
+
+    var mcOptions = {
+        gridSize: 50,
+        maxZoom: 10,
+        minimumClusterSize: 10,
+        averageCenter: true
+    };
+    var mc = new MarkerClusterer(map, markers, mcOptions);
 }
+
 
 function initialize() {
     $('#map').append('<img alt="loading" title="temporary map image" class="img-responsive" src="/static/map_snapshot.png"/>');
