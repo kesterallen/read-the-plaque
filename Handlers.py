@@ -181,6 +181,11 @@ def set_featured(plaque):
     featured.plaque = plaque.key
     featured.put()
 
+def keys_argstr(plaques):
+    plaque_keys = [p.key.urlsafe() for p in plaques]
+    argstr = "&".join(plaque_keys)
+    return argstr
+
 def handle_404(request, response, exception):
     email_admin('404 error!', '404 error!\n\n%s\n\n%s\n\n%s' %
                               (request, response, exception))
@@ -197,13 +202,20 @@ def handle_500(request, response, exception):
     response.set_status(500)
 
 class ViewPlaquesPage(webapp2.RequestHandler):
-    def head(self, page_num=1, per_page=DEFAULT_NUM_PER_PAGE, is_random=False, is_featured=True):
-        self.get(page_num=1, per_page=DEFAULT_NUM_PER_PAGE, is_featured=is_featured)
+    def head(self, page_num=1, per_page=DEFAULT_NUM_PER_PAGE, 
+        is_random=False, is_featured=True):
+
+        self.get(
+            page_num=1, per_page=DEFAULT_NUM_PER_PAGE, is_featured=is_featured)
         self.response.clear()
 
-    def _get_template_values(self, page_num, per_page, is_random, is_featured, limit=FETCH_LIMIT_PLAQUES, disable_memcache=False):
+    def _get_template_values(
+        self, page_num, per_page, is_random, is_featured, 
+        limit=FETCH_LIMIT_PLAQUES, disable_memcache=False):
+
         # Grab all plaques for the map
-        plaques = Plaque.approved_list(limit=limit, disable_memcache=disable_memcache)
+        plaques = Plaque.approved_list(
+            limit=limit, disable_memcache=disable_memcache)
         map_plaques = plaques
         if is_random:
             random.shuffle(plaques)
@@ -220,7 +232,7 @@ class ViewPlaquesPage(webapp2.RequestHandler):
                               static_map=is_featured,
                           )
         if is_random:
-            template_values['jp_plaques_str'] = "&".join([p.key.urlsafe() for p in map_plaques])
+            template_values['jp_plaques_str'] = keys_argstr(map_plaques)
 
         if is_featured:
             featured = get_featured()
@@ -228,7 +240,9 @@ class ViewPlaquesPage(webapp2.RequestHandler):
 
         return template_values
 
-    def _get(self, page_num=1, per_page=DEFAULT_NUM_PER_PAGE, is_random=False, is_featured=True):
+    def _get(
+        self, page_num=1, per_page=DEFAULT_NUM_PER_PAGE, is_random=False, 
+        is_featured=True):
         """
         View the nth per_page plaques on a grid.
         page_num is a one-based integer
@@ -266,7 +280,8 @@ class ViewPlaquesPage(webapp2.RequestHandler):
                 memcache_name)
 
         if template_text is None:
-            template_values = self._get_template_values(page_num, per_page, is_random, is_featured)
+            template_values = self._get_template_values(
+                page_num, per_page, is_random, is_featured)
             template = JINJA_ENVIRONMENT.get_template('all.html')
             template_text = template.render(template_values)
             if not is_random:
@@ -281,12 +296,18 @@ class ViewPlaquesPage(webapp2.RequestHandler):
 
         return template_text
 
-    def get(self, page_num=1, per_page=DEFAULT_NUM_PER_PAGE, is_random=False, is_featured=True):
+    def get(
+        self, page_num=1, per_page=DEFAULT_NUM_PER_PAGE, is_random=False, 
+        is_featured=True):
+
         template_text = self._get(page_num, per_page, is_random, is_featured)
         self.response.write(template_text)
 
 class RenderMapSetup(ViewPlaquesPage):
-    def get(self, page_num=1, per_page=DEFAULT_NUM_PER_PAGE, is_random=False, is_featured=True):
+    def get(
+        self, page_num=1, per_page=DEFAULT_NUM_PER_PAGE, is_random=False, 
+        is_featured=True):
+
         template_values = self._get_template_values(
             page_num, per_page, is_random, is_featured, 
             limit=FETCH_LIMIT_PLAQUES, disable_memcache=True)
@@ -449,9 +470,9 @@ class JsonAllPlaques(webapp2.RequestHandler):
     """
     def get(self, plaque_keys_str=None, summary=True):
         # TODO: this should not hardcode a 10k plaque limit.
-        logging.info("start")
         block_size = 1000
-        num_blocks = 10 * block_size
+        num_blocks = 10
+        max_num_plaques = num_blocks * block_size
         all_plaques_json = []
 
         # If keys are specified, dump those and return
@@ -459,19 +480,17 @@ class JsonAllPlaques(webapp2.RequestHandler):
         if plaque_keys_str is not None:
             plaque_keys = plaque_keys_str.split('&')
             plaques = [ndb.Key(urlsafe=pk).get() for pk in plaque_keys]
-            json_output = json.dumps([p.to_dict(summary=summary) for p in plaques])
+            json_output = json.dumps(
+                [p.to_dict(summary=summary) for p in plaques])
             self.response.write(json_output)
             return
 
-        logging.info("begin loop")
-        for ik in range(0, num_blocks, block_size):
-            logging.info("%s loop" % ik)
+        for ik in range(0, max_num_plaques, block_size):
             # Get the plauqes' JSON for this block_size of plaques
             #
             memcache_name = 'plaque_json_{0}'.format(ik)
             plaques_json = memcache.get(memcache_name)
             if plaques_json is None:
-                logging.info("doing query %s" % ik)
                 plaques = Plaque.query(
                                ).filter(Plaque.approved == True
                                ).order(-Plaque.created_on
@@ -483,7 +502,6 @@ class JsonAllPlaques(webapp2.RequestHandler):
                     logging.debug("JsonAllPlaques memcache.set for %s failed" %
                         memcache_name)
             else:
-                logging.info("doing memcache for %s" % ik)
                 logging.debug("JsonAllPlaques memcache.get worked for %s" %
                     memcache_name)
 
@@ -517,7 +535,7 @@ class ViewTag(webapp2.RequestHandler):
         plaques = query.filter(Plaque.tags == tag
                        ).order(-Plaque.created_on
                        ).fetch()
-        jp_plaques_str = "&".join([p.key.urlsafe() for p in plaques]),
+        jp_plaques_str = keys_argstr(plaques)
         template = JINJA_ENVIRONMENT.get_template('all.html')
         template_values = get_default_template_values(
                               all_plaques=plaques,
@@ -637,17 +655,17 @@ class AddPlaque(webapp2.RequestHandler):
             name = "anon" if user is None else user.nickname()
             msg = '%s %s plaque! %s' %  (name, post_type, plaque.title_page_url)
             body = """
-                <p>
-                    <a href="http://readtheplaque.com{1.title_page_url}">
-                        {0} plaque!
-                    </a>
-                </p>
-                <p>
-                    <a href="http://readtheplaque.com{1.title_page_url}">
-                        <img alt="plaque alt" title="plaque title" src="{1.img_url}"/>
-                    </a>
-                </p>
-                """.format(post_type, plaque)
+<p>
+    <a href="http://readtheplaque.com{1.title_page_url}">
+        {0} plaque!
+    </a>
+</p>
+<p>
+    <a href="http://readtheplaque.com{1.title_page_url}">
+        <img alt="plaque alt" title="plaque title" src="{1.img_url}"/>
+    </a>
+</p>
+            """.format(post_type, plaque)
             #logging.info('sending email')
             #email_admin(msg, body)
             state = ADD_STATES['ADD_STATE_SUCCESS']
@@ -887,7 +905,7 @@ class SearchPlaques(webapp2.RequestHandler):
             plaques = [p for p in plaques if p is not None]
 
         template = JINJA_ENVIRONMENT.get_template('all.html')
-        jp_plaques_str = "&".join([p.key.urlsafe() for p in plaques])
+        jp_plaques_str = keys_argstr(plaques)
         template_values = get_default_template_values(
                               all_plaques=plaques,
                               plaques=plaques,
@@ -924,7 +942,7 @@ class SearchPlaquesGeo(webapp2.RequestHandler):
             if plaque is not None and plaque.approved:
                 approved_plaques.append(plaque)
 
-        jp_plaques_str = "&".join([p.key.urlsafe() for p in approved_plaques])
+        jp_plaques_str = keys_argstr(approved_plaques)
 
         template = JINJA_ENVIRONMENT.get_template('all.html')
         template_values = get_default_template_values(
@@ -1001,7 +1019,7 @@ class Counts(webapp2.RequestHandler):
         else:
             orphan_pics.add("didn't check for orphans")
 
-        msg = "There are %s comments, %s plaques, %s images, orphan pics: %s<hr>%s" % (
+        msg = "Count: %s comments, %s plaques, %s images, orphans: %s<hr>%s" % (
                 num_comments, num_plaques, num_images, orphan_pics, pics_count)
         self.response.write(msg)
 
@@ -1019,7 +1037,8 @@ class DeleteOnePlaque(webapp2.RequestHandler):
         plaque = ndb.Key(urlsafe=plaque_key).get()
 
         if name != 'kester':
-            email_admin('Delete warning!', '%s tried to delete %s' % (name, plaque.title_url))
+            email_admin('Delete warning!', '%s tried to delete %s' % (
+                name, plaque.title_url))
             raise NotImplementedError("delete is turned off for now")
 
         for comment in plaque.comments:
@@ -1076,7 +1095,7 @@ class ViewPending(webapp2.RequestHandler):
         logging.info("User %s is viewing pending plaques" % name)
 
         template = JINJA_ENVIRONMENT.get_template('all.html')
-        jp_plaques_str = "&".join([p.key.urlsafe() for p in plaques])
+        jp_plaques_str = keys_argstr(plaques)
         template_values = get_default_template_values(
                               all_plaques=plaques,
                               jp_plaques_str=jp_plaques_str,
@@ -1120,9 +1139,11 @@ class RedoIndex(webapp2.RequestHandler):
         ideleted = 0
         # Delete all the search documents
         while True:
-            # Get a list of documents populating only the doc_id field and extract the ids.
-            document_ids = [document.doc_id
-                            for document in plaque_search_index.get_range(ids_only=True)]
+            # Get a list of documents populating only the doc_id field and
+            # extract the ids.
+            document_ids = [
+                document.doc_id for document 
+                    in plaque_search_index.get_range(ids_only=True)]
             ideleted += len(document_ids)
             if not document_ids:
                 break
@@ -1150,7 +1171,9 @@ class RedoIndex(webapp2.RequestHandler):
             iput += 100
             plaque_search_index.put(docs[i:i+100])
 
-        self.response.write('deleted %s docs, created %s, failed to create %s, put %s' % (ideleted, igood, ibad, iput))
+        self.response.write(
+            'deleted %s docs, created %s, failed to create %s, put %s' % (
+            ideleted, igood, ibad, iput))
 
 class AddTitleUrlAll(webapp2.RequestHandler):
     def get(self):
