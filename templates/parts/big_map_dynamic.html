@@ -1,21 +1,7 @@
 <script src="/static/markerclusterer.js"></script>
 
 <script>
-function draw_map(plaques_json, map_markers_str) {
-    var mapCanvas = document.getElementById('map');
-    var mapOptions = {mapTypeId: google.maps.MapTypeId.ROADMAP, center: {lat: -15.0, lng: -10.0}, minZoom: 1, maxZoom: 19};
-    var map = new google.maps.Map(mapCanvas, mapOptions);
-
-    var ic = {
-        url: "/images/red-dot.png",
-        scaledSize: new google.maps.Size({{icon_size}}, {{icon_size}}),
-        origin: new google.maps.Point(0, 0), // origin -- top left
-        anchor: new google.maps.Point({{icon_size / 2}}, {{icon_size}}) // anchor -- bottom middle
-    };
-
-    var bounds = new google.maps.LatLngBounds();
-    var markers = [];
-
+function get_markers_precomputed(map, ic, plaques_json, map_markers_str) {
     // Make a set of the requested markers, leave the set empty if every the
     // map_markers_str is empty, which indicates to draw every marker
     //
@@ -24,7 +10,7 @@ function draw_map(plaques_json, map_markers_str) {
         specified_marker_urls = new Set(map_markers_str.split('&'));
     } 
 
-
+    var markers = [];
     for (i = 0; i < plaques_json.length; i++) {
         plaque = plaques_json[i];
 
@@ -47,7 +33,29 @@ function draw_map(plaques_json, map_markers_str) {
         google.maps.event.addListener(markers[im], 'mouseover', function(j) { return function() { markers[j].infowindow.open(map, markers[j]); } }(im));
         google.maps.event.addListener(markers[im], 'mouseout', function(j) { return function() { markers[j].infowindow.close(); } }(im));
         google.maps.event.addListener(markers[im], 'click', function(j) { return function() { window.location.href = this.url; } }(im));
-        bounds.extend(markers[im].position);
+    }
+    return markers;
+}
+
+function draw_map(plaques_json, map_markers_str) {
+    var mapCanvas = document.getElementById('map');
+    var mapOptions = {mapTypeId: google.maps.MapTypeId.ROADMAP, center: {lat: -15.0, lng: -10.0}, minZoom: 1, maxZoom: 19};
+    var map = new google.maps.Map(mapCanvas, mapOptions);
+
+    var ic = {
+        url: "/images/red-dot.png",
+        scaledSize: new google.maps.Size({{icon_size}}, {{icon_size}}),
+        origin: new google.maps.Point(0, 0), // origin -- top left
+        anchor: new google.maps.Point({{icon_size / 2}}, {{icon_size}}) // anchor -- bottom middle
+    };
+
+    var markers = get_markers_precomputed(map, ic, plaques_json, map_markers_str);
+
+    // Fit the map bounds to the markers:
+    //
+    var bounds = new google.maps.LatLngBounds();
+    for (i = 0; i < markers.length; i++) {
+        bounds.extend(markers[i].position);
     }
     map.fitBounds(bounds);
 

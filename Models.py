@@ -75,7 +75,7 @@ class Plaque(ndb.Model):
         if disable_memcache:
             plaques = Plaque.query().filter(Plaque.approved == True
                                    ).order(-Plaque.created_on
-                                   ).fetch(limit=limit)
+                                   ).fetch(offset=offset, limit=limit)
             return plaques
 
         memcache_name = 'approved %s %s' % (offset, limit)
@@ -83,7 +83,7 @@ class Plaque(ndb.Model):
         if plaques is None:
             plaques = Plaque.query().filter(Plaque.approved == True
                                    ).order(-Plaque.created_on
-                                   ).fetch(limit=limit)
+                                   ).fetch(offset=offset, limit=limit)
             memcache_status = memcache.set(memcache_name, plaques)
             if not memcache_status:
                 logging.debug("memcaching for Plaque.approved() failed")
