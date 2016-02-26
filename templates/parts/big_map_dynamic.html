@@ -1,9 +1,9 @@
 <script src="/static/markerclusterer.js"></script>
 
 <script>
-function draw_map(plaques_json) {
+function draw_map(plaques_json, map_markers_str) {
     var mapCanvas = document.getElementById('map');
-    var mapOptions = {mapTypeId: google.maps.MapTypeId.ROADMAP, center: {lat: -15.0, lng: -10.0}, minZoom: 0, maxZoom: 19};
+    var mapOptions = {mapTypeId: google.maps.MapTypeId.ROADMAP, center: {lat: -15.0, lng: -10.0}, minZoom: 1, maxZoom: 19};
     var map = new google.maps.Map(mapCanvas, mapOptions);
 
     var ic = {
@@ -16,8 +16,23 @@ function draw_map(plaques_json) {
     var bounds = new google.maps.LatLngBounds();
     var markers = [];
 
+    // Make a set of the requested markers, leave the set empty if every the
+    // map_markers_str is empty, which indicates to draw every marker
+    //
+    specified_marker_urls = new Set();
+    if (map_markers_str != '') {
+        specified_marker_urls = new Set(map_markers_str.split('&'));
+    } 
+
+
     for (i = 0; i < plaques_json.length; i++) {
         plaque = plaques_json[i];
+
+        if (specified_marker_urls.size > 0) {
+            if (!specified_marker_urls.has(plaque.title_page_url)) {
+                continue;
+            }
+        }
         marker = new google.maps.Marker({
             map: map,
             icon: ic,
@@ -28,10 +43,11 @@ function draw_map(plaques_json) {
         });
         markers.push(marker);
 
-        google.maps.event.addListener(markers[i], 'mouseover', function(j) { return function() { markers[j].infowindow.open(map, markers[j]); } }(i));
-        google.maps.event.addListener(markers[i], 'mouseout', function(j) { return function() { markers[j].infowindow.close(); } }(i));
-        google.maps.event.addListener(markers[i], 'click', function(j) { return function() { window.location.href = this.url; } }(i));
-        bounds.extend(markers[i].position);
+        im = markers.length - 1;
+        google.maps.event.addListener(markers[im], 'mouseover', function(j) { return function() { markers[j].infowindow.open(map, markers[j]); } }(im));
+        google.maps.event.addListener(markers[im], 'mouseout', function(j) { return function() { markers[j].infowindow.close(); } }(im));
+        google.maps.event.addListener(markers[im], 'click', function(j) { return function() { window.location.href = this.url; } }(im));
+        bounds.extend(markers[im].position);
     }
     map.fitBounds(bounds);
 
@@ -46,19 +62,15 @@ function draw_map(plaques_json) {
 
 
 function initialize() {
-    $('#map').append('<img alt="loading" title="temporary map image" class="img-responsive" src="/static/map_snapshot.png"/>');
+    $('#map').append('<img alt="loading dynamic map" title="temporary map image" class="img-responsive" src="/static/map_snapshot.png"/>');
 
-    {% if jp_plaques_str %}
-    var jp_url = '/alljp/{{jp_plaques_str}}';
-    {% else %}
     var jp_url = '/static/plaques.json';
-    {% endif %}
     
     $.ajax({
         url: jp_url,
         dataType: 'json',
         success: function(json) {
-            draw_map(json);
+            draw_map(json, '{{map_markers_str}}');
         },
         //error: function(request, status, error) {
         //}

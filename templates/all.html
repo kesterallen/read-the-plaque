@@ -3,7 +3,7 @@
 {% block content %}
 <div class="container-fluid">
 
-    <!-- Render the featured plaque pane and a small map, if it exists. Otherwise draw the larger map at the bottom of the page -->
+    <!-- Render the featured plaque pane and a small map, if it exists. -->
     {% if featured_plaque %}
         <div class="row">
             <div class="col-xs-12 col-sm-7 col-centered">
@@ -12,27 +12,19 @@
 
             <a class="col-xs-12 col-sm-5 featured" href="{{featured_plaque.title_page_url}}">
                 <div class="item">
-
                     <div class="thumbnail right-caption">
                         <h1>Featured Plaque:</h1>
-
                         <img src="{{featured_plaque.img_url_thumbnail}}"/>
-
                         <div class="caption">
                             <h2>{{featured_plaque.title}}</h2>
-
                             {{featured_plaque.description | striptags | wordwrap(100, True) | truncate(400)}}
-
                             <p>
                                 <ul class="list-inline">
-                                    {% for tag in featured_plaque.tags %}
-                                        <li>{{tag | truncate(15, True)}}</li>
-                                    {% endfor %}
+{% for tag in featured_plaque.tags %} <li>{{tag | truncate(15, True)}}</li> {% endfor %}
                                 </ul>
                             </p>
                         </div>
                     </div>
-
                 </div>
             </a>
         </div>
@@ -41,26 +33,17 @@
     {% if plaques|length == 0 %}<h2>No plaques in that search</h2>{% endif %}
 
     <div class="pinterest-row">
-        {% for iplaque in range(start_index, end_index) %}
-            {% if iplaque < plaques|length %}
-                {% set plaque = plaques[iplaque] %}
-                <a href="{{plaque.title_page_url}}">
-                    <div class="item">
-                        <div class="well">
-                            <h3>{{plaque.title}}</h3>
-                            <img src="{{plaque.img_url_thumbnail}}" class="img-responsive"/>
-
-                            <p>{{plaque.description | striptags | wordwrap(50, True) | truncate(200)}}</p>
-                            <ul class="list-inline">
-                                {% for tag in plaque.tags %}
-                                    <li>{{tag | truncate(15, True)}}</li>
-                                {% endfor %}
-                            </ul>
-                            <!--<p>{{iplaque + 1}} / {{plaques|length}}-->
-                        </div>
+        {% for plaque in plaques %}
+            <a href="{{plaque.title_page_url}}">
+                <div class="item">
+                    <div class="well">
+                        <h3>{{plaque.title}}</h3>
+                        <img src="{{plaque.img_url_thumbnail}}" class="img-responsive"/>
+                        <p>{{plaque.description | striptags | wordwrap(50, True) | truncate(200)}}</p>
+                        <ul class="list-inline">{% for tag in plaque.tags %} <li>{{tag | truncate(15, True)}}</li>{% endfor %}</ul>
                     </div>
-                </a>
-            {% endif %}
+                </div>
+            </a>
         {% endfor %}
     </div>
 
@@ -71,36 +54,20 @@
                 <div style="height: 150;" id="map"></div>
             </div>
         </div>
-    {% endif %}
-
-    {% if all_plaques %} 
-        {% include 'parts/big_map_dynamic.html' %} 
-    {% endif %}
-
-    <!-- Links to all plaques -->
-    {% if all_plaques|length > 0 %}
-        <br/>
-        <div class="panel-group" id="accordion">
-            <div class="panel panel-default" id="panel1">
-
-                <div class="panel-heading">
-                    <h4 class="panel-title">
-                        <a data-toggle="collapse"
-                           data-target="#collapseOne"
-                           href="#collapseOne">All Plaques</a>
-                    </h4>
-                </div>
-
-                <div id="collapseOne" class="panel-collapse collapse">
-                    <div class="panel-body">
-                        <small>
-{% for plaque in all_plaques %}<a href="{{plaque.title_page_url}}">{{plaque.title}}</a>{% endfor %}
-                        </small>
-                    </div>
-                </div>
-
-            </div>
-        </div>
+    {% else %}
+        {#
+        <!-- If there is featured plaque, draw the paginator-->
+        <!-- this needs some work in _get_template_values -->
+        <!--
+        <nav>
+            <ul class="pagination pagination-sm">
+                {% for i in range(num_pages) %}
+                    <li><a href="/page/{{i}}">{{i}}</a></li>
+                {% endfor %}
+            </ul>
+        </nav>
+        -->
+        #}
     {% endif %}
 </div>
 {% endblock %}

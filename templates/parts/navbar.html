@@ -23,43 +23,15 @@
 
         <div class="collapse navbar-collapse" id="navbar-collapse-1">
             <ul class="nav navbar-nav navbar-right">
-                <p class="navbar-text">
-                    a <a href="http://99percentinvisible.org/">99% Invisible</a> project
-                </p>
-
-                <li class="dropdown">
-                    <a href="#"
-                       class="dropdown-toggle"
-                       data-toggle="dropdown"
-                       role="button"
-                       aria-expanded="false"
-                    >Search<span class="caret"></span></a>
-                    <ul class="dropdown-menu" role="menu">
-                        <li>
-                            <form class="navbar-form navbar-left" style="width: auto; display: inline-block;" role="search" action="/search" method="POST">
-                                <div class="form-group">
-                                    <input name="search_term" type="text" class="form-control" placeholder="Search plaque text">
-                                </div>
-                            </form>
-                        </li>
-                        <li><a href="/geo">Location Search</a></li>
-                        <li><a onclick="find_near_here()" href="#">Plaques near you</a></li>
-                    </ul>
+                <li>
+                    <form class="navbar-form navbar-left" role="search" action="/search" method="POST">
+                        <div class="form-group">
+                            <input name="search_term" type="text" class="form-control" placeholder="Search plaques">
+                        </div>
+                    </form>
                 </li>
-
-                <!--
-                <li class="dropdown">
-                    <a href="#"
-                       class="dropdown-toggle"
-                       data-toggle="dropdown"
-                       role="button"
-                       aria-expanded="false"
-                    >Pages<span class="caret"></span></a>
-                    <ul class="dropdown-menu scrollable-menu" role="menu">
-                        {% for i in pages_list %} <li {% if page_num and page_num == i %}class="active"{% endif %}> <a href="/page/{{i}}">Plaques Page {{i}}</a> </li> {% endfor %}
-                    </ul>
-                </li>
-                -->
+                <li><a href="/geo">Location Search</a></li>
+                <li><a onclick="find_near_here()" href="#">Nearby Plaques</a></li>
 
                 {% if loginout and loginout.is_admin %}
                     <li><a href="/pending">Pending <span class="badge">{{num_pending}}</span></a></li>
@@ -74,11 +46,11 @@
     </div>
 </nav>
 
-<div class="jumbotron" style="color: white">
+<div class="jumbotron" style="color: lightgreen">
     <br/>
     <br/>
-    <h1>Read the Plaque</h1>
-    A gigantic map of all the cool plaques in the world.
+    <h1>Read the Plaque</h1> a gigantic map of all the cool plaques in the world.
+    <p>A <a style="color: inherit; text-decoration: none;" href="http://99pi.org/">99% Invisible</a> project.</p>
 </div>
 
 <!-- Modal -->

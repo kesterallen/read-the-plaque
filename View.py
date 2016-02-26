@@ -61,7 +61,7 @@ def main():
         ('/setupdated', h.SetUpdatedOn),
         ('/setfeatured/(.*?)', h.SetFeatured),
 
-        ('/map/?', h.RenderMapSetup),
+        #('/map/?', h.RenderMapSetup),
 
         ('/', h.ViewPlaquesPage),
         ('/(.+?)/(.+?)', h.ViewOnePlaque), # supports the old_site_id

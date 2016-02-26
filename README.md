@@ -28,5 +28,5 @@ retrieved using a strongly consistent (ancestor) query.
 [7]: http://twitter.github.com/bootstrap/
 
 Update:
-    ../appcfg.py update . && curl readtheplaque.com/flush && curl readtheplaque.com/alljp >| static/plaques.json && ../appcfg.py update .  && curl readtheplaque.com
+    ../appcfg.py update . && curl readtheplaque.com/alljp >| static/plaques.json && ../appcfg.py update . && curl readtheplaque.com/flush  && curl readtheplaque.com
 

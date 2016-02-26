@@ -69,19 +69,22 @@ class Plaque(ndb.Model):
             return 0
 
     @classmethod
-    def approved_list(cls, limit=FETCH_LIMIT_PLAQUES, disable_memcache=False):
+    def approved_list(
+        cls, offset=0, limit=FETCH_LIMIT_PLAQUES, disable_memcache=False):
+
         if disable_memcache:
             plaques = Plaque.query().filter(Plaque.approved == True
                                    ).order(-Plaque.created_on
                                    ).fetch(limit=limit)
             return plaques
 
-        plaques = memcache.get('approved')
+        memcache_name = 'approved %s %s' % (offset, limit)
+        plaques = memcache.get(memcache_name)
         if plaques is None:
             plaques = Plaque.query().filter(Plaque.approved == True
                                    ).order(-Plaque.created_on
                                    ).fetch(limit=limit)
-            memcache_status = memcache.set('approved', plaques)
+            memcache_status = memcache.set(memcache_name, plaques)
             if not memcache_status:
                 logging.debug("memcaching for Plaque.approved() failed")
         else:

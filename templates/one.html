@@ -29,7 +29,7 @@
                     <div class="panel-body">
                         <p>{{plaque.description}}</p>
                         <ul class="list-inline">
-                            {% for tag in plaque.tags %} <li><a href="/tag/{{tag}}" alt="{{tag}}">{{tag}}</a></li> {% endfor %}
+{% for tag in plaque.tags %} <li><a href="/tag/{{tag}}" alt="{{tag}}">{{tag}}</a></li> {% endfor %}
                         </ul>
                     </div>
                 </div>
@@ -37,25 +37,11 @@
                 <p><a class="btn btn-primary" role="button" href="/geo/{{plaque.location.lat}}/{{plaque.location.lon}}/50000">Nearby Plaques</a></p>
 
                 <div id="map"></div>
-
-                {% if all_plaques %} {% include 'parts/big_map_dynamic.html' %} {% endif %}
             </div>
         </div>
 
-        {% for comment_key in plaque.comments %}
-            {% set comment = comment_key.get() %}
-            <div class="row">
-                <div class="col-xs-11">
-                    {{comment.created_by}} said on
-                    {{comment.created_on}}:<br>
-                    {{comment.text}}
-                </div>
-            </div>
-        {% endfor %}
-
         <p></p>
 
-        <!-- <h1>Leave a Comment</h1> -->
         <div class="row">
             <div class="col-xs-11">
                 {% if loginout.is_admin %}
@@ -81,6 +67,19 @@
                 {% endif %}
             </div>
         </div>
+        {#
+        {% for comment_key in plaque.comments %}
+            {% set comment = comment_key.get() %}
+            <div class="row">
+                <div class="col-xs-11">
+                    {{comment.created_by}} said on
+                    {{comment.created_on}}:<br>
+                    {{comment.text}}
+                </div>
+            </div>
+        {% endfor %}
+        #}
     {% endif %}
+
 </div>
 {% endblock %}
