@@ -1,41 +1,57 @@
 <script src="/static/markerclusterer.js"></script>
 
 <script>
-function get_markers_precomputed(map, ic, plaques_json, map_markers_str) {
-    // Make a set of the requested markers, leave the set empty if every the
-    // map_markers_str is empty, which indicates to draw every marker
-    //
-    specified_marker_urls = new Set();
-    if (map_markers_str != '') {
-        specified_marker_urls = new Set(map_markers_str.split('&'));
-    } 
-
-    var markers = [];
-    for (i = 0; i < plaques_json.length; i++) {
-        plaque = plaques_json[i];
-
-        if (specified_marker_urls.size > 0) {
-            if (!specified_marker_urls.has(plaque.title_page_url)) {
-                continue;
-            }
-        }
-        marker = new google.maps.Marker({
-            map: map,
-            icon: ic,
-            position: new google.maps.LatLng(plaque.lat, plaque.lng),
-            url: plaque.title_page_url,
-            infowindow: new google.maps.InfoWindow(
-                {content: plaque.title + "<p><img src='" + plaque.img_url_tiny + "'/>"})
-        });
-        markers.push(marker);
-
-        im = markers.length - 1;
-        google.maps.event.addListener(markers[im], 'mouseover', function(j) { return function() { markers[j].infowindow.open(map, markers[j]); } }(im));
-        google.maps.event.addListener(markers[im], 'mouseout', function(j) { return function() { markers[j].infowindow.close(); } }(im));
-        google.maps.event.addListener(markers[im], 'click', function(j) { return function() { window.location.href = this.url; } }(im));
+// Don't write the dynamic markers unless there are < 12 markers
+{% if plaques|length < 12 %}
+    function get_markers_dynamic(map, ic) {
+        var markers = [];
+        {% for plaque in plaques %}
+            marker = new google.maps.Marker({
+                map: map,
+                icon: ic,
+                position: new google.maps.LatLng({{plaque.location.lat}}, {{plaque.location.lon}}),
+                url: "{{plaque.title_page_url}}",
+                infowindow: new google.maps.InfoWindow(
+                    {content: "<a href='{{plaque.title_page_url}}'>{{plaque.title}}<p><img src='{{plaque.img_url_tiny}}'/></a>"}),
+                open: false
+            });
+            markers.push(marker);
+        {% endfor %}
+        return markers;
     }
-    return markers;
-}
+{% else %}
+    function get_markers_precomputed(map, ic, plaques_json, map_markers_str) {
+        // Make a set of the requested markers, leave the set empty if every the
+        // map_markers_str is empty, which indicates to draw every marker
+        //
+        specified_marker_urls = new Set();
+        if (map_markers_str != '') {
+            specified_marker_urls = new Set(map_markers_str.split('&'));
+        } 
+
+        var markers = [];
+        for (i = 0; i < plaques_json.length; i++) {
+            plaque = plaques_json[i];
+
+            if (specified_marker_urls.size > 0) {
+                if (!specified_marker_urls.has(plaque.title_page_url)) {
+                    continue;
+                }
+            }
+            marker = new google.maps.Marker({
+                map: map,
+                icon: ic,
+                position: new google.maps.LatLng(plaque.lat, plaque.lng),
+                url: plaque.title_page_url,
+                infowindow: new google.maps.InfoWindow(
+                    {content: "<a href='" + plaque.title_page_url + "'>" + plaque.title + "<p><img src='" + plaque.img_url_tiny + "'/></a>"}),
+                open: false
+            });
+            markers.push(marker);
+        }
+        return markers;
+    }
+{% endif %}
 
 function draw_map(plaques_json, map_markers_str) {
     var mapCanvas = document.getElementById('map');
@@ -49,13 +65,40 @@ function draw_map(plaques_json, map_markers_str) {
         anchor: new google.maps.Point({{icon_size / 2}}, {{icon_size}}) // anchor -- bottom middle
     };
 
-    var markers = get_markers_precomputed(map, ic, plaques_json, map_markers_str);
+    {% if plaques|length < 12 %}
+        var markers = get_markers_dynamic(map, ic);
+    {% else %}
+        var markers = get_markers_precomputed(map, ic, plaques_json, map_markers_str);
+    {% endif %}
+
+    // Add event listeners for marker/infowindow/link interactions
+    for (im = 0; im < markers.length; im++) {
+        //google.maps.event.addListener(markers[im], 'mouseover', function(j) { return function() { markers[j].infowindow.open(map, markers[j]); } }(im));
+        //google.maps.event.addListener(markers[im], 'mouseout', function(j) { return function() { markers[j].infowindow.close(); } }(im));
+        //google.maps.event.addListener(markers[im], 'click', function(j) { return function() { window.location.href = this.url; } }(im));
+        google.maps.event.addListener(markers[im], 'click', function(j) { return function() { markers[j].infowindow.open(map, markers[j]); } }(im));
+        // Close on offclick
+//        google.maps.event.addListener(markers[im], 'click', function(j) {
+//            if (markers[j].open){
+//                markers[j].infowindow.close();
+//                markers[j].open = false;
+//            }
+//            else {
+//                markers[j].infowindow.open(map, markers[j]);
+//                markers[j].open = true;
+//            }
+//            google.maps.event.addListener(map, 'click', function() {
+//                markers[j].infowindow.close();
+//                markers[j].open = false;
+//            });
+//        }(im));
+    }
 
     // Fit the map bounds to the markers:
     //
     var bounds = new google.maps.LatLngBounds();
-    for (i = 0; i < markers.length; i++) {
-        bounds.extend(markers[i].position);
+    for (im = 0; im < markers.length; im++) {
+        bounds.extend(markers[im].position);
     }
     map.fitBounds(bounds);
 
