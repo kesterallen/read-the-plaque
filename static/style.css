@@ -29,7 +29,6 @@
 }
 
 .bg {
-    background: url('https://pbs.twimg.com/profile_banners/3321788408/1440106466/1500x500') no-repeat center center;
     position: fixed;
     width: 100%;
     height: 350px; /*same height as jumbotron */
@@ -39,14 +38,19 @@
 }
 
 .jumbotron {
-    background: url('https://pbs.twimg.com/profile_banners/3321788408/1440106466/1500x500') no-repeat center center;
+    background: url('/images/jumbotron_background.jpg') no-repeat center center;
     background-size: cover;
     height: 350px;
-    color: #40495A;
+    /*color: #40495A;*/
+    color: white;
     text-shadow: 2px 2px 2px #004;
 }
 
 .jumbotron > h1 {
+    display: inline;
+}
+
+.jumbotron > a {
     display: inline;
 }
 

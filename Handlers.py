@@ -181,11 +181,11 @@ def loginout():
     user = users.get_current_user()
     if user:
         loginout = {'is_admin': users.is_current_user_admin(),
-                    'url': users.create_logout_url('/flush'),
+                    'url': users.create_logout_url('/'),
                     'text': 'Log out'}
     else:
         loginout = {'is_admin': users.is_current_user_admin(),
-                    'url': users.create_login_url('/flush'),
+                    'url': users.create_login_url('/'),
                     'text': 'Admin login'}
     return loginout
 

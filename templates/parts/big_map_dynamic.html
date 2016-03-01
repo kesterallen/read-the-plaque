@@ -55,7 +55,7 @@
 
 function draw_map(plaques_json, map_markers_str) {
     var mapCanvas = document.getElementById('map');
-    var mapOptions = {mapTypeId: google.maps.MapTypeId.ROADMAP, center: {lat: -15.0, lng: -10.0}, minZoom: 1, maxZoom: 19};
+    var mapOptions = {mapTypeId: google.maps.MapTypeId.ROADMAP, center: {lat: -15.0, lng: -10.0}, minZoom: 1, maxZoom: 19, scaleControl: true};
     var map = new google.maps.Map(mapCanvas, mapOptions);
 
     var ic = {
