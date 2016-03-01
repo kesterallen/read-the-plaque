@@ -67,7 +67,7 @@ def get_default_template_values(**kwargs):
     template_values = memcache.get(memcache_name)
     if template_values is None:
         template_values = {
-            'num_pending': Plaque.num_pending(),
+            'num_pending': Plaque.num_pending(num=21), # limit the return to 21 items
             'footer_items': get_footer_items(),
             'loginout': loginout(),
             'icon_size': DEFAULT_MAP_ICON_SIZE_PIX,
@@ -684,7 +684,7 @@ class AddPlaque(webapp2.RequestHandler):
 </p>
             """.format(post_type, plaque)
             #logging.info('sending email')
-            #email_admin(msg, body)
+            email_admin(msg, body)
             state = ADD_STATES['ADD_STATE_SUCCESS']
             msg = plaque.title_page_url
         except (BadValueError, ValueError, SubmitError) as err:
@@ -1095,8 +1095,8 @@ class DeleteOnePlaque(webapp2.RequestHandler):
 #        self.response.write(msg)
 
 class ViewPending(webapp2.RequestHandler):
-    def get(self):
-        plaques = Plaque.pending_list()
+    def get(self, num=20):
+        plaques = Plaque.pending_list(num)
         user = users.get_current_user()
         name = "anon" if user is None else user.nickname()
         logging.info("User %s is viewing pending plaques" % name)

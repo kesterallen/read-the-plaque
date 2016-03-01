@@ -12,7 +12,7 @@
                 position: new google.maps.LatLng({{plaque.location.lat}}, {{plaque.location.lon}}),
                 url: "{{plaque.title_page_url}}",
                 infowindow: new google.maps.InfoWindow(
-                    {content: "<a href='{{plaque.title_page_url}}'>{{plaque.title}}<p><img src='{{plaque.img_url_tiny}}'/></a>"}),
+                    {content: "<a href='{{plaque.title_page_url}}'>{{plaque.title|escape}}<p><img src='{{plaque.img_url_tiny}}'/></a>"}),
                 open: false
             });
             markers.push(marker);

@@ -92,21 +92,21 @@ class Plaque(ndb.Model):
         return plaques
 
     @classmethod
-    def num_pending(cls):
-        plaques_list = cls.pending_list()
+    def num_pending(cls, num=20): # num is the max to return
+        plaques_list = cls.pending_list(num=num)
         if plaques_list:
             return len(plaques_list)
         else:
             return 0
 
     @classmethod
-    def pending_list(cls):
+    def pending_list(cls, num=20):
         """A separate method from approved() so that it will
         never be memcached."""
         plaques = Plaque.query().filter(Plaque.approved != True
                                ).order(-Plaque.approved
                                ).order(-Plaque.created_on
-                               ).fetch(limit=FETCH_LIMIT_PLAQUES)
+                               ).fetch(limit=num)
         return plaques
 
     @classmethod
