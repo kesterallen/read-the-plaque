@@ -67,6 +67,6 @@
 {% endif %}
 
 <!-- Include the map-drawing javascript at the bottom -->
-{% if plaques %} {% include 'parts/big_map_dynamic.html' %} {% endif %}
+{% if plaques or bigmap %} {% include 'parts/map_dynamic.html' %} {% endif %}
 </body>
 </html>

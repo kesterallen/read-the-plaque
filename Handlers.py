@@ -21,6 +21,7 @@ from google.appengine.api import search
 from google.appengine.api import users
 from google.appengine.ext import blobstore
 from google.appengine.ext import ndb
+from google.appengine.ext.ndb.google_imports import ProtocolBuffer
 from google.appengine.ext.db import BadValueError
 
 import lib.cloudstorage as gcs
@@ -326,17 +327,12 @@ class ViewPlaquesPage(webapp2.RequestHandler):
         template_text = self._get(page_num, per_page, is_random, is_featured)
         self.response.write(template_text)
 
-#class RenderMapSetup(ViewPlaquesPage):
-#    def get(
-#        self, page_num=1, per_page=DEFAULT_NUM_PER_PAGE, is_random=False,
-#        is_featured=True):
-#
-#        template_values = self._get_template_values(
-#            page_num, per_page, is_random, is_featured,
-#            limit=FETCH_LIMIT_PLAQUES, disable_memcache=True)
-#        template = JINJA_ENVIRONMENT.get_template('parts/big_map_dynamic.html')
-#        template_text = template.render(template_values)
-#        self.response.write(template_text)
+class BigMap(ViewPlaquesPage):
+    def get(self):
+        template_values = get_default_template_values(bigmap=True)
+        template = JINJA_ENVIRONMENT.get_template('bigmap.html')
+        template_text = template.render(template_values)
+        self.response.write(template_text)
 
 class ViewOnePlaqueParent(webapp2.RequestHandler):
     def get(self):
@@ -481,10 +477,21 @@ class JsonAllPlaques(webapp2.RequestHandler):
         #
         if plaque_keys_str is not None:
             plaque_keys = plaque_keys_str.split('&')
-            plaques = [ndb.Key(urlsafe=pk).get() for pk in plaque_keys]
+
+            plaques = []
+            for pk in plaque_keys:
+                try:
+                    plaque = ndb.Key(urlsafe=pk).get()
+                    plaques.append(plaque)
+                except ProtocolBuffer.ProtocolBufferDecodeError:
+                    pass
             plaques = [p for p in plaques if p] # Remove empties
-            json_output = json.dumps(
-                [p.to_dict(summary=summary) for p in plaques])
+
+            if not plaques:
+                json_output = ''
+            else:
+                json_output = json.dumps(
+                    [p.to_dict(summary=summary) for p in plaques])
             self.response.write(json_output)
             return
 

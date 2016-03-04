@@ -16,11 +16,10 @@ JINJA_ENVIRONMENT = jinja2.Environment (
 def main():
     app = webapp2.WSGIApplication([
         ('/admin', h.AdminLogin),
-        ('/page/(.+?)/(.+?)/(.+?)/?', h.ViewPlaquesPage),
-        ('/page/(.+?)/(.+?)/?', h.ViewPlaquesPage),
-        ('/page/(.+?)/?', h.ViewPlaquesPage),
-        ('/page/?', h.ViewPlaquesPage),
-        #('/test/?', h.ViewPlaquesTest),
+        #('/page/(.+?)/(.+?)/(.+?)/?', h.ViewPlaquesPage),
+        #('/page/(.+?)/(.+?)/?', h.ViewPlaquesPage),
+        #('/page/(.+?)/?', h.ViewPlaquesPage),
+        #('/page/?', h.ViewPlaquesPage),
         ('/plaque/(.+?)/?', h.ViewOnePlaque),
         ('/plaque/?', h.ViewOnePlaque),
         ('/randompage.*', h.RandomPlaquesPage),
@@ -61,8 +60,7 @@ def main():
         ('/s/?', h.SearchPlaques),
         ('/setupdated', h.SetUpdatedOn),
         ('/setfeatured/(.*?)', h.SetFeatured),
-
-        #('/map/?', h.RenderMapSetup),
+        ('/map/?', h.BigMap),
 
         ('/', h.ViewPlaquesPage),
         ('/(.+?)/(.+?)', h.ViewOnePlaque), # supports the old_site_id

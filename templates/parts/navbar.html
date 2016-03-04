@@ -32,6 +32,7 @@
                 </li>
                 <li><a href="/geo">Location</a></li>
                 <li><a onclick="find_near_here()" href="#">Nearby</a></li>
+                <li><a href="/map#bigmap">Big Map</a></li>
 
                 {% if loginout and loginout.is_admin %}
                     <li><a href="/pending">Pending <span class="badge">{{num_pending}}{% if num_pending %}{% if num_pending > 20 %}+{% endif %}{% endif %}</span></a></li>
@@ -46,11 +47,11 @@
     </div>
 </nav>
 
-<div class="jumbotron" style="color: white">
+<div class="jumbotron" style="color: yellow">
     <br/>
     <br/>
-    <h1>Read the Plaque</h1> a gigantic map of all the cool plaques in the world.
-    <p>A <a style="color: inherit; text-decoration: none;" href="http://99pi.org/">99% Invisible</a> project.</p>
+    A gigantic map of all the cool plaques in the world.
+    <p>A <a style="color: inherit" href="http://99pi.org/">99% Invisible</a> project.</p>
 </div>
 
 <!-- Modal -->
