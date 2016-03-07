@@ -60,7 +60,7 @@ def get_plaque_data(plaque_url, base_url=BASE_URL):
     return plaque_data
 
 
-def main():
+def 
     log = logging.getLogger()
     log.addHandler(logging.StreamHandler())
     log.setLevel(logging.DEBUG)

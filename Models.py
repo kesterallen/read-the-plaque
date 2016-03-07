@@ -93,11 +93,8 @@ class Plaque(ndb.Model):
 
     @classmethod
     def num_pending(cls, num=20): # num is the max to return
-        plaques_list = cls.pending_list(num=num)
-        if plaques_list:
-            return len(plaques_list)
-        else:
-            return 0
+        count = Plaque.query().filter(Plaque.approved != True).count(limit=num)
+        return count
 
     @classmethod
     def pending_list(cls, num=20):

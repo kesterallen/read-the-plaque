@@ -45,6 +45,7 @@ GCS_BUCKET = '/read-the-plaque.appspot.com'
 
 DEFAULT_PLAQUESET_NAME = 'public'
 DEFAULT_NUM_PER_PAGE = 20
+DEFAULT_NUM_PENDING = 5
 DEFAULT_MAP_ICON_SIZE_PIX = 16
 
 # Load templates from the /templates dir
@@ -68,7 +69,7 @@ def get_default_template_values(**kwargs):
     template_values = memcache.get(memcache_name)
     if template_values is None:
         template_values = {
-            'num_pending': Plaque.num_pending(num=21), # limit the return to 21 items
+            'num_pending': Plaque.num_pending(num=5), # limit the return to 5 items
             'footer_items': get_footer_items(),
             'loginout': loginout(),
             'icon_size': DEFAULT_MAP_ICON_SIZE_PIX,
@@ -552,7 +553,7 @@ class ViewTag(webapp2.RequestHandler):
             # TODO: NDB cursor pagination?
             plaques = query.filter(Plaque.tags == tag
                            ).order(-Plaque.created_on
-                           ).fetch(limit=20)
+                           ).fetch(limit=DEFAULT_NUM_PER_PAGE)
             map_markers_str = get_map_markers_str(plaques)
 
             template = JINJA_ENVIRONMENT.get_template('all.html')
@@ -1102,7 +1103,7 @@ class DeleteOnePlaque(webapp2.RequestHandler):
 #        self.response.write(msg)
 
 class ViewPending(webapp2.RequestHandler):
-    def get(self, num=20):
+    def get(self, num=DEFAULT_NUM_PENDING):
         plaques = Plaque.pending_list(num)
         user = users.get_current_user()
         name = "anon" if user is None else user.nickname()
@@ -1198,13 +1199,13 @@ class AddTitleUrlAll(webapp2.RequestHandler):
 class ApproveAllPending(webapp2.RequestHandler):
     """Approve all pending plaques"""
     def get(self):
-        raise NotImplementedError("Turned off")
-        #plaques = Plaque.pending_list()
-        #for plaque in plaques:
-            #plaque.approved = True
-            #plaque.put()
-        #memcache.flush_all()
-        #self.redirect('/')
+        #raise NotImplementedError("Turned off")
+        plaques = Plaque.pending_list()
+        for plaque in plaques:
+            plaque.approved = True
+            plaque.put()
+        memcache.flush_all()
+        self.redirect('/')
 
 class ApprovePending(webapp2.RequestHandler):
     """Approve a plaque"""

@@ -1,4 +1,8 @@
 User-agent: *
+Disallow: /admin
+Disallow: /alljp
+Disallow: /flush
+Disallow: /jp
 Disallow: /geo
 Disallow: /edit
 Disallow: /delete
