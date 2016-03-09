@@ -8,6 +8,7 @@ FETCH_LIMIT_PLAQUES = 500
 from google.appengine.api import memcache
 from google.appengine.ext import ndb
 from google.appengine.api import search
+from google.appengine.datastore.datastore_query import Cursor
 
 class Comment(ndb.Model):
     """
@@ -62,34 +63,65 @@ class Plaque(ndb.Model):
 
     @classmethod
     def num_approved(cls):
-        plaques_list = cls.approved_list()
-        if plaques_list:
-            return len(plaques_list)
-        else:
-            return 0
+        count = Plaque.query().filter(Plaque.approved == True).count()
+        return count
 
     @classmethod
-    def approved_list(
-        cls, offset=0, limit=FETCH_LIMIT_PLAQUES, disable_memcache=False):
+    def page_plaques(cls, num, curs_urlsafe=None):
+        memcache_names = [
+            'page_plaques_%s_%s' % (num, curs_urlsafe),
+            'page_curs_urlsafe_%s_%s' % (num, curs_urlsafe),
+            'page_more_%s_%s' % (num, curs_urlsafe),
+        ]
 
-        if disable_memcache:
-            plaques = Plaque.query().filter(Plaque.approved == True
-                                   ).order(-Plaque.created_on
-                                   ).fetch(offset=offset, limit=limit)
-            return plaques
-
-        memcache_name = 'approved %s %s' % (offset, limit)
-        plaques = memcache.get(memcache_name)
-        if plaques is None:
-            plaques = Plaque.query().filter(Plaque.approved == True
-                                   ).order(-Plaque.created_on
-                                   ).fetch(offset=offset, limit=limit)
-            memcache_status = memcache.set(memcache_name, plaques)
-            if not memcache_status:
-                logging.debug("memcaching for Plaque.approved() failed")
+        memcache_out =  memcache.get_multi(memcache_names)
+        memcache_worked = len(memcache_out.keys()) == len(memcache_names)
+        if memcache_worked:
+            logging.debug("memcache.get_multi worked for Plaque.page_plaques()")
+            plaques = memcache_out[memcache_names[0]]
+            next_cursor = memcache_out[memcache_names[1]]
+            more = memcache_out[memcache_names[2]]
         else:
-            logging.debug("memcache.get worked for Plaque.approved()")
-        return plaques
+            query = Plaque.query().filter(Plaque.approved == True).order(-Plaque.created_on)
+
+            if curs_urlsafe is None:
+                start_cursor = None
+                plaques, next_cursor, more = query.fetch_page(num)
+            else:
+                start_cursor = Cursor(urlsafe=curs_urlsafe)
+                plaques, next_cursor, more = query.fetch_page(num, start_cursor=start_cursor)
+
+            memcache_status = memcache.set_multi({
+                memcache_names[0]: plaques,
+                memcache_names[1]: start_cursor,
+                memcache_names[2]: more,
+            })
+            if memcache_status:
+                logging.debug("""memcache.set in Plaque.plaque_pages() failed: 
+                    %s were not set""" % memcache_status)
+
+        return plaques, next_cursor, more
+
+#    @classmethod
+#    def approved_list(cls, offset=0, limit=FETCH_LIMIT_PLAQUES):
+#        #if disable_memcache:
+#        #    plaques = Plaque.query().filter(Plaque.approved == True
+#        #                           ).order(-Plaque.created_on
+#        #                           ).fetch(offset=offset, limit=limit)
+#        #    return plaques
+#
+#        memcache_name = 'approved %s %s' % (offset, limit)
+#        plaques = memcache.get(memcache_name)
+#        if plaques is None:
+#            plaques = Plaque.query().filter(Plaque.approved == True
+#                                   ).order(-Plaque.created_on
+#                                   ).fetch(offset=offset, limit=limit)
+#            memcache_status = memcache.set(memcache_name, plaques)
+#            if not memcache_status:
+#                logging.debug("memcaching for Plaque.approved() failed")
+#        else:
+#            logging.debug("memcache.get worked for Plaque.approved()")
+#        return plaques
 
     @classmethod
     def num_pending(cls, num=20): # num is the max to return
@@ -112,7 +144,6 @@ class Plaque(ndb.Model):
         Return a dict of the tags and their display-layer font sizes. Done
         here to speed rendering and to make the whole thing memcacheable.
         """
-        #MEMCACHE TODO: set template_values to None to turn off memcaching
         tag_counts = memcache.get('all_tags_sized')
         if tag_counts is None:
             tag_counts = defaultdict(int)
@@ -262,9 +293,6 @@ class Plaque(ndb.Model):
                 'old_site_id': self.old_site_id,
             }
         return plaque_dict
-
-    def __repr__(self):
-        return self.key.urlsafe()
 
 class FeaturedPlaque(ndb.Model):
     created_on = ndb.DateTimeProperty(auto_now_add=True)

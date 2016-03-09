@@ -43,10 +43,10 @@ ADD_STATES = {'ADD_STATE_SUCCESS': ADD_STATE_SUCCESS,
 GCS_BUCKET = '/read-the-plaque.appspot.com'
 # Don't change this to, say, readtheplaque.com
 
-DEFAULT_PLAQUESET_NAME = 'public'
-DEFAULT_NUM_PER_PAGE = 20
-DEFAULT_NUM_PENDING = 5
-DEFAULT_MAP_ICON_SIZE_PIX = 16
+DEF_PLAQUESET_NAME = 'public'
+DEF_NUM_PER_PAGE = 20
+DEF_NUM_PENDING = 5
+DEF_MAP_ICON_SIZE_PIX = 16
 
 # Load templates from the /templates dir
 JINJA_ENVIRONMENT = jinja2.Environment(
@@ -64,15 +64,14 @@ class SubmitError(Exception):
 # However, the write rate should be limited to ~1/second.
 
 def get_default_template_values(**kwargs):
-    #MEMCACHE TODO: set template_values to None to turn off memcaching
     memcache_name = 'default_template_values_%s' % users.is_current_user_admin()
     template_values = memcache.get(memcache_name)
     if template_values is None:
         template_values = {
-            'num_pending': Plaque.num_pending(num=5), # limit the return to 5 items
+            'num_pending': Plaque.num_pending(num=DEF_NUM_PENDING),
             'footer_items': get_footer_items(),
             'loginout': loginout(),
-            'icon_size': DEFAULT_MAP_ICON_SIZE_PIX,
+            'icon_size': DEF_MAP_ICON_SIZE_PIX,
         }
         memcache_status = memcache.set(memcache_name, template_values)
         if not memcache_status:
@@ -98,7 +97,7 @@ def email_admin(msg, body):
     except Exception as err:
         logging.debug('mail failed: %s, %s' % (msg, err))
 
-def get_plaqueset_key(plaqueset_name=DEFAULT_PLAQUESET_NAME):
+def get_plaqueset_key(plaqueset_name=DEF_PLAQUESET_NAME):
     """
     Constructs a Datastore key for a Plaque entity. Use plaqueset_name as
     the key.
@@ -136,6 +135,7 @@ def random_tags(num=5):
         tags = random.sample(tags, 5)
     return tags
 
+# TODO: make this scalable too
 def get_random_plaque():
     plaque_key = get_random_plaque_key()
     plaque = ndb.Key(urlsafe=plaque_key).get()
@@ -152,7 +152,7 @@ def get_random_plaque_key():
                            ).fetch(offset=iplaque, limit=1, keys_only=True)
     return plaque_keys[0].urlsafe()
 
-def get_pages_list(per_page=DEFAULT_NUM_PER_PAGE):
+def get_pages_list(per_page=DEF_NUM_PER_PAGE):
     num_pages = int(math.ceil(float(Plaque.num_approved()) /
                               float(per_page)))
     pages_list = [1+p for p in range(num_pages)]
@@ -163,7 +163,6 @@ def get_footer_items():
     Just 5 tags for the footer.
     Memcache the output of this so it doesn't get calculated every time.
     """
-    #MEMCACHE TODO: set footer_items to None to turn off memcaching
     footer_items = memcache.get('get_footer_items')
     if footer_items is None:
         footer_items = {'tags': random_tags(),
@@ -225,66 +224,23 @@ def handle_500(request, response, exception):
     response.set_status(500)
 
 class ViewPlaquesPage(webapp2.RequestHandler):
-    def head(self, page_num=1, per_page=DEFAULT_NUM_PER_PAGE,
-        is_random=False, is_featured=True):
-
-        self.get(
-            page_num=1, per_page=DEFAULT_NUM_PER_PAGE, is_featured=is_featured)
+    def head(self, start_curs_str=None):
+        self.get(per_page=per_page, is_featured=is_featured)
         self.response.clear()
 
-    def _get_template_values(
-        self, page_num, per_page, is_random, is_featured,
-        limit=FETCH_LIMIT_PLAQUES, disable_memcache=False):
+    def get(self, curs_urlsafe=None):
+        template_text = self._get(curs_urlsafe, is_random=False, is_featured=True)
+        self.response.write(template_text)
 
-        start_index = per_page * (page_num - 1)
-        end_index = start_index + per_page
-
-        # Grab all plaques for the map
-        if is_random:
-            plaques = []
-            for i in range(per_page):
-                plaques.append(get_random_plaque())
-        else:
-            # TODO: NDB cursor pagination?
-            plaques = Plaque.approved_list(
-                offset=start_index, limit=per_page, disable_memcache=disable_memcache)
-
-        num_plaques = Plaque.query().count()
-        num_pages = int(math.ceil((num_plaques / (end_index - start_index))))
-        template_values = get_default_template_values(
-                              plaques=plaques,
-                              page_num=page_num,
-                              num_pages=num_pages,
-                          )
-        if is_random:
-            template_values['map_markers_str'] = get_map_markers_str(plaques)
-
-        if is_featured:
-            featured = get_featured()
-            template_values['featured_plaque'] = featured
-
-        return template_values
-
-    def _get(
-        self, page_num=1, per_page=DEFAULT_NUM_PER_PAGE, is_random=False,
-        is_featured=True):
+    def _get(self, curs_urlsafe=None, per_page=DEF_NUM_PER_PAGE, is_random=False, is_featured=True):
         """
         View the nth per_page plaques on a grid.
-        page_num is a one-based integer
         """
-        try:
-            page_num = int(page_num)
-        except ValueError as err:
-            logging.error(err)
-            page_num = 1
-        if page_num < 1:
-            page_num = 1
-
         try:
             per_page = int(per_page)
         except ValueError as err:
             logging.error(err)
-            per_page = DEFAULT_NUM_PER_PAGE
+            per_page = DEF_NUM_PER_PAGE
         if per_page < 1:
             per_page = 1
 
@@ -295,18 +251,17 @@ class ViewPlaquesPage(webapp2.RequestHandler):
         name = "anon" if user is None else user.nickname()
         logging.debug("User %s is admin: %s" % (name, is_admin))
         memcache_name = 'view_plaques_page_featured_%s_%s_%s' % (
-            page_num, per_page, is_admin)
+            per_page, curs_urlsafe, is_admin)
         if is_random:
             template_text = None
         else:
-            #MEMCACHE TODO: set template_text to None to turn off memcaching
             template_text = memcache.get(memcache_name)
             logging.debug("memcaching worked for ViewPlaquesPage %s" %
                 memcache_name)
 
         if template_text is None:
             template_values = self._get_template_values(
-                page_num, per_page, is_random, is_featured)
+                per_page, curs_urlsafe, is_random, is_featured)
             template = JINJA_ENVIRONMENT.get_template('all.html')
             template_text = template.render(template_values)
             if not is_random:
@@ -321,12 +276,42 @@ class ViewPlaquesPage(webapp2.RequestHandler):
 
         return template_text
 
-    def get(
-        self, page_num=1, per_page=DEFAULT_NUM_PER_PAGE, is_random=False,
-        is_featured=True):
+    def _get_template_values(self, per_page, curs_urlsafe, is_random, is_featured):
 
-        template_text = self._get(page_num, per_page, is_random, is_featured)
-        self.response.write(template_text)
+        if is_random:
+            plaques = []
+            curs_urlsafe = None
+            more = False
+            for i in range(per_page):
+                plaques.append(get_random_plaque())
+        else:
+            plaques, next_curs, more = Plaque.page_plaques(per_page, curs_urlsafe=curs_urlsafe)
+            logging.info("%s %s %s" % (plaques, next_curs, more))
+            logging.info("%s %s %s" % (plaques, next_curs, more))
+            logging.info("%s %s %s" % (plaques, next_curs, more))
+            logging.info("%s %s %s" % (plaques, next_curs, more))
+            logging.info("%s %s %s" % (plaques, next_curs, more))
+            if next_curs is None:
+                curs_urlsafe = ''
+                logging.info('next_curs is None')
+            else:
+                curs_urlsafe = next_curs.urlsafe()
+
+        num_plaques = Plaque.query().count()
+        num_pages = int(math.ceil((num_plaques / per_page)))
+        template_values = get_default_template_values(
+                              plaques=plaques,
+                              num_pages=num_pages,
+                              curs_urlsafe=curs_urlsafe,
+                              more=more,
+                          )
+        if is_random:
+            template_values['map_markers_str'] = get_map_markers_str(plaques)
+        if is_featured:
+            featured = get_featured()
+            template_values['featured_plaque'] = featured
+
+        return template_values
 
 class BigMap(ViewPlaquesPage):
     def get(self):
@@ -352,7 +337,6 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
         logging.info(
             "memcache name in ViewOnePlaqueParent._get_from_key is %s" %
             memcache_name)
-        #MEMCACHE TODO: set page_text to None to turn off memcaching
         page_text = memcache.get(memcache_name)
         if page_text is None:
             plaque = None
@@ -553,7 +537,7 @@ class ViewTag(webapp2.RequestHandler):
             # TODO: NDB cursor pagination?
             plaques = query.filter(Plaque.tags == tag
                            ).order(-Plaque.created_on
-                           ).fetch(limit=DEFAULT_NUM_PER_PAGE)
+                           ).fetch(limit=DEF_NUM_PER_PAGE)
             map_markers_str = get_map_markers_str(plaques)
 
             template = JINJA_ENVIRONMENT.get_template('all.html')
@@ -652,7 +636,7 @@ class AddPlaque(webapp2.RequestHandler):
             #memcache.flush_all()
         try:
             plaqueset_name = self.request.get('plaqueset_name',
-                                              DEFAULT_PLAQUESET_NAME)
+                                              DEF_PLAQUESET_NAME)
             plaqueset_key = get_plaqueset_key(plaqueset_name)
 
             # Create new plaque entity:
@@ -959,7 +943,8 @@ class SearchPlaquesGeo(webapp2.RequestHandler):
         query = search.Query(query_string)
         results = plaque_search_index.search(query)
         plaques = [ndb.Key(urlsafe=r.doc_id).get() for r in results]
-        geo_plaques_approved = [p for p in plaques if p is not None and p.approved]
+        geo_plaques_approved = [p for p in plaques 
+            if p is not None and p.approved]
 
         map_markers_str = get_map_markers_str(geo_plaques_approved)
 
@@ -1103,7 +1088,7 @@ class DeleteOnePlaque(webapp2.RequestHandler):
 #        self.response.write(msg)
 
 class ViewPending(webapp2.RequestHandler):
-    def get(self, num=DEFAULT_NUM_PENDING):
+    def get(self, num=DEF_NUM_PENDING):
         plaques = Plaque.pending_list(num)
         user = users.get_current_user()
         name = "anon" if user is None else user.nickname()
@@ -1200,7 +1185,7 @@ class ApproveAllPending(webapp2.RequestHandler):
     """Approve all pending plaques"""
     def get(self):
         #raise NotImplementedError("Turned off")
-        plaques = Plaque.pending_list()
+        plaques = Plaque.pending_list(num=100)
         for plaque in plaques:
             plaque.approved = True
             plaque.put()

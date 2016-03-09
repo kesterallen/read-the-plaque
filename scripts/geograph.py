@@ -107,8 +107,9 @@ def main():
 
     with open(filename) as fh:
         plaque_ids = [l.strip() for l in fh.readlines()]
+    plaque_ids.reverse()
 
-    for plaque_id in plaque_ids:
+    for plaque_id in plaque_ids[:100]:
         plaque_url = "%s/photo/%s" % (BASE_URL, plaque_id)
         plaque_data = get_plaque_data(plaque_url)
         if plaque_data is None:
@@ -124,7 +125,7 @@ def main():
         except Exception as err:
             logging.info("error (unexpected) %s: cant get %s" % (err, plaque_url))
 
-        time.sleep(30)
+        #time.sleep(1)
 
 if __name__ == '__main__':
     main()

@@ -16,10 +16,10 @@ JINJA_ENVIRONMENT = jinja2.Environment (
 def main():
     app = webapp2.WSGIApplication([
         ('/admin', h.AdminLogin),
-        #('/page/(.+?)/(.+?)/(.+?)/?', h.ViewPlaquesPage),
-        #('/page/(.+?)/(.+?)/?', h.ViewPlaquesPage),
-        #('/page/(.+?)/?', h.ViewPlaquesPage),
-        #('/page/?', h.ViewPlaquesPage),
+        ('/page/(.+?)/(.+?)/(.+?)/?', h.ViewPlaquesPage),
+        ('/page/(.+?)/(.+?)/?', h.ViewPlaquesPage),
+        ('/page/(.+?)/?', h.ViewPlaquesPage),
+        ('/page/?', h.ViewPlaquesPage),
         ('/plaque/(.+?)/?', h.ViewOnePlaque),
         ('/plaque/?', h.ViewOnePlaque),
         ('/randompage.*', h.RandomPlaquesPage),
@@ -68,7 +68,7 @@ def main():
     ], debug=True)
 
     app.error_handlers[404] = h.handle_404
-    app.error_handlers[500] = h.handle_500
+    #app.error_handlers[500] = h.handle_500
 
     return app
 

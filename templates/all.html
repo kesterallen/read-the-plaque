@@ -39,22 +39,21 @@
                     <div style="height: 150;" id="map"></div>
                 </div>
             </div>
-        {% else %}
-            {#
-            <!-- If there is featured plaque, draw the paginator-->
-            <!-- this needs some work in _get_template_values -->
-            <!--
+        {% endif %}
+
+        <!-- If there is an activer cursor, make a paginator -->
+        {% if more %}
             <nav>
                 <ul class="pagination pagination-sm">
-                    {% for i in range(num_pages) %}
-                        <li><a href="/page/{{i}}">{{i}}</a></li>
-                    {% endfor %}
+                    <li>
+                        <a href="/"><span>1</span></a>
+                    </li>
+                    <li>
+                        <a href="/page/{{curs_urlsafe}}"><span>&raquo;</span></a>
+                    </li>
                 </ul>
             </nav>
-            -->
-            #}
         {% endif %}
-        <p><a class="btn btn-primary" role="button" href="/randompage">More Plaques</a></p>
 
     </div><div class="col-xs-0 col-sm-1"></div></div>
 </div>
