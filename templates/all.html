@@ -41,15 +41,12 @@
             </div>
         {% endif %}
 
-        <!-- If there is an activer cursor, make a paginator -->
+        <!-- If there is an active cursor, make a paginator -->
         {% if more %}
             <nav>
                 <ul class="pagination pagination-sm">
                     <li>
-                        <a href="/"><span>1</span></a>
-                    </li>
-                    <li>
-                        <a href="/page/{{curs_urlsafe}}"><span>&raquo;</span></a>
+                        <a class="btn btn-default" href="/page/{{next_cursor_urlsafe}}"><span>Next Page of Plaques</span></a>
                     </li>
                 </ul>
             </nav>

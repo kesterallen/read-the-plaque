@@ -114,7 +114,7 @@ function draw_map(plaques_json, map_markers_str) {
 
 
 function initialize() {
-    $('#map').append('<img alt="loading dynamic map" title="temporary map image" class="img-responsive" src="/static/map_snapshot.png"/>');
+    $('#map').append('<a href="/map#bigmap"><img alt="loading dynamic map" title="temporary map image" class="img-responsive" src="/images/map_snapshot.png"/></a>');
 
     var jp_url = '/static/plaques.json';
     

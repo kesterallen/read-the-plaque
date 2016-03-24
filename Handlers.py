@@ -45,7 +45,7 @@ GCS_BUCKET = '/read-the-plaque.appspot.com'
 
 DEF_PLAQUESET_NAME = 'public'
 DEF_NUM_PER_PAGE = 20
-DEF_NUM_PENDING = 5
+DEF_NUM_PENDING = 5 
 DEF_MAP_ICON_SIZE_PIX = 16
 
 # Load templates from the /templates dir
@@ -123,24 +123,35 @@ def random_five_approved(cls, num=5):
     else:
         return items
 
-# TODO make this scalable
+# TODO: add table UniqueTags
 def random_tags(num=5):
+    """
+    Get a list of random tags. Limit to total number of runs to 100 to prevent
+    infinite loop if there are no plaques or tags.
+    """
     tags = set()
-    for p in Plaque.query(Plaque.approved == True).fetch():
-        for t in p.tags:
-            tags.add(t)
+    bailout = 0
+    try:
+        while len(tags) < num and bailout < 100:
+            plaque = get_random_plaque()
+            for t in plaque.tags:
+                tags.add(t)
+            bailout += 1
+    except ValueError as err:
+        logging.info("no plaques in random_tags")
+        pass
 
-    tags = list(tags)
-    if len(tags) > num:
-        tags = random.sample(tags, 5)
-    return tags
+    outtags = list(tags)
+    outtags = outtags[:num]
+    return outtags
 
-# TODO: make this scalable too
 def get_random_plaque():
     plaque_key = get_random_plaque_key()
     plaque = ndb.Key(urlsafe=plaque_key).get()
     return plaque
 
+# TODO: make this scalable. Idea: select  with a .filter(> some date in the
+# current range), limit=1, or geographically
 def get_random_plaque_key():
     count = Plaque.query().filter(Plaque.approved == True).count()
     if not count:
@@ -228,11 +239,11 @@ class ViewPlaquesPage(webapp2.RequestHandler):
         self.get(per_page=per_page, is_featured=is_featured)
         self.response.clear()
 
-    def get(self, curs_urlsafe=None):
-        template_text = self._get(curs_urlsafe, is_random=False, is_featured=True)
+    def get(self, cursor_urlsafe=None):
+        template_text = self._get(cursor_urlsafe, is_random=False, is_featured=True)
         self.response.write(template_text)
 
-    def _get(self, curs_urlsafe=None, per_page=DEF_NUM_PER_PAGE, is_random=False, is_featured=True):
+    def _get(self, cursor_urlsafe=None, per_page=DEF_NUM_PER_PAGE, is_random=False, is_featured=True):
         """
         View the nth per_page plaques on a grid.
         """
@@ -251,7 +262,7 @@ class ViewPlaquesPage(webapp2.RequestHandler):
         name = "anon" if user is None else user.nickname()
         logging.debug("User %s is admin: %s" % (name, is_admin))
         memcache_name = 'view_plaques_page_featured_%s_%s_%s' % (
-            per_page, curs_urlsafe, is_admin)
+            per_page, cursor_urlsafe, is_admin)
         if is_random:
             template_text = None
         else:
@@ -261,7 +272,7 @@ class ViewPlaquesPage(webapp2.RequestHandler):
 
         if template_text is None:
             template_values = self._get_template_values(
-                per_page, curs_urlsafe, is_random, is_featured)
+                per_page, cursor_urlsafe, is_random, is_featured)
             template = JINJA_ENVIRONMENT.get_template('all.html')
             template_text = template.render(template_values)
             if not is_random:
@@ -276,33 +287,32 @@ class ViewPlaquesPage(webapp2.RequestHandler):
 
         return template_text
 
-    def _get_template_values(self, per_page, curs_urlsafe, is_random, is_featured):
+    def _get_template_values(self, per_page, cursor_urlsafe, is_random, is_featured):
 
         if is_random:
             plaques = []
-            curs_urlsafe = None
+            cursor_urlsafe = None
             more = False
             for i in range(per_page):
                 plaques.append(get_random_plaque())
         else:
-            plaques, next_curs, more = Plaque.page_plaques(per_page, curs_urlsafe=curs_urlsafe)
-            logging.info("%s %s %s" % (plaques, next_curs, more))
-            logging.info("%s %s %s" % (plaques, next_curs, more))
-            logging.info("%s %s %s" % (plaques, next_curs, more))
-            logging.info("%s %s %s" % (plaques, next_curs, more))
-            logging.info("%s %s %s" % (plaques, next_curs, more))
-            if next_curs is None:
-                curs_urlsafe = ''
-                logging.info('next_curs is None')
+            plaques, next_cursor, more = Plaque.page_plaques(
+                per_page, start_cursor_urlsafe=cursor_urlsafe)
+
+            logging.info("In ._get_template_values: %s plaques %s %s" % (len(plaques), next_cursor, more))
+
+            if next_cursor is None:
+                cursor_urlsafe = ''
+                logging.info('next_cursor is None')
             else:
-                curs_urlsafe = next_curs.urlsafe()
+                cursor_urlsafe = next_cursor.urlsafe()
 
         num_plaques = Plaque.query().count()
         num_pages = int(math.ceil((num_plaques / per_page)))
         template_values = get_default_template_values(
                               plaques=plaques,
                               num_pages=num_pages,
-                              curs_urlsafe=curs_urlsafe,
+                              next_cursor_urlsafe=cursor_urlsafe,
                               more=more,
                           )
         if is_random:
@@ -481,6 +491,7 @@ class JsonAllPlaques(webapp2.RequestHandler):
             return
 
         # TODO: this should not hardcode a 10k plaque limit.
+        # TODO: NDB cursor pagination for this
         block_size = 1000
         num_blocks = 10
         max_num_plaques = num_blocks * block_size
@@ -658,7 +669,7 @@ class AddPlaque(webapp2.RequestHandler):
 
             # Notify admin:
             #
-            logging.info('creating email')
+            #logging.info('creating email')
             post_type = 'Updated' if is_edit else 'New'
             user = users.get_current_user()
             name = "anon" if user is None else user.nickname()
@@ -676,7 +687,7 @@ class AddPlaque(webapp2.RequestHandler):
 </p>
             """.format(post_type, plaque)
             #logging.info('sending email')
-            email_admin(msg, body)
+            #email_admin(msg, body)
             state = ADD_STATES['ADD_STATE_SUCCESS']
             msg = plaque.title_page_url
         except (BadValueError, ValueError, SubmitError) as err:
@@ -995,7 +1006,9 @@ class Counts(webapp2.RequestHandler):
     def get(self):
         find_orphans = self.request.get('find_orphans')
         num_comments = Comment.query().count()
-        num_plaques = Plaque.query().count()
+        query = Plaque.query()
+        num_plaques = query.count()
+        num_pending = query.filter(Plaque.approved == False).count()
         num_images = 0
         images = gcs.listbucket(GCS_BUCKET)
         for image in images:
@@ -1019,8 +1032,8 @@ class Counts(webapp2.RequestHandler):
         else:
             orphan_pics.add("didn't check for orphans")
 
-        msg = "Count: %s comments, %s plaques, %s images, orphans: %s<hr>%s" % (
-                num_comments, num_plaques, num_images, orphan_pics, pics_count)
+        msg = "Count: %s comments, %s plaques (%s pending), %s images, orphans: %s<hr>%s" % (
+                num_comments, num_plaques, num_pending, num_images, orphan_pics, pics_count)
         self.response.write(msg)
 
 class DeleteOnePlaque(webapp2.RequestHandler):

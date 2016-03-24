@@ -67,11 +67,11 @@ class Plaque(ndb.Model):
         return count
 
     @classmethod
-    def page_plaques(cls, num, curs_urlsafe=None):
+    def page_plaques(cls, num, start_cursor_urlsafe=None):
         memcache_names = [
-            'page_plaques_%s_%s' % (num, curs_urlsafe),
-            'page_curs_urlsafe_%s_%s' % (num, curs_urlsafe),
-            'page_more_%s_%s' % (num, curs_urlsafe),
+            'page_plaques_%s_%s' % (num, start_cursor_urlsafe),
+            'page_start_cursor_urlsafe_%s_%s' % (num, start_cursor_urlsafe),
+            'page_more_%s_%s' % (num, start_cursor_urlsafe),
         ]
 
         memcache_out =  memcache.get_multi(memcache_names)
@@ -82,14 +82,16 @@ class Plaque(ndb.Model):
             next_cursor = memcache_out[memcache_names[1]]
             more = memcache_out[memcache_names[2]]
         else:
-            query = Plaque.query().filter(Plaque.approved == True).order(-Plaque.created_on)
+            query = Plaque.query(
+                ).filter(Plaque.approved == True).order(-Plaque.created_on)
 
-            if curs_urlsafe is None:
+            if start_cursor_urlsafe is None:
                 start_cursor = None
                 plaques, next_cursor, more = query.fetch_page(num)
             else:
-                start_cursor = Cursor(urlsafe=curs_urlsafe)
-                plaques, next_cursor, more = query.fetch_page(num, start_cursor=start_cursor)
+                start_cursor = Cursor(urlsafe=start_cursor_urlsafe)
+                plaques, next_cursor, more = query.fetch_page(
+                    num, start_cursor=start_cursor)
 
             memcache_status = memcache.set_multi({
                 memcache_names[0]: plaques,
@@ -100,6 +102,7 @@ class Plaque(ndb.Model):
                 logging.debug("""memcache.set in Plaque.plaque_pages() failed: 
                     %s were not set""" % memcache_status)
 
+        logging.info("In Plaque.page_url: %s plaques %s %s" % (len(plaques), next_cursor, more))
         return plaques, next_cursor, more
 
 #    @classmethod
@@ -133,7 +136,7 @@ class Plaque(ndb.Model):
         """A separate method from approved() so that it will
         never be memcached."""
         plaques = Plaque.query().filter(Plaque.approved != True
-                               ).order(-Plaque.approved
+                               ).order(Plaque.approved
                                ).order(-Plaque.created_on
                                ).fetch(limit=num)
         return plaques
