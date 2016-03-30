@@ -1,4 +1,4 @@
-<script async src="/static/markerclusterer.js"></script>
+<script src="/static/markerclusterer.js"></script>
 
 <script async>
 function get_markers(map, ic, plaques_json, map_markers_str) {
@@ -31,7 +31,8 @@ function get_markers(map, ic, plaques_json, map_markers_str) {
             position: new google.maps.LatLng(plaque.lat, plaque.lng),
             url: plaque.title_page_url,
             infowindow: new google.maps.InfoWindow(
-                {content: '<a href="' + plaque.title_page_url + '" target="_blank">' + plaque.title + '<p><img src="' + plaque.img_url_tiny + '"/></a>'}),
+                //{content: '<a href="' + plaque.title_page_url + '" target="_blank">' + plaque.title + '<p><img src="' + plaque.img_url_tiny + '"/></p></a>'}),
+                {content: '<a href="' + plaque.title_page_url + '" target="_blank">' + plaque.title + '</a>'}),
             open: false
         });
         markers.push(marker);

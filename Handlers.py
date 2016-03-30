@@ -467,60 +467,91 @@ class JsonAllPlaques(webapp2.RequestHandler):
     """
     Get every plaques' JSON repr.
     """
-    def get(self, plaque_keys_str=None, summary=True):
-        # If keys are specified, dump those and return
-        #
-        if plaque_keys_str is not None:
-            plaque_keys = plaque_keys_str.split('&')
+    def _plaques_to_json(self, plaques, summary=True):
+        plaques = [p.to_dict(summary=summary) for p in plaques]
+        json_output = json.dumps(plaques)
+        return json_output
 
-            plaques = []
-            for pk in plaque_keys:
-                try:
-                    plaque = ndb.Key(urlsafe=pk).get()
-                    plaques.append(plaque)
-                except ProtocolBuffer.ProtocolBufferDecodeError:
-                    pass
-            plaques = [p for p in plaques if p] # Remove empties
+    def _json_for_keys(self, plaque_keys_str=None, summary=True):
+        self.json_for_all(summary)
+        plaque_keys = plaque_keys_str.split('&')
 
-            if not plaques:
-                json_output = ''
-            else:
-                json_output = json.dumps(
-                    [p.to_dict(summary=summary) for p in plaques])
-            self.response.write(json_output)
-            return
+        plaques = []
+        for pk in plaque_keys:
+            try:
+                plaque = ndb.Key(urlsafe=pk).get()
+                plaques.append(plaque)
+            except ProtocolBuffer.ProtocolBufferDecodeError:
+                pass
+        plaques = [p for p in plaques if p] # Remove empties
 
+        if not plaques:
+            json_output = ''
+        else:
+            json_output = self._plaques_to_json(plaques, summary)
+
+        return json_output
+
+    def _json_for_update(self, updated_on, summary=True):
+        plaques = Plaque.query(
+                       ).filter(Plaque.approved == True
+                       ).filter(Plaque.created_on > updated_on
+                       ).order(-Plaque.created_on
+                       ).fetch()
+        json_output = self._plaques_to_json(plaques, summary)
+        return json_output
+
+    def _json_for_all(self, summary=True):
         # TODO: this should not hardcode a 10k plaque limit.
         # TODO: NDB cursor pagination for this
         block_size = 1000
         num_blocks = 10
         max_num_plaques = num_blocks * block_size
-        plaques_json_all = []
+        plaques_all = []
 
         for ik in range(0, max_num_plaques, block_size):
             # Get the plaques' JSON for this block_size of plaques
             #
-            memcache_name = 'plaque_json_{0}'.format(ik)
-            plaques_json = memcache.get(memcache_name)
-            if plaques_json is None:
-                plaques = Plaque.query(
-                               ).filter(Plaque.approved == True
-                               ).order(-Plaque.created_on
-                               ).fetch(offset=ik, limit=block_size)
-                plaques_json = [p.to_dict(summary=summary) for p in plaques]
+            #memcache_name = 'plaque_json_{0}'.format(ik)
+            #plaques = memcache.get(memcache_name)
+            #if plaques_json is None:
+                #plaques = Plaque.query(
+                               #).filter(Plaque.approved == True
+                               #).order(-Plaque.created_on
+                               #).fetch(offset=ik, limit=block_size)
 
-                memcache_status = memcache.set(memcache_name, plaques_json)
-                if not memcache_status:
-                    logging.debug("JsonAllPlaques memcache.set for %s failed" %
-                        memcache_name)
-            else:
-                logging.debug("JsonAllPlaques memcache.get worked for %s" %
-                    memcache_name)
+                #memcache_status = memcache.set(memcache_name, plaques)
+                #if not memcache_status:
+                    #logging.debug("JsonAllPlaques memcache.set for %s failed" %
+                        #memcache_name)
+            #else:
+                #logging.debug("JsonAllPlaques memcache.get worked for %s" %
+                    #memcache_name)
 
+            plaques = Plaque.query(
+                           ).filter(Plaque.approved == True
+                           ).order(-Plaque.created_on
+                           ).fetch(offset=ik, limit=block_size)
             # Now add it to the total list:
-            plaques_json_all.extend(plaques_json)
+            plaques_all.extend(plaques)
 
-        json_output = json.dumps(plaques_json_all)
+        json_output = self._plaques_to_json(plaques_all, summary)
+        return json_output
+
+    def get(self, plaque_keys_str=None, summary=True):
+        # If keys are specified, dump those and return
+        #
+        if plaque_keys_str is not None:
+            json_output = self._json_for_keys(plaque_keys_str, summary)
+        else:
+            json_output = self._json_for_all(summary)
+        self.response.write(json_output)
+
+    def post(self):
+        date_fmt =  "%Y-%m-%d %H:%M:%S.%f"
+        updated_on_str = self.request.get('updated_on')
+        updated_on = datetime.datetime.strptime(updated_on_str, date_fmt)
+        json_output = self._json_for_update(updated_on, summary=True)
         self.response.write(json_output)
 
 class ViewAllTags(webapp2.RequestHandler):

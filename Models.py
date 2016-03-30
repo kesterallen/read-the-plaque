@@ -9,6 +9,7 @@ from google.appengine.api import memcache
 from google.appengine.ext import ndb
 from google.appengine.api import search
 from google.appengine.datastore.datastore_query import Cursor
+from google.appengine.ext.db import BadValueError
 
 class Comment(ndb.Model):
     """
@@ -85,13 +86,20 @@ class Plaque(ndb.Model):
             query = Plaque.query(
                 ).filter(Plaque.approved == True).order(-Plaque.created_on)
 
-            if start_cursor_urlsafe is None:
-                start_cursor = None
-                plaques, next_cursor, more = query.fetch_page(num)
+            # Protect agains bad values of start_cursor_urlsafe, like the old
+            # type of request to /page/3.
+            if start_cursor_urlsafe:
+                try:
+                    start_cursor = Cursor(urlsafe=start_cursor_urlsafe)
+                except BadValueError:
+                    start_cursor = None
             else:
-                start_cursor = Cursor(urlsafe=start_cursor_urlsafe)
-                plaques, next_cursor, more = query.fetch_page(
-                    num, start_cursor=start_cursor)
+                start_cursor = None
+
+            if start_cursor:
+                plaques, next_cursor, more = query.fetch_page(num, start_cursor=start_cursor)
+            else:
+                plaques, next_cursor, more = query.fetch_page(num)
 
             memcache_status = memcache.set_multi({
                 memcache_names[0]: plaques,

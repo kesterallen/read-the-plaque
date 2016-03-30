@@ -28,6 +28,7 @@ def main():
         ('/jp/?', h.JsonOnePlaque),
         ('/alljp/(.+?)/?', h.JsonAllPlaques),
         ('/alljp/?', h.JsonAllPlaques),
+        ('/updatejp/?', h.JsonAllPlaques),
         ('/add/?', h.AddPlaque),
         ('/submit-your-own/?', h.AddPlaque),
         ('/edit/(.+?)/?', h.EditPlaque),
