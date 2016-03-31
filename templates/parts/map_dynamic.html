@@ -17,8 +17,8 @@ function get_markers(map, ic, plaques_json, map_markers_str) {
         specified_marker_urls = new Set(map_markers_str.split('&'));
     } 
 
-    for (i = 0; i < plaques_json.length; i++) {
-        plaque = plaques_json[i];
+    for (i = 0; i < plaques_json['plaques'].length; i++) {
+        plaque = plaques_json['plaques'][i];
 
         if (specified_marker_urls.size > 0) {
             if (!specified_marker_urls.has(plaque.title_page_url)) {
@@ -117,7 +117,7 @@ function draw_map(plaques_json, map_markers_str) {
 function initialize() {
     $('#map').append('<a href="/map#bigmap"><img alt="loading dynamic map" title="temporary map image" class="img-responsive" src="/images/map_snapshot.png"/></a>');
 
-    var jp_url = '/static/plaques.json';
+    var jp_url = '/static/plaques_updated.json';
     
     $.ajax({
         url: jp_url,

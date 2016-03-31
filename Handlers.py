@@ -134,8 +134,8 @@ def random_tags(num=5):
     try:
         while len(tags) < num and bailout < 100:
             plaque = get_random_plaque()
-            for t in plaque.tags:
-                tags.add(t)
+            if len(plaque.tags) > 0:
+                tags.add(plaque.tags[-1])
             bailout += 1
     except ValueError as err:
         logging.info("no plaques in random_tags")
@@ -236,7 +236,7 @@ def handle_500(request, response, exception):
 
 class ViewPlaquesPage(webapp2.RequestHandler):
     def head(self, start_curs_str=None):
-        self.get(per_page=per_page, is_featured=is_featured)
+        self.get()
         self.response.clear()
 
     def get(self, cursor_urlsafe=None):
