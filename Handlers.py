@@ -116,13 +116,6 @@ def last_five_approved(cls):
                   ).fetch(limit=5)
     return new_items
 
-def random_five_approved(cls, num=5):
-    items = cls.query(cls.approved == True).fetch()
-    if len(items) > num:
-        return random.sample(items, num)
-    else:
-        return items
-
 # TODO: add table UniqueTags
 def random_tags(num=5):
     """
@@ -135,7 +128,8 @@ def random_tags(num=5):
         while len(tags) < num and bailout < 100:
             plaque = get_random_plaque()
             if len(plaque.tags) > 0:
-                tags.add(plaque.tags[-1])
+                tag = random.choice(plaque.tags)
+                tags.add(tag)
             bailout += 1
     except ValueError as err:
         logging.info("no plaques in random_tags")
@@ -145,23 +139,57 @@ def random_tags(num=5):
     outtags = outtags[:num]
     return outtags
 
+def get_random_time():
+    """
+    Get a random time during the operation of the site.
+    """
+    memcache_names = ['first', 'last']
+    memcache_out = memcache.get_multi(memcache_names)
+    memcache_worked = len(memcache_out.keys()) == len(memcache_names)
+    if memcache_worked:
+            first = memcache_out[memcache_names[0]]
+            last = memcache_out[memcache_names[1]]
+    else:
+        first = Plaque.query().filter(Plaque.approved == True).order(Plaque.created_on).get().created_on
+        last = Plaque.query().filter(Plaque.approved == True).order(-Plaque.created_on).get().created_on
+        memcache_status = memcache.set_multi({
+            memcache_names[0]: first,
+            memcache_names[1]: last
+        })
+        if memcache_status:
+            logging.debug("""memcache.set in Handlers.get_randome_time() failed: 
+                %s were not set""" % memcache_status)
+
+    diff = last - first
+    diff_seconds = int(diff.total_seconds())
+    rand_seconds = random.randint(0, diff_seconds)
+    random_offset = datetime.timedelta(seconds=rand_seconds)
+    random_time = first + random_offset
+    return random_time
+
+def get_random_plaque_key():
+    """
+    Get a random plaque key.  Limit to total number of runs to 100 to prevent
+    infinite loop if there are no plaques.
+    """
+    plaque_key = None
+    bailout = 0
+    while plaque_key is None and bailout < 100:
+        bailout += 1
+        random_time = get_random_time()
+        plaque_key = Plaque.query(
+                          ).filter(Plaque.approved == True
+                          ).filter(Plaque.created_on > random_time
+                          ).get(keys_only=True)
+    if plaque_key is None:
+        return None
+    else:
+        return plaque_key.urlsafe()
+
 def get_random_plaque():
     plaque_key = get_random_plaque_key()
     plaque = ndb.Key(urlsafe=plaque_key).get()
     return plaque
-
-# TODO: make this scalable. Idea: select  with a .filter(> some date in the
-# current range), limit=1, or geographically
-def get_random_plaque_key():
-    count = Plaque.query().filter(Plaque.approved == True).count()
-    if not count:
-        raise ValueError("No plaques!")
-
-    iplaque = random.randint(0, count-1)
-    plaque_keys = Plaque.query().filter(Plaque.approved == True
-                           ).order(Plaque.created_on
-                           ).fetch(offset=iplaque, limit=1, keys_only=True)
-    return plaque_keys[0].urlsafe()
 
 def get_pages_list(per_page=DEF_NUM_PER_PAGE):
     num_pages = int(math.ceil(float(Plaque.num_approved()) /
@@ -176,8 +204,9 @@ def get_footer_items():
     """
     footer_items = memcache.get('get_footer_items')
     if footer_items is None:
+        random_plaques = [get_random_plaque() for _ in range(5)]
         footer_items = {'tags': random_tags(),
-                        'new_plaques': random_five_approved(Plaque),
+                        'new_plaques': random_plaques,
                         'new_comments': last_five_approved(Comment)}
 
         memcache_status = memcache.set('get_footer_items', footer_items)
@@ -493,11 +522,15 @@ class JsonAllPlaques(webapp2.RequestHandler):
         return json_output
 
     def _json_for_update(self, updated_on, summary=True):
+        logging.info("Updated_on is %s in _json_for_update" % updated_on)
         plaques = Plaque.query(
                        ).filter(Plaque.approved == True
                        ).filter(Plaque.created_on > updated_on
                        ).order(-Plaque.created_on
                        ).fetch()
+        logging.info("_json_for_update got %s plaques" % len(plaques))
+        for i, plaque in enumerate(plaques):
+            logging.info("_json_for_update plaque %s date: %s" % (i, plaque.updated_on))
         json_output = self._plaques_to_json(plaques, summary)
         return json_output
 
@@ -551,6 +584,7 @@ class JsonAllPlaques(webapp2.RequestHandler):
         date_fmt =  "%Y-%m-%d %H:%M:%S.%f"
         updated_on_str = self.request.get('updated_on')
         updated_on = datetime.datetime.strptime(updated_on_str, date_fmt)
+        logging.info('updated_on_str: %s, updated_on %s' % (updated_on_str, updated_on))
         json_output = self._json_for_update(updated_on, summary=True)
         self.response.write(json_output)
 
@@ -1100,10 +1134,10 @@ class DeleteOnePlaque(webapp2.RequestHandler):
             pass
 
         plaque.key.delete()
-        memcache.flush_all()
+        #memcache.flush_all()
         email_admin('%s Deleted plaque %s' % (name, plaque.title_url),
                     '%s Deleted plaque %s' % (name, plaque.title_url))
-        self.redirect('/')
+        self.redirect('/pending')
 
 
 #class DeleteEverything(webapp2.RequestHandler):
@@ -1243,7 +1277,7 @@ class ApprovePending(webapp2.RequestHandler):
         #memcache.flush_all()
         plaque_key = self.request.get('plaque_key')
         plaque = ndb.Key(urlsafe=plaque_key).get()
-        logging.info("Approving plaque {0.title}".format(plaque))
+        #logging.info("Approving plaque {0.title}".format(plaque))
         plaque.approved = True
         plaque.created_on = datetime.datetime.now()
         plaque.put()
@@ -1256,7 +1290,7 @@ class DisapprovePlaque(webapp2.RequestHandler):
         #memcache.flush_all()
         plaque_key = self.request.get('plaque_key')
         plaque = ndb.Key(urlsafe=plaque_key).get()
-        logging.info("disapproving plaque {0.title}".format(plaque))
+        #logging.info("disapproving plaque {0.title}".format(plaque))
         plaque.approved = False
         plaque.put()
         self.redirect('/')
