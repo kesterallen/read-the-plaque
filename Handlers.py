@@ -588,14 +588,12 @@ class JsonAllPlaques(webapp2.RequestHandler):
         json_output = self._json_for_update(updated_on, summary=True)
         self.response.write(json_output)
 
-class ViewAllTags(webapp2.RequestHandler):
-    def get(self):
-
-        tags_sized = Plaque.all_tags_sized()
-
-        template = JINJA_ENVIRONMENT.get_template('tags.html')
-        template_values = get_default_template_values(tags=tags_sized)
-        self.response.write(template.render(template_values))
+#class ViewAllTags(webapp2.RequestHandler):
+#    def get(self):
+#        tags_sized = Plaque.all_tags_sized()
+#        template = JINJA_ENVIRONMENT.get_template('tags.html')
+#        template_values = get_default_template_values(tags=tags_sized)
+#        self.response.write(template.render(template_values))
 
 class ViewTag(webapp2.RequestHandler):
     def get(self, tag, view_all=False):
@@ -674,7 +672,7 @@ class AddPlaque(webapp2.RequestHandler):
         if state is not None:
             if state == ADD_STATE_SUCCESS:
                 if users.is_current_user_admin():
-                    message = """Plaque added by admin:
+                    message = """Thanks, admin!
                         <a href="%s">here</a>.""" % message
                 else:
                     message = """Hooray! And thank you. We'll review your

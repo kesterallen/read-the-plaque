@@ -36,7 +36,7 @@ def main():
         #('/comment', h.AddComment),
         ('/tag/(.+?)/(.+?)/?', h.ViewTag),
         ('/tag/(.+?)', h.ViewTag),
-        ('/tags/?', h.ViewAllTags),
+        #('/tags/?', h.ViewAllTags),
         ('/about', h.About),
         ('/rss', h.RssFeed),
         ('/flush', h.FlushMemcache),

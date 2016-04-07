@@ -149,6 +149,8 @@ class Plaque(ndb.Model):
                                ).fetch(limit=num)
         return plaques
 
+    # Turning off because this doesn't scale.
+    # TODO: add table UniqueTags
     @classmethod
     def all_tags_sized(cls):
         """
