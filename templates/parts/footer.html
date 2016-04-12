@@ -12,7 +12,7 @@
 
         <div class="col-md-6 col-xs-12">
             <ul class="list-group">
-                <a href="/tags"><li class="list-group-item active">Tags (click here for all tags)</li></a>
+                <li class="list-group-item active">Selected Tags</li>
                 {% for tag in footer_items.tags %} <li class="list-group-item"><a href="/tag/{{tag}}">{{tag}}</a></li> {% endfor %}
             </ul>
         </div>
@@ -21,8 +21,9 @@
     <div class="row">
         <div class="col-xs-4">
             Read The Plaque is a project of <a href="http://99pi.org/">99% Invisible</a>.
-            We tweet at <a href="http://www.twitter.com/readtheplaque">
-                @readtheplaque<i class="fi-social-twitter"></i>
+            We tweet at 
+            <a href="http://www.twitter.com/readtheplaque">@readtheplaque<i class="fi-social-twitter"></i>
+            and are on <a href="https://www.facebook.com/readtheplaque">Facebook</a>.
             </a>
         </div>
 

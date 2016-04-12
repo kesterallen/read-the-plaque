@@ -127,6 +127,8 @@ def random_tags(num=5):
     try:
         while len(tags) < num and bailout < 100:
             plaque = get_random_plaque()
+            if plaque is None:
+                continue
             if len(plaque.tags) > 0:
                 tag = random.choice(plaque.tags)
                 tags.add(tag)
@@ -150,22 +152,35 @@ def get_random_time():
             first = memcache_out[memcache_names[0]]
             last = memcache_out[memcache_names[1]]
     else:
-        first = Plaque.query().filter(Plaque.approved == True).order(Plaque.created_on).get().created_on
-        last = Plaque.query().filter(Plaque.approved == True).order(-Plaque.created_on).get().created_on
+        first_plaque = Plaque.query().filter(Plaque.approved == True).order(Plaque.created_on).get()
+        if first_plaque:
+            first = first_plaque.created_on
+        else:
+            first = None
+
+        last_plaque = Plaque.query().filter(Plaque.approved == True).order(-Plaque.created_on).get()
+        if last_plaque:
+            last = last_plaque.created_on
+        else:
+            last = None
+
         memcache_status = memcache.set_multi({
             memcache_names[0]: first,
             memcache_names[1]: last
         })
         if memcache_status:
-            logging.debug("""memcache.set in Handlers.get_randome_time() failed: 
+            logging.debug("""memcache.set in Handlers.get_random_time() failed: 
                 %s were not set""" % memcache_status)
 
-    diff = last - first
-    diff_seconds = int(diff.total_seconds())
-    rand_seconds = random.randint(0, diff_seconds)
-    random_offset = datetime.timedelta(seconds=rand_seconds)
-    random_time = first + random_offset
-    return random_time
+    if first is None or last is None:
+        random_time = None
+    else:
+        diff = last - first
+        diff_seconds = int(diff.total_seconds())
+        rand_seconds = random.randint(0, diff_seconds)
+        random_offset = datetime.timedelta(seconds=rand_seconds)
+        random_time = first + random_offset
+        return random_time
 
 def get_random_plaque_key():
     """
@@ -177,10 +192,13 @@ def get_random_plaque_key():
     while plaque_key is None and bailout < 100:
         bailout += 1
         random_time = get_random_time()
-        plaque_key = Plaque.query(
-                          ).filter(Plaque.approved == True
-                          ).filter(Plaque.created_on > random_time
-                          ).get(keys_only=True)
+        if random_time is None:
+            plaque_key = None
+        else:
+            plaque_key = Plaque.query(
+                              ).filter(Plaque.approved == True
+                              ).filter(Plaque.created_on > random_time
+                              ).get(keys_only=True)
     if plaque_key is None:
         return None
     else:
@@ -188,6 +206,8 @@ def get_random_plaque_key():
 
 def get_random_plaque():
     plaque_key = get_random_plaque_key()
+    if plaque_key is None:
+        return None
     plaque = ndb.Key(urlsafe=plaque_key).get()
     return plaque
 
@@ -317,7 +337,6 @@ class ViewPlaquesPage(webapp2.RequestHandler):
         return template_text
 
     def _get_template_values(self, per_page, cursor_urlsafe, is_random, is_featured):
-
         if is_random:
             plaques = []
             cursor_urlsafe = None
@@ -1135,7 +1154,7 @@ class DeleteOnePlaque(webapp2.RequestHandler):
         #memcache.flush_all()
         email_admin('%s Deleted plaque %s' % (name, plaque.title_url),
                     '%s Deleted plaque %s' % (name, plaque.title_url))
-        self.redirect('/pending')
+        self.redirect('/nextpending')
 
 
 #class DeleteEverything(webapp2.RequestHandler):
@@ -1163,8 +1182,18 @@ class DeleteOnePlaque(webapp2.RequestHandler):
 #        memcache.flush_all()
 #        self.response.write(msg)
 
+class ViewNextPending(ViewOnePlaqueParent):
+    def get(self):
+        plaque = Plaque.pending_list(1)[0]
+        page_text = self._get_from_key(plaque_key=plaque.key.urlsafe())
+        self.response.write(page_text)
+
 class ViewPending(webapp2.RequestHandler):
     def get(self, num=DEF_NUM_PENDING):
+        try:
+            num = int(num)
+        except:
+            pass
         plaques = Plaque.pending_list(num)
         user = users.get_current_user()
         name = "anon" if user is None else user.nickname()
@@ -1261,7 +1290,7 @@ class ApproveAllPending(webapp2.RequestHandler):
     """Approve all pending plaques"""
     def get(self):
         #raise NotImplementedError("Turned off")
-        plaques = Plaque.pending_list(num=100)
+        plaques = Plaque.pending_list(num=500)
         for plaque in plaques:
             plaque.approved = True
             plaque.put()
@@ -1279,7 +1308,7 @@ class ApprovePending(webapp2.RequestHandler):
         plaque.approved = True
         plaque.created_on = datetime.datetime.now()
         plaque.put()
-        self.redirect('/pending')
+        self.redirect('/nextpending')
 
 class DisapprovePlaque(webapp2.RequestHandler):
     """Disapprove a plaque"""

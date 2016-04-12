@@ -46,6 +46,7 @@ def main():
         ('/delete', h.DeleteOnePlaque),
         ('/pending/?', h.ViewPending),
         ('/pending/(.*?)/?', h.ViewPending),
+        ('/nextpending/?', h.ViewNextPending),
         ('/disapprove', h.DisapprovePlaque),
         ('/approve', h.ApprovePending),
         ('/approveall', h.ApproveAllPending),
