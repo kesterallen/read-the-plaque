@@ -98,10 +98,21 @@ body {
 
 #map {
     height: 400px;
+    background-color: #D1D1D1;
 }
 
 #bigmap {
     height: 900px;
+    background-color: #D1D1D1;
+}
+
+.mapMarkerCluster {
+	background: #90BDCB;
+	text-align: center;
+	color: black;
+	padding-top: 6px;
+	border: 2px solid #3E3E3E;
+	border-radius: 50%;
 }
 
 /* If the map DIV doesn't have a size set up, it won't appear on the page */
