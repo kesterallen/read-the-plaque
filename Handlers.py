@@ -45,7 +45,7 @@ GCS_BUCKET = '/read-the-plaque.appspot.com'
 
 DEF_PLAQUESET_NAME = 'public'
 DEF_NUM_PER_PAGE = 20
-DEF_NUM_PENDING = 5 
+DEF_NUM_PENDING = 5
 DEF_MAP_ICON_SIZE_PIX = 16
 
 # Load templates from the /templates dir
@@ -67,10 +67,14 @@ def get_default_template_values(**kwargs):
     memcache_name = 'default_template_values_%s' % users.is_current_user_admin()
     template_values = memcache.get(memcache_name)
     if template_values is None:
+        num_pending = Plaque.num_pending(num=DEF_NUM_PENDING)
+        footer_items = get_footer_items()
+        loginout_output = loginout()
+
         template_values = {
-            'num_pending': Plaque.num_pending(num=DEF_NUM_PENDING),
-            'footer_items': get_footer_items(),
-            'loginout': loginout(),
+            'num_pending': num_pending,
+            'footer_items': footer_items,
+            'loginout': loginout_output,
             'icon_size': DEF_MAP_ICON_SIZE_PIX,
         }
         memcache_status = memcache.set(memcache_name, template_values)
@@ -126,13 +130,13 @@ def random_tags(num=5):
     bailout = 0
     try:
         while len(tags) < num and bailout < 100:
+            bailout += 1
             plaque = get_random_plaque()
             if plaque is None:
                 continue
             if len(plaque.tags) > 0:
                 tag = random.choice(plaque.tags)
                 tags.add(tag)
-            bailout += 1
     except ValueError as err:
         logging.info("no plaques in random_tags")
         pass
@@ -169,7 +173,7 @@ def get_random_time():
             memcache_names[1]: last
         })
         if memcache_status:
-            logging.debug("""memcache.set in Handlers.get_random_time() failed: 
+            logging.debug("""memcache.set in Handlers.get_random_time() failed:
                 %s were not set""" % memcache_status)
 
     if first is None or last is None:
@@ -225,7 +229,8 @@ def get_footer_items():
     footer_items = memcache.get('get_footer_items')
     if footer_items is None:
         random_plaques = [get_random_plaque() for _ in range(5)]
-        footer_items = {'tags': random_tags(),
+        tags = random_tags()
+        footer_items = {'tags': tags,
                         'new_plaques': random_plaques,
                         'new_comments': last_five_approved(Comment)}
 
@@ -347,19 +352,16 @@ class ViewPlaquesPage(webapp2.RequestHandler):
             plaques, next_cursor, more = Plaque.page_plaques(
                 per_page, start_cursor_urlsafe=cursor_urlsafe)
 
-            logging.info("In ._get_template_values: %s plaques %s %s" % (len(plaques), next_cursor, more))
-
             if next_cursor is None:
                 cursor_urlsafe = ''
-                logging.info('next_cursor is None')
             else:
                 cursor_urlsafe = next_cursor.urlsafe()
 
-        num_plaques = Plaque.query().count()
-        num_pages = int(math.ceil((num_plaques / per_page)))
+        #num_plaques = Plaque.query().count()
+        #num_pages = int(math.ceil((num_plaques / per_page)))
         template_values = get_default_template_values(
                               plaques=plaques,
-                              num_pages=num_pages,
+                              #num_pages=num_pages,
                               next_cursor_urlsafe=cursor_urlsafe,
                               more=more,
                           )
@@ -554,32 +556,14 @@ class JsonAllPlaques(webapp2.RequestHandler):
         return json_output
 
     def _json_for_all(self, summary=True):
-        # TODO: this should not hardcode a 10k plaque limit.
+        # TODO: this should not hardcode a 20k plaque limit.
         # TODO: NDB cursor pagination for this
         block_size = 1000
-        num_blocks = 10
+        num_blocks = 20
         max_num_plaques = num_blocks * block_size
         plaques_all = []
 
         for ik in range(0, max_num_plaques, block_size):
-            # Get the plaques' JSON for this block_size of plaques
-            #
-            #memcache_name = 'plaque_json_{0}'.format(ik)
-            #plaques = memcache.get(memcache_name)
-            #if plaques_json is None:
-                #plaques = Plaque.query(
-                               #).filter(Plaque.approved == True
-                               #).order(-Plaque.created_on
-                               #).fetch(offset=ik, limit=block_size)
-
-                #memcache_status = memcache.set(memcache_name, plaques)
-                #if not memcache_status:
-                    #logging.debug("JsonAllPlaques memcache.set for %s failed" %
-                        #memcache_name)
-            #else:
-                #logging.debug("JsonAllPlaques memcache.get worked for %s" %
-                    #memcache_name)
-
             plaques = Plaque.query(
                            ).filter(Plaque.approved == True
                            ).order(-Plaque.created_on
@@ -606,6 +590,17 @@ class JsonAllPlaques(webapp2.RequestHandler):
         logging.info('updated_on_str: %s, updated_on %s' % (updated_on_str, updated_on))
         json_output = self._json_for_update(updated_on, summary=True)
         self.response.write(json_output)
+
+class JsonAllPlaquesFull(JsonAllPlaques):
+    """
+    Dump the full json.
+
+    Expensive, don't use this more often than necessary..
+    """
+    def get(self):
+        json_output = self._json_for_all(summary=False)
+        self.response.write(json_output)
+
 
 #class ViewAllTags(webapp2.RequestHandler):
 #    def get(self):
@@ -1036,7 +1031,7 @@ class SearchPlaquesGeo(webapp2.RequestHandler):
         query = search.Query(query_string)
         results = plaque_search_index.search(query)
         plaques = [ndb.Key(urlsafe=r.doc_id).get() for r in results]
-        geo_plaques_approved = [p for p in plaques 
+        geo_plaques_approved = [p for p in plaques
             if p is not None and p.approved]
 
         map_markers_str = get_map_markers_str(geo_plaques_approved)

@@ -13,8 +13,9 @@ import sys
 
 IS_GG = False
 
-site_url = 'http://readtheplaque.com'
+#site_url = 'http://readtheplaque.com'
 #site_url = 'http://localhost:8080'
+site_url = 'http://10.10.40.65:8080'
 post_url = site_url + '/add'
 flush_url = site_url + '/flush'
 
@@ -109,8 +110,8 @@ def main():
         plaque_ids = [l.strip() for l in fh.readlines()]
     plaque_ids.reverse()
 
-    plaque_ids = [3090938, 2817642, 2825358]
-    for i, plaque_id in enumerate(plaque_ids):
+    #plaque_ids = [3090938, 2817642, 2825358]
+    for i, plaque_id in enumerate(plaque_ids[200:240]):
         plaque_url = "%s/photo/%s" % (BASE_URL, plaque_id)
         plaque_data = get_plaque_data(plaque_url)
         if plaque_data is None:
@@ -128,7 +129,7 @@ def main():
             logging.info("error (unexpected) %s: cant get %s" % (err, plaque_url))
 
 
-        time.sleep(10)
+        time.sleep(1)
 
 if __name__ == '__main__':
     main()

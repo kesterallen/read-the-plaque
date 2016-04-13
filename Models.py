@@ -284,7 +284,7 @@ class Plaque(ndb.Model):
                 'title_page_url': self.title_page_url,
                 'lat': str(self.location.lat),
                 'lng': str(self.location.lon), # N.B.: 'lng' --> 'lon'
-                #'img_url_tiny': self.img_url_tiny,
+                'img_url_tiny': self.img_url_tiny,
             }
         else:
             plaque_dict = {

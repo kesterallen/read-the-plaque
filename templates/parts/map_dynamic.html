@@ -101,7 +101,7 @@
 		
 {% for plaque in plaques %}
 	    json.push({
-		   'title': '{{plaque.title}}',
+		   'title': '{{plaque.title | striptags | escape}}',
 		   'title_page_url': '{{plaque.title_page_url}}',
 		   'img_url_tiny': '{{plaque.img_url_tiny}}', 
 		   'lat': {{plaque.location.lat}}, 
