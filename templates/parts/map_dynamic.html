@@ -7,7 +7,10 @@
 	
 	function marker_for_json(plaque_json) {
 		var latlng = L.latLng(plaque_json['lat'], plaque_json['lng']);
-		var popup = '<a href="' + plaque_json['title_page_url'] + '" target="_blank">' + plaque_json['title'] + '<br /><img src="' + plaque_json['img_url_tiny'] + '" width="100" height="100" alt="' + plaque_json['title'] + ' image" /></a>';
+		var popup = '<a href="' + plaque_json['title_page_url'] + '" target="_blank">' + 
+            plaque_json['title'] + '<br />' +
+            '<img src="' + plaque_json['img_url_tiny'] + '" width="100" height="100" ' +
+            'alt="' + plaque_json['title'] + ' image" /></a>';
 		
 		var marker_size_multiplier = 0.5;
 		var marker_icon_size = [35*marker_size_multiplier, 90*marker_size_multiplier];
@@ -27,8 +30,8 @@
 	function draw_map(map, plaques_json) {
 		
 		var cluster_group = new L.MarkerClusterGroup({
-			maxClusterRadius: 40 /* pixels */,
-			disableClusteringAtZoom: 17,
+			maxClusterRadius: 40 /* pixels */, /* TODO */
+			disableClusteringAtZoom: 17, /* TODO */
 			polygonOptions: {
 				stroke: false,
 				color: '#000000',

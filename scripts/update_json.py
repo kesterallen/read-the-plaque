@@ -33,7 +33,6 @@ def main():
         new_plaques = json.loads(resp.content)
         print "found %s new plaques" % len(new_plaques)
 
-        import ipdb; ipdb.set_trace()
         # Insert in descending time sort, and update the timestamp:
         for plaque in reversed(new_plaques):
             json_data['plaques'].insert(0, plaque)

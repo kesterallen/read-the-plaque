@@ -518,8 +518,9 @@ class JsonAllPlaques(webapp2.RequestHandler):
     Get every plaques' JSON repr.
     """
     def _plaques_to_json(self, plaques, summary=True):
-        plaques = [p.to_dict(summary=summary) for p in plaques]
-        json_output = json.dumps(plaques)
+        logging.info("plaque date range is %s - %s" % (plaques[0], plaques[-1]))
+        plaque_dicts = [p.to_dict(summary=summary) for p in plaques]
+        json_output = json.dumps(plaque_dicts)
         return json_output
 
     def _json_for_keys(self, plaque_keys_str=None, summary=True):
@@ -1179,8 +1180,12 @@ class DeleteOnePlaque(webapp2.RequestHandler):
 
 class ViewNextPending(ViewOnePlaqueParent):
     def get(self):
-        plaque = Plaque.pending_list(1)[0]
-        page_text = self._get_from_key(plaque_key=plaque.key.urlsafe())
+        plaques = Plaque.pending_list(1)
+        if plaques:
+            plaque = plaques[0]
+            page_text = self._get_from_key(plaque_key=plaque.key.urlsafe())
+        else:
+            page_text =  self._get_from_key(None)
         self.response.write(page_text)
 
 class ViewPending(webapp2.RequestHandler):
