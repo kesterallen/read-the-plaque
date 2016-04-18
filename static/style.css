@@ -38,17 +38,17 @@ body {
     background-size: cover;
     background-position: center 55%;
     margin-top: 50px;
-    height: 15vw;
+    height: 13vw;
 }
 
 .title {
-    background: #3E3E3E;
+    background: #3E3E3E;  /* RTP gray */
     text-align: center;
-    font-size: 1.5em;
-    text-shadow: 2px 2px 2px #004;
-    padding: 10px;
+    font-size: 1.0em;
+    text-shadow: 1px 1px 0 #222;
+    padding: 5px;
     box-sizing: border-box;
-    margin-bottom: 20px;
+    margin-bottom: 5px;
 }
 
 .title > a {
@@ -58,7 +58,7 @@ body {
 .title,
 .title > a,
 .title > a:hover {
-    color: yellow;
+    color: #6796a0;  /* RTP blue */
 }
 
 
