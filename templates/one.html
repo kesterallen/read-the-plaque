@@ -34,7 +34,10 @@
                     </div>
                 </div>
                 <p>Originally added {{plaque.created_on.strftime('%Y-%m-%d')}}.</p>
-                <p><a class="btn btn-primary" role="button" href="/geo/{{plaque.location.lat}}/{{plaque.location.lon}}/50000">Nearby Plaques</a></p>
+                <p>
+                    <a class="btn btn-primary" role="button" href="/geo/{{plaque.location.lat}}/{{plaque.location.lon}}/50000">Nearby Plaques</a>
+                    <a class="btn btn-primary" role="button" href="https://www.google.com/maps/@{{plaque.location.lat}},{{plaque.location.lon}},21z" target="_blank">This plaque's location in Google Maps</a>
+                </p>
 
                 <div id="map"></div>
             </div>
