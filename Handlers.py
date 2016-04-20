@@ -481,7 +481,7 @@ class RandomPlaquesPage(ViewPlaquesPage):
     Get a page of random plaques.
     """
     def get(self):
-        page_text = self._get(per_page=6, is_random=True, is_featured=False)
+        page_text = self._get(per_page=5, is_random=True, is_featured=False)
         self.response.write(page_text)
 
 class RandomPlaque(ViewOnePlaqueParent):
@@ -1185,7 +1185,7 @@ class ViewNextPending(ViewOnePlaqueParent):
             plaque = plaques[0]
             page_text = self._get_from_key(plaque_key=plaque.key.urlsafe())
         else:
-            page_text =  self._get_from_key(None)
+            page_text =  self._get_from_key(plaque_key=None)
         self.response.write(page_text)
 
 class ViewPending(webapp2.RequestHandler):
@@ -1197,7 +1197,7 @@ class ViewPending(webapp2.RequestHandler):
         plaques = Plaque.pending_list(num)
         user = users.get_current_user()
         name = "anon" if user is None else user.nickname()
-        logging.info("User %s is viewing pending plaques" % name)
+        logging.info("User %s is viewing pending plaques %s" % (name, plaques))
 
         template = JINJA_ENVIRONMENT.get_template('all.html')
         map_markers_str = get_map_markers_str(plaques)

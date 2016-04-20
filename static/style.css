@@ -37,6 +37,7 @@ body {
     background: url('/images/rtp_2048x2048.jpg') no-repeat center center;
     background-size: cover;
     background-position: center 55%;
+    background-color: #3E3E3E;  /* RTP gray */
     margin-top: 50px;
     height: 13vw;
 }
@@ -46,9 +47,9 @@ body {
     text-align: center;
     font-size: 1.0em;
     text-shadow: 1px 1px 0 #222;
-    padding: 5px;
+    padding: 2px;
     box-sizing: border-box;
-    margin-bottom: 5px;
+    margin-bottom: 2px;
 }
 
 .title > a {

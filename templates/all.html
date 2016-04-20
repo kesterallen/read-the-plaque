@@ -15,7 +15,9 @@
             {% include 'parts/featured_row.html' %}
         {% endif %}
 
-        {% if plaques|length == 0 %}<h2>No plaques in that search</h2>{% endif %}
+        {% if plaques|length == 0 %}
+            <h2>No plaques in that search</h2>
+        {% endif %}
 
         <div class="pinterest-row">
             {% for plaque in plaques %}
@@ -33,7 +35,7 @@
         </div>
 
         <!-- If there is no featured plaque, draw the larger map at the bottom of the page -->
-        {% if not featured_plaque %}
+        {% if not featured_plaque and plaques|length > 0 %}
             <div class="row">
                 <div class="col-xs-12 col-centered">
                     <div style="height: 150;" id="map"></div>

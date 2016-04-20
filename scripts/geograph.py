@@ -13,9 +13,9 @@ import sys
 
 IS_GG = False
 
-#site_url = 'http://readtheplaque.com'
+site_url = 'http://readtheplaque.com'
 #site_url = 'http://localhost:8080'
-site_url = 'http://10.10.40.65:8080'
+#site_url = 'http://10.10.40.65:8080'
 post_url = site_url + '/add'
 flush_url = site_url + '/flush'
 
@@ -101,17 +101,17 @@ def main():
     logging.getLogger('requests').setLevel(logging.WARNING)
     logging.getLogger('urllib3').setLevel(logging.WARNING)
 
-    if IS_GG:
-        filename = 'geograph_gg_ids.txt'
-    else:
-        filename = 'geograph_ids.txt'
+    #if IS_GG:
+        #filename = 'geograph_gg_ids.txt'
+    #else:
+        #filename = 'geograph_ids.txt'
+#
+    #with open(filename) as fh:
+        #plaque_ids = [l.strip() for l in fh.readlines()]
+    #plaque_ids.reverse()
 
-    with open(filename) as fh:
-        plaque_ids = [l.strip() for l in fh.readlines()]
-    plaque_ids.reverse()
-
-    #plaque_ids = [3090938, 2817642, 2825358]
-    for i, plaque_id in enumerate(plaque_ids[200:240]):
+    plaque_ids = [940965, 4912877]
+    for i, plaque_id in enumerate(plaque_ids):
         plaque_url = "%s/photo/%s" % (BASE_URL, plaque_id)
         plaque_data = get_plaque_data(plaque_url)
         if plaque_data is None:
