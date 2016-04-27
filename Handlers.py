@@ -182,8 +182,8 @@ def get_random_time():
         diff = last - first
         diff_seconds = int(diff.total_seconds())
         rand_seconds = random.randint(0, diff_seconds)
-        random_offset = datetime.timedelta(seconds=rand_seconds)
-        random_time = first + random_offset
+        random_delta = datetime.timedelta(seconds=rand_seconds)
+        random_time = first + random_delta
         return random_time
 
 #TODO: Generate random lat/lng point and get nearest plaque by index search?
@@ -611,6 +611,13 @@ class JsonAllPlaques(webapp2.RequestHandler):
                            ).fetch(offset=ik, limit=block_size)
             # Now add it to the total list:
             plaques_all.extend(plaques)
+
+        #more = True
+        #cursor = None
+        #while more:
+        #    plaques, cursor, more = Plaque.page_plaques(100, cursor)
+        #    plaques_all.extend(plaques)
+
 
         json_output = self._plaques_to_json(plaques_all, summary)
         return json_output
