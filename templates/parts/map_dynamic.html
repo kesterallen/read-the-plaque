@@ -59,6 +59,7 @@
 		
 		map.addLayer(cluster_group);
 		map.fitBounds(cluster_group.getBounds());
+        L.control.scale({imperial: false}).addTo(map);
 	}
 	
 	function initialize() {

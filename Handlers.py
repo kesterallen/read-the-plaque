@@ -186,23 +186,63 @@ def get_random_time():
         random_time = first + random_offset
         return random_time
 
-def get_random_plaque_key():
+#TODO: Generate random lat/lng point and get nearest plaque by index search?
+def get_random_plaque_key(method='time'):
     """
     Get a random plaque key.  Limit to total number of runs to 100 to prevent
     infinite loop if there are no plaques.
+
+    There are at least three ways to get a random plaque:
+        1. Perform a Plaque.query().count(), get a random int in the [0,count)
+           range, and get the plaque at that offset using
+           Plaque.query.get(offset=foo). 
+
+           This technique favors large submissions of plaques that were
+           imported automatically (e.g. North Carolina, Geographs,
+           Toronto/Ontario), and that large offsets are expensive in the NDB
+           system.
+
+        2. 'time': Pick a random time since the start of the site, and find a
+           plaque that has a created_by value close to that time.
+
+           This technique favors plaques which were submitted by users who have
+           submitted many plaques over a long period of time, and will be
+           unlikely to pick a plaque which would be picked by technique #1.
+
+        3. 'geo': Pick a random geographical spot on the globe, and get the
+           plaque closest to that. 
+
+           This will favor plaques that are further away from other plaques.
+           
     """
     plaque_key = None
     bailout = 0
+    plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
     while plaque_key is None and bailout < 100:
         bailout += 1
-        random_time = get_random_time()
-        if random_time is None:
-            plaque_key = None
-        else:
-            plaque_key = Plaque.query(
-                              ).filter(Plaque.approved == True
-                              ).filter(Plaque.created_on > random_time
-                              ).get(keys_only=True)
+        if method == 'geo':
+            # Math from http://mathworld.wolfram.com/SpherePointPicking.html
+            rand_u = random.random()
+            rand_v = random.random()
+            lng = ((2.0 * rand_u) - 1.0) * 180.0 # Range: [-180.0, 180.0)
+            lat = math.acos(2.0 * rand_v - 1) * 180.0 / math.pi - 90.0
+            search_radius_meters = 100000 # 100 km
+
+            query_string = 'distance(location, geopoint(%s, %s)) < %s' % (
+                            lat, lng, search_radius_meters)
+            query = search.Query(query_string)
+            results = plaque_search_index.search(query)
+            logging.info("bailout %s: produced results (%s)" % (bailout, results))
+            if results.number_found > 0:
+                doc_id= results[0].doc_id
+                plaque_key = ndb.Key(doc_id).get()
+        else: #method == 'time'
+            random_time = get_random_time()
+            if random_time is not None:
+                plaque_key = Plaque.query(
+                                  ).filter(Plaque.approved == True
+                                  ).filter(Plaque.created_on > random_time
+                                  ).get(keys_only=True)
     if plaque_key is None:
         return None
     else:
@@ -558,7 +598,7 @@ class JsonAllPlaques(webapp2.RequestHandler):
 
     def _json_for_all(self, summary=True):
         # TODO: this should not hardcode a 20k plaque limit.
-        # TODO: NDB cursor pagination for this
+        # TODO: NDB cursor pagination for this?
         block_size = 1000
         num_blocks = 20
         max_num_plaques = num_blocks * block_size
@@ -800,7 +840,7 @@ class AddPlaque(webapp2.RequestHandler):
         plaque.set_title_url(plaqueset_key, is_edit)
         plaque.description = description
         plaque.tags = tags
-        plaque.approved = users.is_current_user_admin()
+        plaque.approved = False
         plaque.updated_on = datetime.datetime.now()
 
         # Upload the image for a new plaque, or update the image for an
@@ -995,6 +1035,7 @@ class SearchPlaques(webapp2.RequestHandler):
         if search_term is None:
             plaques = []
         else:
+            # TODO: NDB cursor pagination?
             search_term = '"%s"' % search_term.replace('"', '')
             plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
             results = plaque_search_index.search(search_term)
