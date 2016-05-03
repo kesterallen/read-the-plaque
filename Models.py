@@ -68,9 +68,9 @@ class Plaque(ndb.Model):
         return count
 
     @classmethod
-    def page_plaques(cls, num, start_cursor_urlsafe=None):
+    def fetch_page(cls, num, start_cursor_urlsafe=None):
         memcache_names = [
-            'page_plaques_%s_%s' % (num, start_cursor_urlsafe),
+            'fetch_page_%s_%s' % (num, start_cursor_urlsafe),
             'page_start_cursor_urlsafe_%s_%s' % (num, start_cursor_urlsafe),
             'page_more_%s_%s' % (num, start_cursor_urlsafe),
         ]
@@ -78,7 +78,7 @@ class Plaque(ndb.Model):
         memcache_out =  memcache.get_multi(memcache_names)
         memcache_worked = len(memcache_out.keys()) == len(memcache_names)
         if memcache_worked:
-            logging.debug("memcache.get_multi worked for Plaque.page_plaques()")
+            logging.debug("memcache.get_multi worked for Plaque.fetch_page()")
             plaques = memcache_out[memcache_names[0]]
             next_cursor = memcache_out[memcache_names[1]]
             more = memcache_out[memcache_names[2]]

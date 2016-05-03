@@ -389,7 +389,7 @@ class ViewPlaquesPage(webapp2.RequestHandler):
             for i in range(per_page):
                 plaques.append(get_random_plaque())
         else:
-            plaques, next_cursor, more = Plaque.page_plaques(
+            plaques, next_cursor, more = Plaque.fetch_page(
                 per_page, start_cursor_urlsafe=cursor_urlsafe)
 
             if next_cursor is None:
@@ -598,7 +598,6 @@ class JsonAllPlaques(webapp2.RequestHandler):
 
     def _json_for_all(self, summary=True):
         # TODO: this should not hardcode a 20k plaque limit.
-        # TODO: NDB cursor pagination for this?
         block_size = 1000
         num_blocks = 20
         max_num_plaques = num_blocks * block_size
@@ -612,10 +611,11 @@ class JsonAllPlaques(webapp2.RequestHandler):
             # Now add it to the total list:
             plaques_all.extend(plaques)
 
+        # TODO: NDB cursor pagination for this?
         #more = True
         #cursor = None
         #while more:
-        #    plaques, cursor, more = Plaque.page_plaques(100, cursor)
+        #    plaques, cursor, more = Plaque.fetch_page(100, cursor)
         #    plaques_all.extend(plaques)
 
 
@@ -847,7 +847,8 @@ class AddPlaque(webapp2.RequestHandler):
         plaque.set_title_url(plaqueset_key, is_edit)
         plaque.description = description
         plaque.tags = tags
-        plaque.approved = False
+        if not is_edit:
+            plaque.approved = False
         plaque.updated_on = datetime.datetime.now()
 
         # Upload the image for a new plaque, or update the image for an
