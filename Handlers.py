@@ -390,7 +390,7 @@ class ViewPlaquesPage(webapp2.RequestHandler):
                 plaques.append(get_random_plaque())
         else:
             plaques, next_cursor, more = Plaque.fetch_page(
-                per_page, start_cursor_urlsafe=cursor_urlsafe)
+                per_page, start_cursor=cursor_urlsafe, urlsafe=True)
 
             if next_cursor is None:
                 cursor_urlsafe = ''
@@ -597,27 +597,27 @@ class JsonAllPlaques(webapp2.RequestHandler):
         return json_output
 
     def _json_for_all(self, summary=True):
-        # TODO: this should not hardcode a 20k plaque limit.
-        block_size = 1000
-        num_blocks = 20
-        max_num_plaques = num_blocks * block_size
         plaques_all = []
+        # TODO: this should not hardcode a 20k plaque limit.
+        #block_size = 1000
+        #num_blocks = 20
+        #max_num_plaques = num_blocks * block_size
 
-        for ik in range(0, max_num_plaques, block_size):
-            plaques = Plaque.query(
-                           ).filter(Plaque.approved == True
-                           ).order(-Plaque.created_on
-                           ).fetch(offset=ik, limit=block_size)
-            # Now add it to the total list:
-            plaques_all.extend(plaques)
-
-        # TODO: NDB cursor pagination for this?
-        #more = True
-        #cursor = None
-        #while more:
-        #    plaques, cursor, more = Plaque.fetch_page(100, cursor)
+        #for ik in range(0, max_num_plaques, block_size):
+        #    plaques = Plaque.query(
+        #                   ).filter(Plaque.approved == True
+        #                   ).order(-Plaque.created_on
+        #                   ).fetch(offset=ik, limit=block_size)
+        #    # Now add it to the total list:
         #    plaques_all.extend(plaques)
 
+        # NDB cursor pagination for this:
+        more = True
+        cursor = None
+        while more:
+            plaques, cursor, more = Plaque.fetch_page(num=50, start_cursor=cursor, urlsafe=False)
+            plaques_all.extend(plaques)
+            logging.info("tot: %s, current: %s, cursor: %s, more?: %s" % (len(plaques_all), len(plaques_all), cursor, more))
 
         json_output = self._plaques_to_json(plaques_all, summary)
         return json_output

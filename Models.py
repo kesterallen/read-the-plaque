@@ -68,7 +68,15 @@ class Plaque(ndb.Model):
         return count
 
     @classmethod
-    def fetch_page(cls, num, start_cursor_urlsafe=None):
+    def fetch_page(cls, num, start_cursor=None, urlsafe=True):
+        if urlsafe:
+            start_cursor_urlsafe = start_cursor
+        else:
+            if start_cursor:
+                start_cursor_urlsafe = start_cursor.urlsafe()
+            else:
+                start_cursor_urlsafe = None
+
         memcache_names = [
             'fetch_page_%s_%s' % (num, start_cursor_urlsafe),
             'page_start_cursor_urlsafe_%s_%s' % (num, start_cursor_urlsafe),
