@@ -558,7 +558,9 @@ class JsonAllPlaques(webapp2.RequestHandler):
     Get every plaques' JSON repr.
     """
     def _plaques_to_json(self, plaques, summary=True):
-        logging.info("plaque date range is %s - %s" % (plaques[0], plaques[-1]))
+        if plaques:
+            logging.info("plaque date range is %s - %s" % 
+                (plaques[0].created_on, plaques[-1].created_on))
         plaque_dicts = [p.to_dict(summary=summary) for p in plaques]
         json_output = json.dumps(plaque_dicts)
         return json_output
@@ -592,39 +594,31 @@ class JsonAllPlaques(webapp2.RequestHandler):
                        ).fetch()
         logging.info("_json_for_update got %s plaques" % len(plaques))
         for i, plaque in enumerate(plaques):
-            logging.info("_json_for_update plaque %s date: %s" % (i, plaque.updated_on))
+            logging.info("_json_for_update plaque %s date: %s" % (
+                i, plaque.updated_on))
         json_output = self._plaques_to_json(plaques, summary)
         return json_output
 
     def _json_for_all(self, summary=True):
         plaques_all = []
-        # TODO: this should not hardcode a 20k plaque limit.
-        #block_size = 1000
-        #num_blocks = 20
-        #max_num_plaques = num_blocks * block_size
-
-        #for ik in range(0, max_num_plaques, block_size):
-        #    plaques = Plaque.query(
-        #                   ).filter(Plaque.approved == True
-        #                   ).order(-Plaque.created_on
-        #                   ).fetch(offset=ik, limit=block_size)
-        #    # Now add it to the total list:
-        #    plaques_all.extend(plaques)
-
-        # NDB cursor pagination for this:
+        num = 500
         more = True
         cursor = None
         while more:
-            plaques, cursor, more = Plaque.fetch_page(num=50, start_cursor=cursor, urlsafe=False)
+            plaques, cursor, more = Plaque.fetch_page(
+                num=num, start_cursor=cursor, urlsafe=False)
             plaques_all.extend(plaques)
-            logging.info("tot: %s, current: %s, cursor: %s, more?: %s" % (len(plaques_all), len(plaques_all), cursor, more))
+            logging.info("tot: %s, current: %s, cursor: %s, more?: %s" % (
+                len(plaques_all), len(plaques_all), cursor, more))
 
         json_output = self._plaques_to_json(plaques_all, summary)
         return json_output
 
     def get(self, plaque_keys_str=None, summary=True):
-        # If keys are specified, dump those and return
-        #
+        """
+        Does all the plaques, unless keys are specified, in which case it only
+        does those plaques.
+        """
         if plaque_keys_str is not None:
             json_output = self._json_for_keys(plaque_keys_str, summary)
         else:
@@ -632,10 +626,12 @@ class JsonAllPlaques(webapp2.RequestHandler):
         self.response.write(json_output)
 
     def post(self):
+        """Updates just the new plaques."""
         date_fmt =  "%Y-%m-%d %H:%M:%S.%f"
         updated_on_str = self.request.get('updated_on')
         updated_on = datetime.datetime.strptime(updated_on_str, date_fmt)
-        logging.info('updated_on_str: %s, updated_on %s' % (updated_on_str, updated_on))
+        logging.info('updated_on_str: %s, updated_on %s' % (
+            updated_on_str, updated_on))
         json_output = self._json_for_update(updated_on, summary=True)
         self.response.write(json_output)
 

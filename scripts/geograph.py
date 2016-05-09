@@ -110,7 +110,9 @@ def main():
         #plaque_ids = [l.strip() for l in fh.readlines()]
     #plaque_ids.reverse()
 
-    plaque_ids = [940965, 4912877]
+    print "start"
+    plaque_ids = [int(a) for a in sys.argv[1:]]
+    print "plaque_ids: %s" % plaque_ids
     for i, plaque_id in enumerate(plaque_ids):
         plaque_url = "%s/photo/%s" % (BASE_URL, plaque_id)
         plaque_data = get_plaque_data(plaque_url)
