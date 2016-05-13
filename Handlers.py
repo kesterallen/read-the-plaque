@@ -328,6 +328,14 @@ def handle_500(request, response, exception):
     response.write(template.render({'code': 500, 'error_text': exception}))
     response.set_status(500)
 
+class FakePlaqueForRootUrlPreviews(object):
+    """Probably a better way to do this."""
+    def __init__(self):
+        self.title_page_url = "http://readtheplaque.com"
+        self.title = "Read the Plaque"
+        self.description = "A gigantic map of all the cool plaques in the world"
+        self.img_url_thumbnail = "http://readtheplaque.com/images/rtp_logo_600square.jpg"
+
 class ViewPlaquesPage(webapp2.RequestHandler):
     def head(self, start_curs_str=None):
         self.get()
@@ -410,6 +418,9 @@ class ViewPlaquesPage(webapp2.RequestHandler):
         if is_featured:
             featured = get_featured()
             template_values['featured_plaque'] = featured
+            fake = FakePlaqueForRootUrlPreviews()
+            logging.info('making fake plaque %s' % fake)
+            template_values['fake_plaque_for_root_url_previews'] = fake
 
         return template_values
 
@@ -807,8 +818,7 @@ class AddPlaque(webapp2.RequestHandler):
     </a>
 </p>
             """.format(post_type, plaque)
-            #logging.info('sending email')
-            #email_admin(msg, body)
+            email_admin(msg, body)
             state = ADD_STATES['ADD_STATE_SUCCESS']
             msg = plaque.title_page_url
         except (BadValueError, ValueError, SubmitError) as err:
@@ -1167,6 +1177,8 @@ class DeleteOnePlaque(webapp2.RequestHandler):
     def post(self):
         """Remove one plaque and its associated Comments and GCS image."""
         user = users.get_current_user()
+        if not users.is_current_user_admin():
+            return "admin only, please log in"
         name = "anon" if user is None else user.nickname()
 
         plaque_key = self.request.get('plaque_key')
@@ -1334,8 +1346,17 @@ class AddTitleUrlAll(webapp2.RequestHandler):
 class ApproveAllPending(webapp2.RequestHandler):
     """Approve all pending plaques"""
     def get(self):
+        if not users.is_current_user_admin():
+            return "admin only, please log in"
         #raise NotImplementedError("Turned off")
         plaques = Plaque.pending_list(num=500)
+
+        user = users.get_current_user()
+        name = "anon" if user is None else user.nickname()
+        msg = "%s ran ApproveAllPending on %s plaques" % (name, len(plaques))
+        email_admin(msg, msg)
+
+        logging.info("Approving %s plaques in ApproveAllPending" % len(plaques))
         for plaque in plaques:
             plaque.approved = True
             plaque.put()
@@ -1347,12 +1368,21 @@ class ApprovePending(webapp2.RequestHandler):
     @ndb.transactional
     def post(self):
         #memcache.flush_all()
+        if not users.is_current_user_admin():
+            return "admin only, please log in"
+
         plaque_key = self.request.get('plaque_key')
         plaque = ndb.Key(urlsafe=plaque_key).get()
-        #logging.info("Approving plaque {0.title}".format(plaque))
+        logging.info("Approving plaque {0.title}".format(plaque))
         plaque.approved = True
         plaque.created_on = datetime.datetime.now()
         plaque.put()
+
+        user = users.get_current_user()
+        name = "anon" if user is None else user.nickname()
+        msg = "{1} approved plaque {0.title}".format(plaque, name)
+        email_admin(msg, msg)
+
         self.redirect('/nextpending')
 
 class DisapprovePlaque(webapp2.RequestHandler):
@@ -1360,11 +1390,20 @@ class DisapprovePlaque(webapp2.RequestHandler):
     @ndb.transactional
     def post(self):
         #memcache.flush_all()
+        if not users.is_current_user_admin():
+            return "admin only, please log in"
+
         plaque_key = self.request.get('plaque_key')
         plaque = ndb.Key(urlsafe=plaque_key).get()
-        #logging.info("disapproving plaque {0.title}".format(plaque))
+        logging.info("disapproving plaque {0.title}".format(plaque))
         plaque.approved = False
         plaque.put()
+
+        user = users.get_current_user()
+        name = "anon" if user is None else user.nickname()
+        msg = "{1} disapproved plaque {0.title}".format(plaque, name)
+        email_admin(msg, msg)
+
         self.redirect('/')
 
 class RssFeed(webapp2.RequestHandler):

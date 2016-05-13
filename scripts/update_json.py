@@ -17,7 +17,7 @@ json_filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 ALL = False
 UTC_OFFSET = 7
 
-def offset_time(last_updated_str)
+def offset_time(last_updated_str):
     """
     This shift into UTC time seems to be necessary. The GAE datastore shows
     the times recorded in the Plaque entities are in 'PDT'. As of this writing,
@@ -40,7 +40,7 @@ def offset_time(last_updated_str)
     last_updated = datetime.datetime(*last_updated_parts)
     timedelta = datetime.timedelta(hours=UTC_OFFSET)
     offset_forward = last_updated + timedelta
-    offset_foward_str = offset_forward.strftime("%Y-%m-%d %H:%M:%S.%f")
+    offset_forward_str = offset_forward.strftime("%Y-%m-%d %H:%M:%S.%f")
     return offset_forward_str
 
 def main():

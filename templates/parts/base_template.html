@@ -27,7 +27,9 @@ script src="/static/bootstrap-3.3.5.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 {% if plaques %}
-    {% if featured_plaque %}
+    {% if fake_plaque_for_root_url_previews %}
+        {% set plaque = fake_plaque_for_root_url_previews %}
+    {% elif featured_plaque %}
         {% set plaque = featured_plaque %}
     {% else %}
         {% set plaque = plaques[0] %}
@@ -44,7 +46,7 @@ script src="/static/bootstrap-3.3.5.min.js"></script>
     <!-- Facebook preview-->
     <meta property="og:title"        content="{{plaque.title | striptags | escape}}"/>
     <meta property="og:description"  content="{{plaque.description | striptags | escape}}"/>
-    <meta property="og:type"         content="blog"/>
+    <meta property="og:type"         content="website"/>
     <meta property="og:image"        content="{{plaque.img_url_thumbnail}}"/>
     <meta property="og:site_name"    content="Read the Plaque"/>
     <meta property="og:url"          content="http://readtheplaque.com{{plaque.title_page_url}}"/>
