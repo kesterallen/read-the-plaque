@@ -1,4 +1,4 @@
-<script async src="/static/nearhere.js"></script>
+<script src="/static/nearhere.js"></script>
 
 {% if loginout and loginout.is_admin %}
 <nav class="navbar navbar-inverse navbar-fixed-top">
@@ -53,7 +53,7 @@
     A project of <a href="http://99pi.org/">99% Invisible</a>.
 </div>
 
-<!-- Modal -->
+<!-- Modals -->
 <div class="modal fade" id="locationModal" role="dialog">
     <div class="modal-dialog">
 
@@ -66,6 +66,30 @@
             <div class="modal-body">
                 <p>Read the Plaque is finding your location, this can take a minute.</p>
                 <p>Please authorize your browser to share your location before closing this popup.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div class="modal fade" id="failedLocationModal" role="dialog">
+    <div class="modal-dialog">
+
+        <!-- Modal content-->
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h4 class="modal-title">Location: Permission Denied</h4>
+            </div>
+            <div class="modal-body">
+                <p>Newer versions of Chrome have disabled geolocation from non-https sources.</p>
+                <p>Try our 
+                <a href="https://read-the-plaque.appspot.com">https server</a>
+                which supports geolocatoin, and can run the the <b>Nearby</b> 
+                and <b>Near Me</b> buttons.</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>

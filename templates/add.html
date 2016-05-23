@@ -2,6 +2,7 @@
 
 {% block content %}
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCPGpsCWGQww0hOPhblgBu34eoVnzf5sKo"></script>
+<script src="/static/nearhere.js"></script>
 <script src="/static/jquery-gmaps-latlon-picker.js"></script>
 
 <div class="container-fluid">
@@ -36,9 +37,11 @@
                     <legend>Image of your Plaque (upload a file or type/copy a URL):</legend>
                     <div class="row">
                         <div class="col-xs-12 col-md-4">
-                            <input type="file"
-                                   id="plaque_image_file"
-                                   name="plaque_image_file">
+                            <label class="btn btn-default btn-file">
+                                <input type="file"
+                                       id="plaque_image_file"
+                                       name="plaque_image_file">
+                            </label>
                         </div>
                         <div class="col-xs-12 col-md-8">
                             <input type="url"

@@ -1068,6 +1068,18 @@ class SearchPlaques(webapp2.RequestHandler):
 class SearchPlaquesGeo(webapp2.RequestHandler):
     """Run a geographic search: plaques within radius of center are returned."""
 
+    def _geo_search(self, lat=None, lng=None, search_radius_meters=None):
+
+        plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
+
+        query_string = 'distance(location, geopoint(%s, %s)) < %s' % (
+                        lat, lng, search_radius_meters)
+        query = search.Query(query_string)
+        results = plaque_search_index.search(query)
+        raw_plaques = [ndb.Key(urlsafe=r.doc_id).get() for r in results]
+        plaques = [p for p in raw_plaques if p is not None and p.approved]
+        return plaques
+
     def _serve_form(self, redir):
         maptext = 'Click the map, or type a search here'
         step1text = 'Click the map to pick where to search'
@@ -1079,17 +1091,7 @@ class SearchPlaquesGeo(webapp2.RequestHandler):
         template = JINJA_ENVIRONMENT.get_template('geosearch.html')
         self.response.write(template.render(template_values))
 
-    def _serve_response(self, lat, lng, search_radius_meters):
-        plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
-
-        query_string = 'distance(location, geopoint(%s, %s)) < %s' % (
-                        lat, lng, search_radius_meters)
-        query = search.Query(query_string)
-        results = plaque_search_index.search(query)
-        plaques = [ndb.Key(urlsafe=r.doc_id).get() for r in results]
-        geo_plaques_approved = [p for p in plaques
-            if p is not None and p.approved]
-
+    def _write_geo_page(self, geo_plaques_approved, lat, lng):
         map_markers_str = get_map_markers_str(geo_plaques_approved)
 
         template = JINJA_ENVIRONMENT.get_template('all.html')
@@ -1099,6 +1101,11 @@ class SearchPlaquesGeo(webapp2.RequestHandler):
                               mapcenter={'lat': lat, 'lng': lng},
                           )
         self.response.write(template.render(template_values))
+
+    def _serve_response(self, lat, lng, search_radius_meters):
+        plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
+        geo_plaques_approved = self._geo_search(lat, lng, search_radius_meters)
+        self._write_geo_page(geo_plaques_approved, lat, lng)
 
     def get(self, lat=None, lng=None, search_radius_meters=None, redir=False):
 
@@ -1125,6 +1132,20 @@ class SearchPlaquesGeo(webapp2.RequestHandler):
                     ". Please try again." % (lat, lng, search_radius_meters))
             raise err
         self.get(lat, lng, search_radius_meters, redir=True)
+
+class NearbyPage(SearchPlaquesGeo):
+    """
+    Run successively larger geo searches, stopping when 10 plaques are found.
+    """ 
+    def get(self, lat, lng):
+        # 8m to 1600 km, in geometric steps
+        search_radii_meters = [2**i for i in range(3, 24)]
+        for search_radius_meters in search_radii_meters:
+            plaques = self._geo_search(lat, lng, search_radius_meters)
+            if len(plaques) > 5:
+                break
+        
+        self._write_geo_page(plaques, lat, lng)
 
 class FlushMemcache(webapp2.RequestHandler):
     def get(self):
@@ -1367,20 +1388,20 @@ class ApprovePending(webapp2.RequestHandler):
     """Approve a plaque"""
     @ndb.transactional
     def post(self):
-        #memcache.flush_all()
         if not users.is_current_user_admin():
             return "admin only, please log in"
 
         plaque_key = self.request.get('plaque_key')
         plaque = ndb.Key(urlsafe=plaque_key).get()
-        logging.info("Approving plaque {0.title}".format(plaque))
+        title = plaque.title.encode('unicode-escape')
+        logging.info("Approving plaque %s" % title)
         plaque.approved = True
         plaque.created_on = datetime.datetime.now()
         plaque.put()
 
         user = users.get_current_user()
         name = "anon" if user is None else user.nickname()
-        msg = "{1} approved plaque {0.title}".format(plaque, name)
+        msg = "{1} approved plaque {0}".format(title, name)
         email_admin(msg, msg)
 
         self.redirect('/nextpending')
@@ -1389,19 +1410,19 @@ class DisapprovePlaque(webapp2.RequestHandler):
     """Disapprove a plaque"""
     @ndb.transactional
     def post(self):
-        #memcache.flush_all()
         if not users.is_current_user_admin():
             return "admin only, please log in"
 
         plaque_key = self.request.get('plaque_key')
         plaque = ndb.Key(urlsafe=plaque_key).get()
-        logging.info("disapproving plaque {0.title}".format(plaque))
+        title = plaque.title.encode('unicode-escape')
+        logging.info("disapproving plaque {0}".format(title))
         plaque.approved = False
         plaque.put()
 
         user = users.get_current_user()
         name = "anon" if user is None else user.nickname()
-        msg = "{1} disapproved plaque {0.title}".format(plaque, name)
+        msg = "{1} disapproved plaque {0}".format(title, name)
         email_admin(msg, msg)
 
         self.redirect('/')

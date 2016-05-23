@@ -7,8 +7,7 @@ threadsafe: true
 handlers:
 - url: /.*php
   static_files: static/nophp.txt
-  upload: static/nophp.txt
-
+  upload: static/nophp.txt 
 - url: /wp-content.*
   static_files: static/nophp.txt
   upload: static/nophp.txt
@@ -72,6 +71,10 @@ handlers:
 
 - url: /add
   script: View.app
+
+- url: /nearby
+  script: View.app
+  secure: always
 
 - url: /.*
   script: View.app

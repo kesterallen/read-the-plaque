@@ -59,6 +59,8 @@ def main():
         ('/geo/(.*?)/(.*?)/(.*?)/?', h.SearchPlaquesGeo),
         ('/geo/.+?', h.SearchPlaquesGeo),
         ('/geo/?', h.SearchPlaquesGeo),
+        ('/nearby/(.*?)/(.*?)/?', h.NearbyPage),
+        ('/nearby/?', h.NearbyPage),
         ('/s/(.+?)', h.SearchPlaques),
         ('/s/?', h.SearchPlaques),
         ('/setupdated', h.SetUpdatedOn),

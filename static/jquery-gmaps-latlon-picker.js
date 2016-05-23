@@ -33,8 +33,8 @@ $.fn.gMapsLatLonPicker = (function() {
         queryLocationNameWhenLatLngChanges: true,
         queryElevationWhenLatLngChanges: true,
         mapOptions : {
-            mapTypeId: google.maps.MapTypeId.ROADMAP,
-            mapTypeControl: false,
+            mapTypeId: google.maps.MapTypeId.HYBRID,
+            //mapTypeControl: false,
             disableDoubleClickZoom: false,
             zoomControlOptions: true,
             streetViewControl: false
@@ -202,7 +202,6 @@ $.fn.gMapsLatLonPicker = (function() {
 
             // Set location to browser location
             $(_self.vars.cssID + ".gllpHereButton").bind("click", function() {
-                $("#locationModal").modal();
                 self_button = document.getElementById("herebutton");
                 old_self_button_text = self_button.value;
                 self_button.value = "Finding your location, please wait"; 
@@ -222,7 +221,8 @@ $.fn.gMapsLatLonPicker = (function() {
                         _self.vars.map.setZoom(14);
                         
                         self_button.value = old_self_button_text;
-                    });
+                    },
+                    no_location);
                 } else { 
                     alert("Geolocation is not supported by this browser.");
                 }

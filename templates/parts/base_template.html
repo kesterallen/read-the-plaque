@@ -53,7 +53,16 @@ script src="/static/bootstrap-3.3.5.min.js"></script>
     <meta property="fb:admins"       content="kesterallen"/>
 {% endif %}
 
-<title>Read the Plaque</title>
+<title>Read the Plaque
+{% if plaque %}
+    -
+    {% if fake_plaque_for_root_url_previews %}
+        {{plaque.description}}
+    {% else %}
+        {{plaque.title}}
+    {% endif %}
+{% endif %}
+</title>
 </head>
 
 <body>
