@@ -222,7 +222,7 @@ $.fn.gMapsLatLonPicker = (function() {
                         
                         self_button.value = old_self_button_text;
                     },
-                    no_location);
+                    no_location); // The no_location function is in  /static/nearhere.js
                 } else { 
                     alert("Geolocation is not supported by this browser.");
                 }

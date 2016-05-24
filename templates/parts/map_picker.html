@@ -4,8 +4,8 @@
     <input type="button" id="herebutton" class="gllpHereButton btn btn-primary" value="Near You">
     <br/>
     <div class="gllpMap" style="width: 100%">Google Maps</div>
-    <input hidden type="text" id="lat" name="lat" class="gllpLatitude" {% if plaque %}value="{{plaque.location.lat}}"{% endif %}/>
-    <input hidden type="text" id="lng" name="lng" class="gllpLongitude" {% if plaque %}value="{{plaque.location.lon}}"{% endif %}/>
+    <input readonly="readonly" type="text" id="lat" name="lat" class="gllpLatitude" {% if plaque %}value="{{plaque.location.lat}}"{% endif %}/>
+    <input readonly="readonly" type="text" id="lng" name="lng" class="gllpLongitude" {% if plaque %}value="{{plaque.location.lon}}"{% endif %}/>
     <input hidden type="text" class="gllpZoom" value="{{mapzoom}}"/>
     <input hidden type="button" class="gllpUpdateButton" value="Go to lat/long">
     <br/>
