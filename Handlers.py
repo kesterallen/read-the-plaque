@@ -195,7 +195,7 @@ def get_random_plaque_key(method='time'):
     There are at least three ways to get a random plaque:
         1. Perform a Plaque.query().count(), get a random int in the [0,count)
            range, and get the plaque at that offset using
-           Plaque.query.get(offset=foo). 
+           Plaque.query.get(offset=foo).
 
            This technique favors large submissions of plaques that were
            imported automatically (e.g. North Carolina, Geographs,
@@ -210,10 +210,10 @@ def get_random_plaque_key(method='time'):
            unlikely to pick a plaque which would be picked by technique #1.
 
         3. 'geo': Pick a random geographical spot on the globe, and get the
-           plaque closest to that. 
+           plaque closest to that.
 
            This will favor plaques that are further away from other plaques.
-           
+
     """
     plaque_key = None
     bailout = 0
@@ -405,14 +405,12 @@ class ViewPlaquesPage(webapp2.RequestHandler):
             else:
                 cursor_urlsafe = next_cursor.urlsafe()
 
-        #num_plaques = Plaque.query().count()
-        #num_pages = int(math.ceil((num_plaques / per_page)))
         template_values = get_default_template_values(
                               plaques=plaques,
-                              #num_pages=num_pages,
                               next_cursor_urlsafe=cursor_urlsafe,
                               more=more,
                           )
+        #logging.info('in _get_template_values, next_cursor=%s, cursor_urlsafe=%s, more=%s' % (next_cursor, cursor_urlsafe, more))
         if is_random:
             template_values['map_markers_str'] = get_map_markers_str(plaques)
         if is_featured:
@@ -570,7 +568,7 @@ class JsonAllPlaques(webapp2.RequestHandler):
     """
     def _plaques_to_json(self, plaques, summary=True):
         if plaques:
-            logging.info("plaque date range is %s - %s" % 
+            logging.info("plaque date range is %s - %s" %
                 (plaques[0].created_on, plaques[-1].created_on))
         plaque_dicts = [p.to_dict(summary=summary) for p in plaques]
         json_output = json.dumps(plaque_dicts)
@@ -1068,14 +1066,28 @@ class SearchPlaques(webapp2.RequestHandler):
 class SearchPlaquesGeo(webapp2.RequestHandler):
     """Run a geographic search: plaques within radius of center are returned."""
 
-    def _geo_search(self, lat=None, lng=None, search_radius_meters=None):
-
+    def _geo_search(self, lat=None, lng=None, search_radius_meters=5000):
+        """
+        Return plaques within search_radius_meters of lat/lng, sorted by
+        distance from lat/lng.
+        """
+        search_radius_meters = int(search_radius_meters)
         plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
 
-        query_string = 'distance(location, geopoint(%s, %s)) < %s' % (
-                        lat, lng, search_radius_meters)
-        query = search.Query(query_string)
-        results = plaque_search_index.search(query)
+        query = 'distance(location, geopoint(%s, %s)) < %s' % (
+            lat, lng, search_radius_meters)
+        loc_expr = 'distance(location, geopoint(%s, %s))' % (lat, lng)
+        sortexpr = search.SortExpression(
+            expression=loc_expr,
+            direction=search.SortExpression.ASCENDING,
+            default_value=search_radius_meters)
+
+        search_query = search.Query(
+            query_string=query,
+            options=search.QueryOptions(
+                    sort_options=search.SortOptions(expressions=[sortexpr])))
+
+        results = plaque_search_index.search(search_query)
         raw_plaques = [ndb.Key(urlsafe=r.doc_id).get() for r in results]
         plaques = [p for p in raw_plaques if p is not None and p.approved]
         return plaques
@@ -1136,7 +1148,7 @@ class SearchPlaquesGeo(webapp2.RequestHandler):
 class NearbyPage(SearchPlaquesGeo):
     """
     Run successively larger geo searches, stopping when 10 plaques are found.
-    """ 
+    """
     def get(self, lat, lng):
         # 8m to 1600 km, in geometric steps
         search_radii_meters = [2**i for i in range(3, 24)]
@@ -1144,7 +1156,7 @@ class NearbyPage(SearchPlaquesGeo):
             plaques = self._geo_search(lat, lng, search_radius_meters)
             if len(plaques) > 5:
                 break
-        
+
         self._write_geo_page(plaques, lat, lng)
 
 class FlushMemcache(webapp2.RequestHandler):

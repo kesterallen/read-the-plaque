@@ -106,8 +106,10 @@ class Plaque(ndb.Model):
 
             if start_cursor:
                 plaques, next_cursor, more = query.fetch_page(num, start_cursor=start_cursor)
+                logging.info('in fetch_page if block, len(plaques)=%s, next_cursor=%s, more=%s' % (len(plaques), next_cursor, more))
             else:
                 plaques, next_cursor, more = query.fetch_page(num)
+                logging.info('in fetch_page else block, len(plaques)=%s, next_cursor=%s, more=%s' % (len(plaques), next_cursor, more))
 
             memcache_status = memcache.set_multi({
                 memcache_names[0]: plaques,
@@ -243,7 +245,7 @@ class Plaque(ndb.Model):
         """
         Set the title_url. For new plaques, if the title_url already exists on
         another plaque, add a suffix to make it unique. Keep plaques which are 
-        being edited by an admin the same.
+        being edited the same.
         """
         if is_edit:
             return
@@ -251,7 +253,13 @@ class Plaque(ndb.Model):
         if self.title:
             title_url = re.sub('[^\w]+', '-', self.title.strip()).lower()
         else:
-            title_url = ''
+            title_url = 'change-me'
+
+        if title_url[0] == '-':
+            title_url = title_url[1:]
+        if title_url[-1] == '-':
+            title_url = title_url[:-1]
+
 
         orig_title_url = title_url
 
