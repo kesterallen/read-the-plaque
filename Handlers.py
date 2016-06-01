@@ -63,6 +63,23 @@ class SubmitError(Exception):
 # same entity group. Queries across the single entity group will be consistent.
 # However, the write rate should be limited to ~1/second.
 
+def latlng_angles_to_dec(ref, latlng_angles):
+    """Convert a degrees, hours, minutes tuple to decimal degrees."""
+    latlng = float(latlng_angles[0]) + \
+             float(latlng_angles[1]) / 60.0 + \
+             float(latlng_angles[2]) / 3600.0
+    if ref == 'N' or ref == 'E':
+        pass
+    elif ref == 'S' or ref == 'W':
+        latlng *= -1.0
+    else:
+        raise SubmitError(
+            'reference "%s" needs to be either N, S, E, or W' % ref)
+
+    logging.info("converted %s %s %s to %s" % (
+        latlng_angles[0], latlng_angles[1], latlng_angles[2], latlng))
+    return latlng
+
 def get_default_template_values(**kwargs):
     memcache_name = 'default_template_values_%s' % users.is_current_user_admin()
     template_values = memcache.get(memcache_name)
@@ -883,12 +900,52 @@ class AddPlaque(webapp2.RequestHandler):
         plaque.put()
         return plaque
 
-    def _get_form_args(self):
-        """Get the arguments from the form and return them."""
+    def _get_latlng_exif(self, img_fh):
+        import EXIF
+        from PIL import Image
+        from PIL.ExifTags import TAGS, GPSTAGS
 
+        gps_data = {}
+        image = Image.open(img_fh)
+        info = image._getexif()
+        if info:
+            for tag, value in info.items():
+                decoded = TAGS.get(tag, tag)
+                if decoded == "GPSInfo":
+                    for gps_tag in value:
+                        gps_tag_decoded = GPSTAGS.get(gps_tag, gps_tag)
+                        gps_data[gps_tag_decoded] = value[gps_tag]
+
+
+        gps_lat = gps_data['GPSLatitude']
+        gps_lat_angles = (
+            float(gps_lat[0][0]) / float(gps_lat[0][1]), # degrees
+            float(gps_lat[1][0]) / float(gps_lat[1][1]), # hours
+            float(gps_lat[2][0]) / float(gps_lat[2][1]), # minutes
+        )
+        gps_lng = gps_data['GPSLongitude']
+        gps_lng_angles = (
+            float(gps_lng[0][0]) / float(gps_lng[0][1]), # degrees
+            float(gps_lng[1][0]) / float(gps_lng[1][1]), # hours
+            float(gps_lng[2][0]) / float(gps_lng[2][1]), # minutes
+        )
+        gps_lat_ref = gps_data['GPSLatitudeRef'] # N/S
+        gps_lng_ref = gps_data['GPSLongitudeRef'] # E/W
+
+        lat = latlng_angles_to_dec(gps_lat_ref, gps_lat_angles)
+        lng = latlng_angles_to_dec(gps_lng_ref, gps_lng_angles)
+
+        logging.info('Converting "%s %s, %s %s" to "%s %s"' % (
+            gps_lat_ref, gps_lat_angles, gps_lng_ref, gps_lng_angles, lat, lng))
+
+        return lat, lng
+
+    def _get_location(self):
+        # If the location has been specified, use that:
         lat = self.request.get('lat')
         lng = self.request.get('lng')
 
+        # If it hasn't, but there's something in the search field, try that:
         if lat is None or lng is None or lat == '' or lng == '':
             geo_search_term = self.request.get('searchfield')
             geo_url = 'http://maps.googleapis.com/maps/api/geocode/'
@@ -901,12 +958,27 @@ class AddPlaque(webapp2.RequestHandler):
                 lat = loc_json['lat']
                 lng = loc_json['lng']
 
+        # If that doesn't work, try to get the location from the image's EXIF
+        # info:
         try:
             location = ndb.GeoPt(lat, lng)
-        except:
-            err = SubmitError("The plaque location wasn't specified. Please "
-                              "click the back button and resubmit.")
-            raise err
+        except Exception as err1:
+            logging.error(err1)
+            try:
+                lat, lng = self._get_latlng_exif(img_fh)
+                location = ndb.GeoPt(lat, lng)
+            except Exception as err2:
+                logging.error(err2)
+                err = SubmitError(
+                    "The plaque location wasn't specified. Please click the "
+                    "back button, select a location, and click 'Add your "
+                    "Plaque' again.")
+                raise err
+
+        return location
+
+    def _get_form_args(self):
+        """Get the arguments from the form and return them."""
 
         if users.get_current_user():
             created_by = users.get_current_user()
@@ -933,6 +1005,8 @@ class AddPlaque(webapp2.RequestHandler):
             img_name = None
             img_fh = None
             #don't do anything (for edits where the image isn't being updated)
+
+        location = self._get_location()
 
         # Get and tokenize tags
         tags_str = self.request.get('tags')
