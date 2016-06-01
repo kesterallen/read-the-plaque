@@ -901,13 +901,14 @@ class AddPlaque(webapp2.RequestHandler):
         return plaque
 
     def _get_latlng_exif(self, img_fh):
-        import EXIF
+        logging.info("Getting exif lat lng in _get_latlng_exif")
         from PIL import Image
         from PIL.ExifTags import TAGS, GPSTAGS
 
         gps_data = {}
         image = Image.open(img_fh)
         info = image._getexif()
+        img_fh.seek(0) # reset file handle
         if info:
             for tag, value in info.items():
                 decoded = TAGS.get(tag, tag)
@@ -940,7 +941,7 @@ class AddPlaque(webapp2.RequestHandler):
 
         return lat, lng
 
-    def _get_location(self):
+    def _get_location(self, img_fh):
         # If the location has been specified, use that:
         lat = self.request.get('lat')
         lng = self.request.get('lng')
@@ -1006,7 +1007,7 @@ class AddPlaque(webapp2.RequestHandler):
             img_fh = None
             #don't do anything (for edits where the image isn't being updated)
 
-        location = self._get_location()
+        location = self._get_location(img_fh)
 
         # Get and tokenize tags
         tags_str = self.request.get('tags')
