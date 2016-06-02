@@ -973,7 +973,7 @@ class AddPlaque(webapp2.RequestHandler):
                 err = SubmitError(
                     "The plaque location wasn't specified. Please click the "
                     "back button, select a location, and click 'Add your "
-                    "Plaque' again. Error (%s)" %s err2)
+                    "Plaque' again. Error (%s)" % err2)
                 raise err
 
         return location
