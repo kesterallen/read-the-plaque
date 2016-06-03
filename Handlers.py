@@ -46,6 +46,7 @@ GCS_BUCKET = '/read-the-plaque.appspot.com'
 DEF_PLAQUESET_NAME = 'public'
 DEF_NUM_PER_PAGE = 20
 DEF_NUM_PENDING = 5
+DEF_NUM_NEARBY = 5
 DEF_MAP_ICON_SIZE_PIX = 16
 
 # Load templates from the /templates dir
@@ -1222,14 +1223,23 @@ class SearchPlaquesGeo(webapp2.RequestHandler):
 
 class NearbyPage(SearchPlaquesGeo):
     """
-    Run successively larger geo searches, stopping when 10 plaques are found.
+    Run successively larger geo searches, stopping when num plaques are found.
     """
-    def get(self, lat, lng):
+    def get(self, lat, lng, num=DEF_NUM_NEARBY):
         # 8m to 1600 km, in geometric steps
+        try:
+            num = int(num)
+        except:
+            num = DEF_NUM_NEARBY
+
+        #TODO: NDB cursor pagination
+        if num > 20:
+            num = 20
+
         search_radii_meters = [2**i for i in range(3, 24)]
         for search_radius_meters in search_radii_meters:
             plaques = self._geo_search(lat, lng, search_radius_meters)
-            if len(plaques) > 5:
+            if len(plaques) > num:
                 break
 
         self._write_geo_page(plaques, lat, lng)
