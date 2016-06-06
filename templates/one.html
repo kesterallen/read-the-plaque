@@ -12,7 +12,7 @@
                 {% if not plaque.approved %}
                     <form class="form-inline" action="/approve" method="POST">
                         <input type="hidden" name="plaque_key" value="{{plaque.key.urlsafe()}}">
-                        <button type="submit" class="btn btn-primary">Approve</button>
+                        <button type="submit" class="btn btn-success">Approve</button>
                     </form>
                 {% endif %}
             {% endif %}

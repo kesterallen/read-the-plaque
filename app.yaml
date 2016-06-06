@@ -88,4 +88,4 @@ libraries:
   version: latest
 
 builtins:
-- appstats: on
+- appstats: off

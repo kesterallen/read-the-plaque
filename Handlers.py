@@ -1164,7 +1164,8 @@ class SearchPlaquesGeo(webapp2.RequestHandler):
                     sort_options=search.SortOptions(expressions=[sortexpr])))
 
         results = plaque_search_index.search(search_query)
-        raw_plaques = [ndb.Key(urlsafe=r.doc_id).get() for r in results]
+        keys = [ndb.Key(urlsafe=r.doc_id) for r in results]
+        raw_plaques = ndb.get_multi(keys)
         plaques = [p for p in raw_plaques if p is not None and p.approved]
         return plaques
 
