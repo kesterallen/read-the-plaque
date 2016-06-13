@@ -5,6 +5,7 @@ import json
 import os
 import re
 import requests
+import sys
 
 
 url_tmpl = 'http://readtheplaque.com/%s'
@@ -64,7 +65,12 @@ def main():
             post_url_update, data={'updated_on': last_updated_offset})
 
         new_plaques = json.loads(resp.content)
-        print "found %s new plaques" % len(new_plaques)
+        noun = "plauqes"
+        if len(new_plaques) == 1:
+            noun = "plauqe"
+        print "Found %s new %s." % (len(new_plaques), noun)
+        if len(new_plaques) == 0:
+            sys.exit(1)
 
         # Insert in descending time sort, and update the timestamp:
         for plaque in reversed(new_plaques):
