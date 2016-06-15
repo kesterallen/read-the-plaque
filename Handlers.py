@@ -354,6 +354,15 @@ class FakePlaqueForRootUrlPreviews(object):
         self.description = "A gigantic map of all the cool plaques in the world"
         self.img_url_thumbnail = "http://readtheplaque.com/images/rtp_logo_600square.jpg"
 
+class ViewPlaquesTest(webapp2.RequestHandler):
+    def get(self):
+        plaques, next_cursor, more = Plaque.fetch_page(20)
+        template_values = get_default_template_values(plaques=plaques)
+        template_values['featured_plaque'] = get_featured()
+        template = JINJA_ENVIRONMENT.get_template('all.html')
+        template_text = template.render(template_values)
+        self.response.write(template_text)
+
 class ViewPlaquesPage(webapp2.RequestHandler):
     def head(self, start_curs_str=None):
         self.get()
@@ -865,8 +874,9 @@ class AddPlaque(webapp2.RequestHandler):
             self._get_form_args()
 
         plaque.location = location
+        if title != plaque.title:
+            plaque.set_title_url(plaqueset_key)
         plaque.title = title
-        plaque.set_title_url(plaqueset_key, is_edit)
         plaque.description = description
         plaque.tags = tags
         if not is_edit:

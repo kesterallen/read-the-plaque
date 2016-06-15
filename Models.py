@@ -241,15 +241,12 @@ class Plaque(ndb.Model):
         url = '/plaque/%s' % self.key.urlsafe()
         return url
 
-    def set_title_url(self, ancestor_key, is_edit=False):
+    def set_title_url(self, ancestor_key):
         """
         Set the title_url. For new plaques, if the title_url already exists on
         another plaque, add a suffix to make it unique. Keep plaques which are 
         being edited the same.
         """
-        if is_edit:
-            return
-
         if self.title:
             title_url = re.sub('[^\w]+', '-', self.title.strip()).lower()
         else:
@@ -264,7 +261,7 @@ class Plaque(ndb.Model):
         orig_title_url = title_url
 
         count = 1
-        n_matches= Plaque.num_same_title_urls(title_url, ancestor_key)
+        n_matches = Plaque.num_same_title_urls(title_url, ancestor_key)
         while n_matches > 0:
             count += 1
             title_url = "%s%s" % (orig_title_url, count)
