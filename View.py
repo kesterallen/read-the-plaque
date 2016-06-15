@@ -20,6 +20,7 @@ def main():
         ('/page/(.+?)/(.+?)/?', h.ViewPlaquesPage),
         ('/page/(.+?)/?', h.ViewPlaquesPage),
         ('/page/?', h.ViewPlaquesPage),
+        ('/test/?', h.ViewPlaquesTest),
         ('/plaque/(.+?)/?', h.ViewOnePlaque),
         ('/plaque/?', h.ViewOnePlaque),
         ('/randompage.*', h.RandomPlaquesPage),

@@ -4,30 +4,6 @@ body {
 	font-weight: 300;
 }
 
-/* Pintrest-like */
-
-.pinterest-row {
-    -moz-column-width: 18em;
-    -webkit-column-width: 18em;
-    -moz-column-gap: 0.25em;
-    -webkit-column-gap: 0.25em;
-}
-
-/* Highlight a column element grey when mouse-overed */
-.pinterest-row > a > div:hover {
-    background-color: #40495A;
-}
-.item {
-    display: inline-block;
-    padding:  .25rem;
-    width:  100%;
-}
-
-.well {
-    position:relative;
-    display: block;
-}
-
 .thumbnail.right-caption > img {
     float: left;
     margin-right: 9px;
@@ -66,7 +42,6 @@ body {
 /* Make navbar buttons stand out more when hovered */
 /* TODO: this isn't working */
 .navbar > a:hover, .navbar > a:focus {
-    background-color: #40495A;
     background-color: #40495A;
     color: #FFF;
 }
@@ -131,5 +106,83 @@ body {
     padding: 4px;
 }
 
-/* end Pintrest-like */
+#wrapper {
+    width: 100%;
+    margin: 50px auto;
+}
+
+#columns {
+    -webkit-column-fill: auto;
+    -moz-column-fill: auto;
+    column-fill: auto;
+
+    -webkit-column-gap: 10px;
+    -moz-column-gap: 10px;
+    column-gap: 10px;
+
+    -webkit-column-count: 1;
+    -moz-column-count: 1;
+    column-count: 1;
+}
+
+.pin {
+    display: inline-block;
+    background: #FEFEFE;
+    border: 2px solid #FAFAFA;
+    box-shadow: 0 1px 2px rgba(34, 25, 25, 0.4);
+    margin: 0 2px 15px;
+    -webkit-column-break-inside: avoid;
+    -moz-column-break-inside: avoid;
+    column-break-inside: avoid;
+    padding: 15px;
+    padding-bottom: 5px;
+}
+
+.pin img {
+    width: 100%;
+    padding-bottom: 15px;
+    margin-bottom: 5px;
+}
+
+.pin p {
+    color: #333;
+    margin: 0;
+}
+
+.pin:hover {
+    background-color: #e6e6e6;
+    /*background-color: #6796a0;*/  /* RTP blue */
+}
+
+@media (min-width: 480px) {
+    #columns {
+        -webkit-column-count: 2;
+        -moz-column-count: 2;
+        column-count: 2;
+    }
+}
+
+@media (min-width: 786px) {
+    #columns {
+        -webkit-column-count: 3;
+        -moz-column-count: 3;
+        column-count: 3;
+    }
+}
+
+@media (min-width: 992px) {
+    #columns {
+        -webkit-column-count: 4;
+        -moz-column-count: 4;
+        column-count: 4;
+    }
+}
+
+@media (min-width: 1200px) {
+    #columns {
+        -webkit-column-count: 5;
+        -moz-column-count: 5;
+        column-count: 5;
+    }
+}
 
