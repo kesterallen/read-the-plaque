@@ -875,8 +875,11 @@ class AddPlaque(webapp2.RequestHandler):
 
         plaque.location = location
         if title != plaque.title:
+            plaque.title = title
             plaque.set_title_url(plaqueset_key)
-        plaque.title = title
+        else:
+            plaque.title = title
+
         plaque.description = description
         plaque.tags = tags
         if not is_edit:
@@ -1247,9 +1250,14 @@ class NearbyPage(SearchPlaquesGeo):
         if num > 20:
             num = 20
 
-        search_radii_meters = [2**i for i in range(3, 24)]
-        for search_radius_meters in search_radii_meters:
+        # Reduce search billing cost by making nearby search less granular:
+        # 8 m, 1/2 km, 5 km, 33 km, 260 km, 4200 km, 8400 km
+        search_radii_meters = [2**i for i in [3, 9, 12, 15, 18, 22, 23]]
+        #search_radii_meters = [2**i for i in range(3, 24)]
+        for i, search_radius_meters in enumerate(search_radii_meters):
+            logging.info("%s/%s: searching within %s meters of (%s,%s)" % (i+1, len(search_radii_meters), search_radius_meters, lat, lng))
             plaques = self._geo_search(lat, lng, search_radius_meters)
+            logging.info("Found %s plaques" % len(plaques))
             if len(plaques) > num:
                 break
 

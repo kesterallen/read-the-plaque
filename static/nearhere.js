@@ -1,7 +1,10 @@
 function find_near_here() {
     //$("#locationModal").modal();
     if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(found_location, no_location);
+        navigator.geolocation.getCurrentPosition(
+            found_location,
+            no_location
+        );
     } else {
         alert("Geolocation is not supported by this browser.");
     }
