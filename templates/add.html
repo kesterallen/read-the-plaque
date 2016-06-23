@@ -94,7 +94,27 @@
         </form>
 </div>
 
-<script src="https://tinymce.cachefly.net/4.2/tinymce.min.js"></script>
-<script>tinymce.init({selector:'textarea', gecko_spellcheck: true});</script>
+<script src="https://cdn.tinymce.com/4/tinymce.min.js"></script>
+<script>
+tinymce.init({
+  selector:'#plaque_description',
+  browser_spellcheck: true,
+  menu: {
+    tools: {title: 'Tools', items: 'spellchecker code'}
+  }
+});
+</script>
+
+<!-- Prevent "enter" keystrokes in the Google Maps search from submiting the plaque -->
+<script>
+$(document).ready(function() {
+  $(window).keydown(function(event){
+    if(event.keyCode == 13) {
+      event.preventDefault();
+      return false;
+    }
+  });
+});
+</script>
 
 {% endblock %}
