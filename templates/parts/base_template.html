@@ -75,7 +75,9 @@ script src="/static/bootstrap-3.3.5.min.js"></script>
     {% include 'parts/footer.html' %}
 {% endif %}
 
-<!-- Include the map-drawing javascript at the bottom -->
 {% if plaques or bigmap %} {% include 'parts/map_pane.html' %} {% endif %}
+
+{% block bottomofbody%}
+{% endblock %}
 </body>
 </html>

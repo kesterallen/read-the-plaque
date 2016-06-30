@@ -67,6 +67,8 @@ def main():
         ('/s/?', h.SearchPlaques),
         ('/setupdated', h.SetUpdatedOn),
         ('/setfeatured/(.*?)', h.SetFeatured),
+        ('/map/(.*?)/(.*?)/(.*?)/?', h.BigMap), # lat, lng, zoom.
+        ('/map/(.*?)/(.*?)/?', h.BigMap), # lat, lng
         ('/map/?', h.BigMap),
 
         ('/', h.ViewPlaquesPage),
@@ -75,7 +77,7 @@ def main():
     ], debug=True)
 
     app.error_handlers[404] = h.handle_404
-    #app.error_handlers[500] = h.handle_500
+    app.error_handlers[500] = h.handle_500
 
     return app
 

@@ -450,8 +450,16 @@ class ViewPlaquesPage(webapp2.RequestHandler):
         return template_values
 
 class BigMap(ViewPlaquesPage):
-    def get(self):
-        template_values = get_default_template_values(bigmap=True)
+    def get(self, lat=None, lng=None, zoom=None):
+        logging.info('lat %s lng %s zoom %s' % (lat,lng,zoom))
+        if lat is not None and lng is not None:
+            template_values = get_default_template_values(
+                bigmap=True, bigmap_center=True, bigmap_lat=lat, bigmap_lng=lng)
+            if zoom is not None:
+                template_values['bigmap_zoom'] = zoom
+        else:
+            template_values = get_default_template_values(bigmap=True)
+        logging.info(template_values)
         template = JINJA_ENVIRONMENT.get_template('bigmap.html')
         template_text = template.render(template_values)
         self.response.write(template_text)
@@ -1129,7 +1137,7 @@ class SearchPlaques(webapp2.RequestHandler):
     """Run a search in the title and description."""
     def post(self):
         search_term = self.request.get('search_term')
-        self.get(search_term)
+        self.redirect('/search/%s' % search_term)
 
     def get(self, search_term=None):
         logging.debug('search term is "%s"' % search_term)

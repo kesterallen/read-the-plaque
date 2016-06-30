@@ -58,7 +58,10 @@
 		});
 		
 		map.addLayer(cluster_group);
-		map.fitBounds(cluster_group.getBounds());
+        {% if not bigmap_center %}
+            map.fitBounds(cluster_group.getBounds());
+        {% endif %}
+
         L.control.scale({imperial: false}).addTo(map);
 	}
 	
@@ -73,57 +76,64 @@
 		
 		L.mapbox.accessToken = 'pk.eyJ1IjoibG9nYW5yb2NrbW9yZSIsImEiOiJjaW10djNoY3QwMjNwdXBra2tndzljZW5kIn0.NVzBF6iK5Xrrre2fjtBP5Q';
 		var map = L.mapbox.map(mapCanvasID, 'mapbox.light').setView([0, 0], 1);
+		//map.setView([61, -150], 5);
+        {% if bigmap_center %}
+            {% if bigmap_zoom %}
+                map.setView([{{bigmap_lat}}, {{bigmap_lng}}], {{bigmap_zoom}});
+            {% else %}
+                map.setView([{{bigmap_lat}}, {{bigmap_lng}}], 14);
+            {% endif %}
+        {% endif %}
 		
-{% if plaques|length >= 12 or bigmap %}
-		// Precomputed markers from /static/plaques_update.json
-	    //
-	    // Either:
-	    //   a) If map_markers_str is specified, make a set of the requested markers, 
-	    //   b) If map_markers_str is empty draw, every marker in plaques.json
-	    //
+        {% if plaques|length >= 12 or bigmap %}
 
-	    var jp_url = '/static/plaques_updated.json';
-	    
-	    $.ajax({
-	        url: jp_url,
-	        dataType: 'json',
-	        success: function(json) {
-				
-				var plaques = json['plaques'];
-		        
-		        // filter the markers
-				var map_markers_filter_urls_string = '{{map_markers_str}}';
-				var map_markers_filter_urls = new Set();
-				if (map_markers_filter_urls_string != '') {
-					map_markers_filter_urls = new Set(map_markers_filter_urls_string.split('&'));
-					
-					plaques = $(plaques).filter(function(index) {
-						return map_markers_filter_urls.has(this.title_page_url);
-					});
-				}
-				
-	            draw_map(map, plaques);
-	        }
-	    });
-	    
-{% else %}
-		
-		var json = [];
-		
-{% for plaque in plaques %}
-	    json.push({
-		   'title': '{{plaque.title | striptags | escape}}',
-		   'title_page_url': '{{plaque.title_page_url}}',
-		   'img_url_tiny': '{{plaque.img_url_tiny}}', 
-		   'lat': {{plaque.location.lat}}, 
-		   'lng': {{plaque.location.lon}}, 
-	    });
-{% endfor %}
-		
-        draw_map(map, json);
-		
+            // Precomputed markers from /static/plaques_update.json
+            //
+            // Either:
+            //   a) If map_markers_str is specified, make a set of the requested markers, 
+            //   b) If map_markers_str is empty draw, every marker in plaques.json
+            //
 
-{% endif %}
+            var jp_url = '/static/plaques_updated.json';
+            
+            $.ajax({
+                url: jp_url,
+                dataType: 'json',
+                success: function(json) {
+                    
+                    var plaques = json['plaques'];
+                    
+                    // filter the markers
+                    var map_markers_filter_urls_string = '{{map_markers_str}}';
+                    var map_markers_filter_urls = new Set();
+                    if (map_markers_filter_urls_string != '') {
+                        map_markers_filter_urls = new Set(map_markers_filter_urls_string.split('&'));
+                        
+                        plaques = $(plaques).filter(function(index) {
+                            return map_markers_filter_urls.has(this.title_page_url);
+                        });
+                    }
+                    
+                    draw_map(map, plaques);
+                }
+            });
+
+        {% else %}
+		
+            var json = [];
+		
+            {% for plaque in plaques %}
+                json.push({
+                   'title': '{{plaque.title | striptags | escape}}',
+                   'title_page_url': '{{plaque.title_page_url}}',
+                   'img_url_tiny': '{{plaque.img_url_tiny}}', 
+                   'lat': {{plaque.location.lat}}, 
+               'lng': {{plaque.location.lon}}, 
+                });
+            {% endfor %}
+		
+            draw_map(map, json);
+        {% endif %}
 
 	}
 	

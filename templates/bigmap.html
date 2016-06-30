@@ -5,3 +5,13 @@
     <div id="bigmap"></div>
 </div>
 {% endblock %}
+
+{% block bottomofbody %}
+<script>
+$(document).ready(function () {
+    $('html, body').animate({
+        scrollTop: $('#bigmap').offset().top
+    }, 'slow');
+});
+</script>
+{% endblock %}
