@@ -1,6 +1,6 @@
 <div class="row">
-    <a class="col-xs-12 col-sm-5 col-centered" href="{{featured_plaque.title_page_url}}">
-        <div class="pin">
+    <a class="col-xs-12 col-sm-4" href="{{featured_plaque.title_page_url}}">
+        <div id="featured-plaque" class="pin">
             <div class="thumbnail right-caption">
                 <h1>Featured Plaque:</h1>
                 <img src="{{featured_plaque.img_url_thumbnail}}"/>
@@ -17,7 +17,8 @@
         </div>
     </a>
 
-    <div class="col-xs-12 col-sm-7 col-centered">
+    <div class="col-xs-12 col-sm-7 col-sm-offset-1">
+        <h4>This map is of <i>just</i> the plaques on this page. See <a href="/map">all 10,000+ plaques</a>.</h4>
         <div id="map"></div>
     </div>
 </div>

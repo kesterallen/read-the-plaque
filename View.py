@@ -77,7 +77,7 @@ def main():
     ], debug=True)
 
     app.error_handlers[404] = h.handle_404
-    app.error_handlers[500] = h.handle_500
+    #app.error_handlers[500] = h.handle_500
 
     return app
 

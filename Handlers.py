@@ -81,8 +81,8 @@ def latlng_angles_to_dec(ref, latlng_angles):
         latlng_angles[0], latlng_angles[1], latlng_angles[2], latlng))
     return latlng
 
-def get_default_template_values(**kwargs):
-    memcache_name = 'default_template_values_%s' % users.is_current_user_admin()
+def get_template_values(**kwargs):
+    memcache_name = 'template_values_%s' % users.is_current_user_admin()
     template_values = memcache.get(memcache_name)
     if template_values is None:
         num_pending = Plaque.num_pending(num=DEF_NUM_PENDING)
@@ -93,12 +93,12 @@ def get_default_template_values(**kwargs):
             'num_pending': num_pending,
             'footer_items': footer_items,
             'loginout': loginout_output,
-            'icon_size': DEF_MAP_ICON_SIZE_PIX,
+            'dynamic_plaque_cutoff': 21,
         }
         memcache_status = memcache.set(memcache_name, template_values)
         if not memcache_status:
             logging.debug(
-                "memcaching.set to %s for default_template_values failed" %
+                "memcache.set to %s for default_template_values failed" %
                 memcache_name)
     else:
         logging.debug(
@@ -294,7 +294,7 @@ def get_footer_items():
 
         memcache_status = memcache.set('get_footer_items', footer_items)
         if not memcache_status:
-            logging.debug("memcaching for get_footer_items failed")
+            logging.debug("memcachefor get_footer_items failed")
     else:
         logging.debug("memcache.get worked for get_footer_items")
 
@@ -357,7 +357,7 @@ class FakePlaqueForRootUrlPreviews(object):
 class ViewPlaquesTest(webapp2.RequestHandler):
     def get(self):
         plaques, next_cursor, more = Plaque.fetch_page(20)
-        template_values = get_default_template_values(plaques=plaques)
+        template_values = get_template_values(plaques=plaques)
         template_values['featured_plaque'] = get_featured()
         template = JINJA_ENVIRONMENT.get_template('all.html')
         template_text = template.render(template_values)
@@ -369,10 +369,14 @@ class ViewPlaquesPage(webapp2.RequestHandler):
         self.response.clear()
 
     def get(self, cursor_urlsafe=None):
-        template_text = self._get(cursor_urlsafe, is_random=False, is_featured=True)
+        template_text = self._get_template_text(
+            cursor_urlsafe, is_random=False, is_featured=True)
         self.response.write(template_text)
 
-    def _get(self, cursor_urlsafe=None, per_page=DEF_NUM_PER_PAGE, is_random=False, is_featured=True):
+    def _get_template_text(
+        self, cursor_urlsafe=None, per_page=DEF_NUM_PER_PAGE, is_random=False,
+        is_featured=True):
+
         """
         View the nth per_page plaques on a grid.
         """
@@ -389,15 +393,12 @@ class ViewPlaquesPage(webapp2.RequestHandler):
         is_admin = users.is_current_user_admin()
         user = users.get_current_user()
         name = "anon" if user is None else user.nickname()
-        logging.debug("User %s is admin: %s" % (name, is_admin))
-        memcache_name = 'view_plaques_page_featured_%s_%s_%s' % (
-            per_page, cursor_urlsafe, is_admin)
+        memcache_name = 'plaques_%s_%s_%s' % (per_page, cursor_urlsafe, is_admin)
         if is_random:
             template_text = None
         else:
             template_text = memcache.get(memcache_name)
-            logging.debug("memcaching worked for ViewPlaquesPage %s" %
-                memcache_name)
+            logging.debug("memcache.get worked ViewPlaquesPage %s" % memcache_name)
 
         if template_text is None:
             template_values = self._get_template_values(
@@ -406,13 +407,8 @@ class ViewPlaquesPage(webapp2.RequestHandler):
             template_text = template.render(template_values)
             if not is_random:
                 memcache_status = memcache.set(memcache_name, template_text)
-                if not memcache_status:
-                    logging.debug("memcache.set failed for ViewPlaquesPage %s" %
-                        memcache_name)
-                else:
-                    logging.debug(
-                        "memcache.set worked for ViewPlaquesPage %s" %
-                        memcache_name)
+                ms = "failed" if not memcache_status else "success"
+                logging.debug("memcache.set %s ViewPlaquesPage %s" % (ms, memcache_name))
 
         return template_text
 
@@ -432,11 +428,8 @@ class ViewPlaquesPage(webapp2.RequestHandler):
             else:
                 cursor_urlsafe = next_cursor.urlsafe()
 
-        template_values = get_default_template_values(
-                              plaques=plaques,
-                              next_cursor_urlsafe=cursor_urlsafe,
-                              more=more,
-                          )
+        template_values = get_template_values(
+            plaques=plaques, next_cursor_urlsafe=cursor_urlsafe, more=more)
         #logging.info('in _get_template_values, next_cursor=%s, cursor_urlsafe=%s, more=%s' % (next_cursor, cursor_urlsafe, more))
         if is_random:
             template_values['map_markers_str'] = get_map_markers_str(plaques)
@@ -444,7 +437,6 @@ class ViewPlaquesPage(webapp2.RequestHandler):
             featured = get_featured()
             template_values['featured_plaque'] = featured
             fake = FakePlaqueForRootUrlPreviews()
-            logging.info('making fake plaque %s' % fake)
             template_values['fake_plaque_for_root_url_previews'] = fake
 
         return template_values
@@ -453,12 +445,12 @@ class BigMap(ViewPlaquesPage):
     def get(self, lat=None, lng=None, zoom=None):
         logging.info('lat %s lng %s zoom %s' % (lat,lng,zoom))
         if lat is not None and lng is not None:
-            template_values = get_default_template_values(
+            template_values = get_template_values(
                 bigmap=True, bigmap_center=True, bigmap_lat=lat, bigmap_lng=lng)
             if zoom is not None:
                 template_values['bigmap_zoom'] = zoom
         else:
-            template_values = get_default_template_values(bigmap=True)
+            template_values = get_template_values(bigmap=True)
         logging.info(template_values)
         template = JINJA_ENVIRONMENT.get_template('bigmap.html')
         template_text = template.render(template_values)
@@ -477,7 +469,7 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
         plaque.
         """
         is_admin = users.is_current_user_admin()
-        memcache_name = 'view_one_%s_%s' % (plaque_key, is_admin)
+        memcache_name = 'plaque_%s_%s' % (plaque_key, is_admin)
         logging.info(
             "memcache name in ViewOnePlaqueParent._get_from_key is %s" %
             memcache_name)
@@ -524,17 +516,15 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
                 self.redirect(plaque.title_page_url)
                 return
 
-            template = JINJA_ENVIRONMENT.get_template('one.html')
-            template_values = get_default_template_values(
-                                  plaques=[plaque],
-                                  map_markers_str=get_map_markers_str([plaque]),
-                                  icon_size=32,
-                              )
+            map_markers_str = get_map_markers_str([plaque]),
+            template_values = get_template_values(
+                plaques=[plaque], map_markers_str=map_markers_str)
 
+            template = JINJA_ENVIRONMENT.get_template('one.html')
             page_text = template.render(template_values)
             memcache_status = memcache.set(memcache_name, page_text)
             if not memcache_status:
-                logging.debug("memcaching for _get_from_key failed for %s" %
+                logging.debug("memcache.set for _get_from_key failed for %s" %
                               memcache_name)
         else:
             logging.debug("memcache.get worked for _get_from_key for %s" %
@@ -565,7 +555,7 @@ class RandomPlaquesPage(ViewPlaquesPage):
     Get a page of random plaques.
     """
     def get(self):
-        page_text = self._get(per_page=5, is_random=True, is_featured=False)
+        page_text = self._get_template_text(per_page=5, is_random=True, is_featured=False)
         self.response.write(page_text)
 
 class RandomPlaque(ViewOnePlaqueParent):
@@ -694,15 +684,15 @@ class JsonAllPlaquesFull(JsonAllPlaques):
 #    def get(self):
 #        tags_sized = Plaque.all_tags_sized()
 #        template = JINJA_ENVIRONMENT.get_template('tags.html')
-#        template_values = get_default_template_values(tags=tags_sized)
+#        template_values = get_template_values(tags=tags_sized)
 #        self.response.write(template.render(template_values))
 
 class ViewTag(webapp2.RequestHandler):
     def get(self, tag, view_all=False):
         """
-        View plaque with a given tag on a grid.
+        View plaques with a given tag on a grid.
         """
-        memcache_name = 'plaque_json_%s' % tag
+        memcache_name = 'plaques_tag_%s' % tag
         page_text = memcache.get(memcache_name)
 
         if page_text is None:
@@ -717,10 +707,8 @@ class ViewTag(webapp2.RequestHandler):
             map_markers_str = get_map_markers_str(plaques)
 
             template = JINJA_ENVIRONMENT.get_template('all.html')
-            template_values = get_default_template_values(
-                                  plaques=plaques,
-                                  map_markers_str=map_markers_str,
-                              )
+            template_values = get_template_values(
+                plaques=plaques, map_markers_str=map_markers_str)
             page_text = template.render(template_values)
             memcache_status = memcache.set(memcache_name, page_text)
             if not memcache_status:
@@ -738,7 +726,7 @@ class About(webapp2.RequestHandler):
         Render the About page from the common template.
         """
         template = JINJA_ENVIRONMENT.get_template('about.html')
-        template_values = get_default_template_values()
+        template_values = get_template_values()
         self.response.write(template.render(template_values))
 
 #class AddComment(webapp2.RequestHandler):
@@ -790,7 +778,7 @@ class AddPlaque(webapp2.RequestHandler):
     def get(self, message=None):
         maptext = "Click the plaque's location on the map, or search " + \
                   "for it, or enter its lat/lng location"
-        template_values = get_default_template_values(maptext=maptext)
+        template_values = get_template_values(maptext=maptext)
         message = self._get_message(message)
         if message is not None:
             template_values['message'] = message
@@ -1154,10 +1142,8 @@ class SearchPlaques(webapp2.RequestHandler):
 
         template = JINJA_ENVIRONMENT.get_template('all.html')
         map_markers_str = get_map_markers_str(plaques)
-        template_values = get_default_template_values(
-                              plaques=plaques,
-                              map_markers_str=map_markers_str,
-                          )
+        template_values = get_template_values(
+            plaques=plaques, map_markers_str=map_markers_str)
         self.response.write(template.render(template_values))
 
 class SearchPlaquesGeo(webapp2.RequestHandler):
@@ -1196,8 +1182,8 @@ class SearchPlaquesGeo(webapp2.RequestHandler):
         if redir:
             step1text = '<span style="color:red">%s</span>' % step1text
 
-        template_values = get_default_template_values(maptext=maptext,
-                                                      step1text=step1text)
+        template_values = get_template_values(
+            maptext=maptext, step1text=step1text)
         template = JINJA_ENVIRONMENT.get_template('geosearch.html')
         self.response.write(template.render(template_values))
 
@@ -1205,11 +1191,9 @@ class SearchPlaquesGeo(webapp2.RequestHandler):
         map_markers_str = get_map_markers_str(geo_plaques_approved)
 
         template = JINJA_ENVIRONMENT.get_template('all.html')
-        template_values = get_default_template_values(
-                              plaques=geo_plaques_approved,
-                              map_markers_str=map_markers_str,
-                              mapcenter={'lat': lat, 'lng': lng},
-                          )
+        template_values = get_template_values(
+            plaques=geo_plaques_approved, map_markers_str=map_markers_str,
+            mapcenter={'lat': lat, 'lng': lng})
         self.response.write(template.render(template_values))
 
     def _serve_response(self, lat, lng, search_radius_meters):
@@ -1259,11 +1243,12 @@ class NearbyPage(SearchPlaquesGeo):
             num = 20
 
         # Reduce search billing cost by making nearby search less granular:
-        # 8 m, 1/2 km, 5 km, 33 km, 260 km, 4200 km, 8400 km
-        search_radii_meters = [2**i for i in [3, 9, 12, 15, 18, 22, 23]]
-        #search_radii_meters = [2**i for i in range(3, 24)]
+        # 5 m, 500 m, 5 km, 50 km, 500 km, 5000 km
+        search_radii_meters = [5*10**i for i in [1, 3, 4, 5, 6, 7]]
         for i, search_radius_meters in enumerate(search_radii_meters):
-            logging.info("%s/%s: searching within %s meters of (%s,%s)" % (i+1, len(search_radii_meters), search_radius_meters, lat, lng))
+            logging.info(
+                "%s/%s: searching within %s meters of (%s,%s)" % (
+                i+1, len(search_radii_meters), search_radius_meters, lat, lng))
             plaques = self._geo_search(lat, lng, search_radius_meters)
             logging.info("Found %s plaques" % len(plaques))
             if len(plaques) > num:
@@ -1310,8 +1295,10 @@ class Counts(webapp2.RequestHandler):
         else:
             orphan_pics.add("didn't check for orphans")
 
-        msg = "Count: %s comments, %s plaques (%s pending), %s images, orphans: %s<hr>%s" % (
-                num_comments, num_plaques, num_pending, num_images, orphan_pics, pics_count)
+        msg = "Count: %s comments, %s plaques (%s pending), " \
+              "%s images, orphans: %s<hr>%s" % (
+              num_comments, num_plaques, num_pending, num_images, orphan_pics,
+              pics_count)
         self.response.write(msg)
 
 class DeleteOnePlaque(webapp2.RequestHandler):
@@ -1403,10 +1390,8 @@ class ViewPending(webapp2.RequestHandler):
 
         template = JINJA_ENVIRONMENT.get_template('all.html')
         map_markers_str = get_map_markers_str(plaques)
-        template_values = get_default_template_values(
-                              map_markers_str=map_markers_str,
-                              plaques=plaques,
-                          )
+        template_values = get_template_values(
+            map_markers_str=map_markers_str, plaques=plaques)
         template_text = template.render(template_values)
         self.response.write(template_text)
 

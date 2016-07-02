@@ -4,139 +4,138 @@
 <script src='https://api.mapbox.com/mapbox.js/plugins/leaflet-markercluster/v0.4.0/leaflet.markercluster.js'></script>
 
 <script>
-	
-	function marker_for_json(plaque_json) {
-		var latlng = L.latLng(plaque_json['lat'], plaque_json['lng']);
-		var popup_html = 
-            '<a href="' + plaque_json['title_page_url'] + '" target="_blank">' + 
-                plaque_json['title'] + 
-                '<br />' + 
-                '<img src="' + plaque_json['img_url_tiny'] + 
-                      '" width="100" height="100" ' + 
+
+    function marker_for_json(plaque_json) {
+        var latlng = L.latLng(plaque_json['lat'], plaque_json['lng']);
+        var popup_html =
+            '<a href="' + plaque_json['title_page_url'] + '" target="_blank">' +
+                plaque_json['title'] +
+                '<br />' +
+                '<img src="' + plaque_json['img_url_tiny'] +
+                      '" width="100" height="100" ' +
                       'alt="' + plaque_json['title'] + ' image" ' +
                 '/>' +
             '</a>';
-		
-		var marker_size_multiplier = 0.5;
-		var marker_icon_size = [35*marker_size_multiplier, 90*marker_size_multiplier];
-		
-		var marker = L.marker(latlng, {
-			icon: L.icon({
-				'iconUrl': '/static/images/map_pin.png',
-				'iconSize': [marker_icon_size[0], marker_icon_size[1]],
-				'iconAnchor': [marker_icon_size[0]/2, marker_icon_size[1]/2],
-				'popupAnchor': [0, -marker_icon_size[1]/2],
-				})
-		});
-		marker.bindPopup(popup_html);
-		return marker;
-	}
-	
-	function draw_map(map, plaques_json) {
-		
+
+        var marker_size_multiplier = 0.5;
+        var marker_icon_size = [35*marker_size_multiplier, 90*marker_size_multiplier];
+
+        var marker = L.marker(latlng, {
+            icon: L.icon({
+                'iconUrl': '/static/images/map_pin.png',
+                'iconSize': [marker_icon_size[0], marker_icon_size[1]],
+                'iconAnchor': [marker_icon_size[0]/2, marker_icon_size[1]/2],
+                'popupAnchor': [0, -marker_icon_size[1]/2],
+                })
+        });
+        marker.bindPopup(popup_html);
+        return marker;
+    }
+
+    function draw_map(map, plaques_json) {
+
         var bold_threshold = 100;
 
-		var cluster_group = new L.MarkerClusterGroup({
-			maxClusterRadius: 30 /* pixels */, /* TODO */
-			disableClusteringAtZoom: 15, /* TODO */
-			polygonOptions: {
-				stroke: false,
-				color: '#000000',
-				opacity: 0.5
-			},
-			iconCreateFunction: function(cluster) {
-				return new L.DivIcon({
-					html: '<span style="color:' + (cluster.getChildCount() > bold_threshold ? 'black': '#3E3E3E') + '">' + cluster.getChildCount() + '</span>',
-					className: 'mapMarkerCluster',
-					iconSize: new L.Point(35, 35)
-				});
-			}
-		});
-		
-		$(plaques_json).each(function() {
-			cluster_group.addLayer(marker_for_json(this));
-		});
-		
-		map.addLayer(cluster_group);
+        var cluster_group = new L.MarkerClusterGroup({
+            maxClusterRadius: 30 /* pixels */, /* TODO */
+            disableClusteringAtZoom: 15, /* TODO */
+            polygonOptions: {
+                stroke: false,
+                color: '#000000',
+                opacity: 0.5
+            },
+            iconCreateFunction: function(cluster) {
+                return new L.DivIcon({
+                    html: '<span style="color:' + (cluster.getChildCount() > bold_threshold ? 'black': '#3E3E3E') + '">' + cluster.getChildCount() + '</span>',
+                    className: 'mapMarkerCluster',
+                    iconSize: new L.Point(35, 35)
+                });
+            }
+        });
+
+        $(plaques_json).each(function() {
+            cluster_group.addLayer(marker_for_json(this));
+        });
+
+        map.addLayer(cluster_group);
         {% if not bigmap_center %}
             map.fitBounds(cluster_group.getBounds());
         {% endif %}
 
         L.control.scale({imperial: false}).addTo(map);
-	}
-	
-	function initialize() {
-		
-		var mapCanvasID;
-		if (null != document.getElementById('map')) {
-			mapCanvasID = 'map';
-		} else {
-			mapCanvasID = 'bigmap';
-		}
-		
-		L.mapbox.accessToken = 'pk.eyJ1IjoibG9nYW5yb2NrbW9yZSIsImEiOiJjaW10djNoY3QwMjNwdXBra2tndzljZW5kIn0.NVzBF6iK5Xrrre2fjtBP5Q';
-		var map = L.mapbox.map(mapCanvasID, 'mapbox.light').setView([0, 0], 1);
-		//map.setView([61, -150], 5);
+    }
+
+    function initialize() {
+
+        var mapCanvasID;
+        if (null != document.getElementById('map')) {
+            mapCanvasID = 'map';
+        } else {
+            mapCanvasID = 'bigmap';
+        }
+
+        L.mapbox.accessToken = 'pk.eyJ1IjoibG9nYW5yb2NrbW9yZSIsImEiOiJjaW10djNoY3QwMjNwdXBra2tndzljZW5kIn0.NVzBF6iK5Xrrre2fjtBP5Q';
+        var map = L.mapbox.map(mapCanvasID, 'mapbox.light').setView([0, 0], 1);
         {% if bigmap_center %}
             {% if bigmap_zoom %}
                 map.setView([{{bigmap_lat}}, {{bigmap_lng}}], {{bigmap_zoom}});
             {% else %}
-                map.setView([{{bigmap_lat}}, {{bigmap_lng}}], 14);
+                map.setView([{{bigmap_lat}}, {{bigmap_lng}}], 10);
             {% endif %}
         {% endif %}
-		
-        {% if plaques|length >= 12 or bigmap %}
+
+        {% if plaques|length >= dynamic_plaque_cutoff or bigmap %}
 
             // Precomputed markers from /static/plaques_update.json
             //
             // Either:
-            //   a) If map_markers_str is specified, make a set of the requested markers, 
+            //   a) If map_markers_str is specified, make a set of the requested markers,
             //   b) If map_markers_str is empty draw, every marker in plaques.json
             //
 
             var jp_url = '/static/plaques_updated.json';
-            
+
             $.ajax({
                 url: jp_url,
                 dataType: 'json',
                 success: function(json) {
-                    
+
                     var plaques = json['plaques'];
-                    
+
                     // filter the markers
                     var map_markers_filter_urls_string = '{{map_markers_str}}';
                     var map_markers_filter_urls = new Set();
                     if (map_markers_filter_urls_string != '') {
                         map_markers_filter_urls = new Set(map_markers_filter_urls_string.split('&'));
-                        
+
                         plaques = $(plaques).filter(function(index) {
                             return map_markers_filter_urls.has(this.title_page_url);
                         });
                     }
-                    
+
                     draw_map(map, plaques);
                 }
             });
 
         {% else %}
-		
+
             var json = [];
-		
+
             {% for plaque in plaques %}
                 json.push({
                    'title': '{{plaque.title | striptags | escape}}',
                    'title_page_url': '{{plaque.title_page_url}}',
-                   'img_url_tiny': '{{plaque.img_url_tiny}}', 
-                   'lat': {{plaque.location.lat}}, 
-               'lng': {{plaque.location.lon}}, 
+                   'img_url_tiny': '{{plaque.img_url_tiny}}',
+                   'lat': {{plaque.location.lat}},
+               'lng': {{plaque.location.lon}},
                 });
             {% endfor %}
-		
+
             draw_map(map, json);
         {% endif %}
 
-	}
-	
+    }
+
     initialize();
-    
+
 </script>

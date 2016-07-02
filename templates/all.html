@@ -50,10 +50,25 @@
                     <li>
                         <a class="btn btn-default" href="/page/{{next_cursor_urlsafe}}"><span>Next Page of Plaques</span></a>
                     </li>
+                    <li>{{cursor_urlsafe}}</li>
                 </ul>
             </nav>
         {% endif %}
 
     </div><div class="col-xs-0 col-sm-1"></div></div>
 </div>
+{% endblock %}
+
+
+{% block bottomofbody %}
+<script>
+    $('#map').ready(function(){
+        $('#map').height($('#featured-plaque').height());
+        //$('#map').width($('#featured-plaque').width());
+    });
+    //$(document).resize(function(){
+    //    $('#map').height($('#featured-plaque').height());
+    //    $('#map').width($('#featured-plaque').width());
+    //});
+</script>
 {% endblock %}

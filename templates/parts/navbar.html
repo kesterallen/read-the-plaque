@@ -32,7 +32,7 @@
                 </li>
                 <li><a href="/geo">Location</a></li>
                 <li><a onclick="find_near_here()" href="#">Nearby</a></li>
-                <li><a href="/map#bigmap">Big Map</a></li>
+                <li><a href="/map">Big Map</a></li>
 
                 {% if loginout and loginout.is_admin %}
                     <li><a href="/pending">Pending <span class="badge">{{num_pending}}{% if num_pending %}{% if num_pending > 4 %}+{% endif %}{% endif %}</span></a></li>
