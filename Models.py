@@ -106,7 +106,7 @@ class Plaque(ndb.Model):
 
             if start_cursor:
                 plaques, next_cursor, more = query.fetch_page(num, start_cursor=start_cursor)
-                logging.info('in fetch_page if block, len(plaques)=%s, next_cursor=%s, more=%s' % (len(plaques), next_cursor, more))
+                logging.info('in fetch_page if block, len(plaques)=%s, start_cursor=%s, next_cursor=%s, more=%s' % (len(plaques), start_cursor, next_cursor, more))
             else:
                 plaques, next_cursor, more = query.fetch_page(num)
                 logging.info('in fetch_page else block, len(plaques)=%s, next_cursor=%s, more=%s' % (len(plaques), next_cursor, more))
