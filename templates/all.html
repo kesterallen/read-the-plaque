@@ -48,7 +48,7 @@
             <nav>
                 <ul class="pagination pagination-sm">
                     <li>
-                        <a class="btn btn-default" href="/page/{{next_cursor_urlsafe}}"><span>Next Page of Plaques</span></a>
+                        <a class="btn btn-default" href="/page/{{next_cursor_urlsafe}}"><span>Next</span></a>
                     </li>
                     <li>{{cursor_urlsafe}}</li>
                 </ul>
@@ -63,7 +63,9 @@
 {% block bottomofbody %}
 <script>
     $('#map').ready(function(){
-        $('#map').height($('#featured-plaque').height());
+        if ($("#featured-plaque").length > 0) {
+            $('#map').height($('#featured-plaque').height() - 20);
+        }
         //$('#map').width($('#featured-plaque').width());
     });
     //$(document).resize(function(){
