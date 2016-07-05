@@ -15,6 +15,15 @@
             {% include 'parts/featured_row.html' %}
         {% endif %}
 
+        <!-- If there is no featured plaque, draw the map at the top of the page -->
+        {% if not featured_plaque and plaques|length > 0 %}
+            <div class="row">
+                <div class="col-xs-12 col-centered">
+                    <div id="map"></div>
+                </div>
+            </div>
+        {% endif %}
+
         {% if plaques|length == 0 %}
             <h2>No plaques in that search</h2>
         {% endif %}
@@ -33,15 +42,6 @@
                 {% endfor %}
             </div>
         </div>
-
-        <!-- If there is no featured plaque, draw the larger map at the bottom of the page -->
-        {% if not featured_plaque and plaques|length > 0 %}
-            <div class="row">
-                <div class="col-xs-12 col-centered">
-                    <div id="map"></div>
-                </div>
-            </div>
-        {% endif %}
 
         <!-- If there is an active cursor, make a paginator -->
         {% if more %}
@@ -64,13 +64,9 @@
 <script>
     $('#map').ready(function(){
         if ($("#featured-plaque").length > 0) {
-            $('#map').height($('#featured-plaque').height() - 20);
+            fp_height = $('#featured-plaque').height();
+            $('#map').height(fp_height - 80);
         }
-        //$('#map').width($('#featured-plaque').width());
     });
-    //$(document).resize(function(){
-    //    $('#map').height($('#featured-plaque').height());
-    //    $('#map').width($('#featured-plaque').width());
-    //});
 </script>
 {% endblock %}

@@ -67,6 +67,8 @@
 
     function initialize() {
 
+        $('.loading').show();
+
         var mapCanvasID;
         if (null != document.getElementById('map')) {
             mapCanvasID = 'map';
@@ -114,6 +116,7 @@
                     }
 
                     draw_map(map, plaques);
+                    $('.loading').hide();
                 }
             });
 
@@ -132,6 +135,7 @@
             {% endfor %}
 
             draw_map(map, json);
+            $('.loading').hide();
         {% endif %}
 
     }
