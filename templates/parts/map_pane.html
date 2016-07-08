@@ -5,15 +5,39 @@
 
 <script>
 
-    function marker_for_json(plaque_json) {
-        var latlng = L.latLng(plaque_json['lat'], plaque_json['lng']);
+    // These globals allow the load_markers method to be be re-enterable
+    var plaques_json = [];
+    var markers = [];
+    var plaques_length = 0;
+    var plaques_index = 0;
+    var bold_threshold = 100;
+    var cluster_group = new L.MarkerClusterGroup({
+        maxClusterRadius: 30 /* pixels */, /* TODO */
+        disableClusteringAtZoom: 15, /* TODO */
+        polygonOptions: {
+            stroke: false,
+            color: '#000000',
+            opacity: 0.5
+        },
+        iconCreateFunction: function(cluster) {
+            return new L.DivIcon({
+                html: '<span style="color:' + (cluster.getChildCount() > bold_threshold ? 'black': '#3E3E3E') + '">' + cluster.getChildCount() + '</span>',
+                className: 'mapMarkerCluster',
+                iconSize: new L.Point(35, 35)
+            });
+        }
+    });
+
+    function make_marker(i) {
+        console.log(i + ' ' + plaques_json[i]['lat'] + ' ' +  plaques_json[i]['lng']);
+        var latlng = L.latLng(plaques_json[i]['lat'], plaques_json[i]['lng']);
         var popup_html =
-            '<a href="' + plaque_json['title_page_url'] + '" target="_blank">' +
-                plaque_json['title'] +
+            '<a href="' + plaques_json[i]['title_page_url'] + '" target="_blank">' +
+                plaques_json[i]['title'] +
                 '<br />' +
-                '<img src="' + plaque_json['img_url_tiny'] +
+                '<img src="' + plaques_json[i]['img_url_tiny'] +
                       '" width="100" height="100" ' +
-                      'alt="' + plaque_json['title'] + ' image" ' +
+                      'alt="' + plaques_json[i]['title'] + ' image" ' +
                 '/>' +
             '</a>';
 
@@ -32,46 +56,50 @@
         return marker;
     }
 
-    function draw_map(map, plaques_json) {
+    var load_markers = function() {
+        while (plaques_index < plaques_length) {
+            marker = make_marker(plaques_index);
+            ++plaques_index;
+            markers.push(marker);
+        }
+    }
 
-        var bold_threshold = 100;
+    var add_markers = function() {
+        for (i = 0; i < markers.length; i++) {
+            cluster_group.addLayer(markers[i]);
 
-        var cluster_group = new L.MarkerClusterGroup({
-            maxClusterRadius: 30 /* pixels */, /* TODO */
-            disableClusteringAtZoom: 15, /* TODO */
-            polygonOptions: {
-                stroke: false,
-                color: '#000000',
-                opacity: 0.5
-            },
-            iconCreateFunction: function(cluster) {
-                return new L.DivIcon({
-                    html: '<span style="color:' + (cluster.getChildCount() > bold_threshold ? 'black': '#3E3E3E') + '">' + cluster.getChildCount() + '</span>',
-                    className: 'mapMarkerCluster',
-                    iconSize: new L.Point(35, 35)
-                });
+            // Release control to the browser periodically
+            if (plaques_index % 100 == 0) {
+                setTimeout(load_markers, 0);
             }
-        });
+        }
+    }
 
-        $(plaques_json).each(function() {
-            cluster_group.addLayer(marker_for_json(this));
-        });
+    var draw_map = function(map) {
 
+        // Add every plaque to the cluster group
+        load_markers();
+        add_markers();
         map.addLayer(cluster_group);
         {% if not bigmap_center %}
             map.fitBounds(cluster_group.getBounds());
         {% endif %}
 
         L.control.scale({imperial: false}).addTo(map);
+
+        // Turn off the loading spinner
+        $('.loading').hide();
     }
 
-    function initialize() {
-
+    var initialize = function() {
+        // Turn on the loading spinner
         $('.loading').show();
 
         var mapCanvasID;
         if (null != document.getElementById('map')) {
             mapCanvasID = 'map';
+        } else if (null != document.getElementById('featured_row_map')) {
+            mapCanvasID = 'featured_row_map';
         } else {
             mapCanvasID = 'bigmap';
         }
@@ -86,56 +114,33 @@
             {% endif %}
         {% endif %}
 
+        // Use the precomputed plaques file if there are lots of plaques
         {% if plaques|length >= dynamic_plaque_cutoff or bigmap %}
 
-            // Precomputed markers from /static/plaques_update.json
-            //
-            // Either:
-            //   a) If map_markers_str is specified, make a set of the requested markers,
-            //   b) If map_markers_str is empty draw, every marker in plaques.json
-            //
-
             var jp_url = '/static/plaques_updated.json';
-
             $.ajax({
                 url: jp_url,
                 dataType: 'json',
                 success: function(json) {
-
-                    var plaques = json['plaques'];
-
-                    // filter the markers
-                    var map_markers_filter_urls_string = '{{map_markers_str}}';
-                    var map_markers_filter_urls = new Set();
-                    if (map_markers_filter_urls_string != '') {
-                        map_markers_filter_urls = new Set(map_markers_filter_urls_string.split('&'));
-
-                        plaques = $(plaques).filter(function(index) {
-                            return map_markers_filter_urls.has(this.title_page_url);
-                        });
-                    }
-
-                    draw_map(map, plaques);
-                    $('.loading').hide();
+                    plaques_json = json['plaques'];
+                    plaques_length = plaques_json.length;
+                    draw_map(map);
                 }
             });
 
         {% else %}
-
-            var json = [];
-
             {% for plaque in plaques %}
-                json.push({
+                plaques_json.push({
                    'title': '{{plaque.title | striptags | escape}}',
                    'title_page_url': '{{plaque.title_page_url}}',
                    'img_url_tiny': '{{plaque.img_url_tiny}}',
                    'lat': {{plaque.location.lat}},
-               'lng': {{plaque.location.lon}},
+                   'lng': {{plaque.location.lon}},
                 });
             {% endfor %}
 
-            draw_map(map, json);
-            $('.loading').hide();
+            plaques_length = plaques_json.length;
+            draw_map(map);
         {% endif %}
 
     }

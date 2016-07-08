@@ -22,7 +22,7 @@
     {% if plaque.approved or loginout.is_admin %}
         <div class="row">
             <div class="col-xs-12 col-md-6">
-                <a href="{{plaque.img_url_big}}"><img src="{{plaque.img_url_display}}" class="img-responsive center-block"/></a>
+                <a href="{{plaque.img_url_big}}"><img src="{{plaque.img_url_display}}" class="img-responsive img-center"/></a>
             </div>
             <div class="col-xs-12 col-md-6">
                 <div class="panel panel-default">
@@ -33,7 +33,9 @@
                         </ul>
                     </div>
                 </div>
-                <p>Originally added {{plaque.created_on.strftime('%Y-%m-%d')}}.</p>
+                {% if loginout.is_admin %}
+                    <p>Originally added {{plaque.created_on.strftime('%Y-%m-%d')}}.</p>
+                {% endif %}
                 <p>
                     <a class="btn btn-primary" role="button" href="/nearby/{{plaque.location.lat}}/{{plaque.location.lon}}">Nearby Plaques</a>
                     <a class="btn btn-primary pull-right" role="button" href="http://maps.google.com/maps?&z=21&q={{plaque.location.lat}}+{{plaque.location.lon}}&ll={{plaque.location.lat}}+{{plaque.location.lon}}" target="_blank">On Google Maps</a>

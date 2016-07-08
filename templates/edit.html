@@ -2,10 +2,11 @@
 
 {% block content %}
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCPGpsCWGQww0hOPhblgBu34eoVnzf5sKo"></script>
+<script src="/static/nearhere.js"></script>
 <script src="/static/gmaps-latlng-picker.js"></script>
 
 <div class="container-fluid">
-    <h1>Plaque Edit Page</h1>
+    <h1>Edit Plaque</h1>
 
         <form
             action="/edit"
@@ -30,13 +31,15 @@
                 </div>
 
                 <div class="form-group">
-                    <legend>Upload your Plaque (upload file or type/copy a URL):</legend>
-                    <img src="{{plaque.img_url_display}}"/>
+                    <legend>Plaque Image:</legend>
+                    <img class="img-responsive" src="{{plaque.img_url_display}}"/>
                     <div class="row">
                         <div class="col-xs-12 col-md-4">
-                            <input type="file"
-                                   id="plaque_image_file"
-                                   name="plaque_image_file">
+                            <label class="btn btn-default btn-file">
+                                <input type="file"
+                                       id="plaque_image_file"
+                                       name="plaque_image_file">
+                            </label>
                         </div>
                         <div class="col-xs-12 col-md-8">
                             <input type="url"
@@ -55,6 +58,7 @@
                         </div>
                     </div>
                 </div>
+
                 <div class="form-group">
                     <legend>Plaque Tags</legend>
                     <input type="text"
@@ -67,8 +71,13 @@
             </div>
 
             <div class="col-xs-12 col-md-6">
+
+                {% include 'parts/map_picker.html' %}
+            </div>
+
+            <div class="col-xs-12 col-md-6">
                 <div class="form-group">
-                    <legend>Tell us about the plaque. Transcribe it if you can.</legend>
+                    <legend>Description</legend>
                     <textarea class="form-control"
                               id="plaque_description"
                               name="description"
@@ -79,17 +88,21 @@
                 </div>
             </div>
 
-            <div class="col-xs-12 col-md-6">
-                {% include 'parts/map_picker.html' %}
-            </div>
-
             <div class="col-xs-11">
-                <button type="submit" class="btn btn-primary">Update Plaque Details</button>
+                <button type="submit" class="btn btn-primary">Update Plaque</button>
             </div>
         </form>
 </div>
 
-<script src="https://tinymce.cachefly.net/4.2/tinymce.min.js"></script>
-<script>tinymce.init({selector:'textarea', gecko_spellcheck: true});</script>
+<script src="https://cdn.tinymce.com/4/tinymce.min.js"></script>
+<script>
+tinymce.init({
+  selector:'#plaque_description',
+  browser_spellcheck: true,
+  menu: {
+    tools: {title: 'Tools', items: 'spellchecker code'}
+  }
+});
+</script>
 
 {% endblock %}

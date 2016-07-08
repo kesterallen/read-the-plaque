@@ -54,8 +54,6 @@
                     </div>
                 </div>
 
-
-
                 <div class="form-group">
                     <legend>Tag your Plaque</legend>
                     <input type="text"
@@ -108,7 +106,7 @@ tinymce.init({
 <!-- Prevent "enter" keystrokes in the Google Maps search from submiting the plaque -->
 <script>
 $(document).ready(function() {
-  $(window).keydown(function(event){
+  $('.gllpLatlonPicker').keydown(function(event){
     if(event.keyCode == 13) {
       event.preventDefault();
       return false;

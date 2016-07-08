@@ -53,6 +53,8 @@ body {
     margin: 0 auto;
 }
 
+.img-center { margin: 0 auto; }
+
 /* Sticky footer styles */
 html {
     position: relative;
@@ -77,7 +79,12 @@ body {
 /* end Sticky footer styles */
 
 #map {
-    height: 400px;
+    height: 600px;
+    background-color: #D1D1D1;
+}
+
+#featured_row_map {
+    height: 90%;
     background-color: #D1D1D1;
 }
 

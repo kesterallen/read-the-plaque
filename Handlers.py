@@ -44,7 +44,9 @@ GCS_BUCKET = '/read-the-plaque.appspot.com'
 # Don't change this to, say, readtheplaque.com
 
 DEF_PLAQUESET_NAME = 'public'
+
 DEF_NUM_PER_PAGE = 20
+DYNAMIC_PLAQUE_CUTOFF = 50
 DEF_NUM_PENDING = 5
 DEF_NUM_NEARBY = 5
 DEF_MAP_ICON_SIZE_PIX = 16
@@ -93,7 +95,7 @@ def get_template_values(**kwargs):
             'num_pending': num_pending,
             'footer_items': footer_items,
             'loginout': loginout_output,
-            'dynamic_plaque_cutoff': 21,
+            'dynamic_plaque_cutoff': DYNAMIC_PLAQUE_CUTOFF,
         }
         memcache_status = memcache.set(memcache_name, template_values)
         if not memcache_status:
@@ -431,8 +433,6 @@ class ViewPlaquesPage(webapp2.RequestHandler):
         template_values = get_template_values(
             plaques=plaques, next_cursor_urlsafe=cursor_urlsafe, more=more)
         #logging.info('in _get_template_values, next_cursor=%s, cursor_urlsafe=%s, more=%s' % (next_cursor, cursor_urlsafe, more))
-        if is_random:
-            template_values['map_markers_str'] = get_map_markers_str(plaques)
         if is_featured:
             featured = get_featured()
             template_values['featured_plaque'] = featured
@@ -516,9 +516,7 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
                 self.redirect(plaque.title_page_url)
                 return
 
-            map_markers_str = get_map_markers_str([plaque]),
-            template_values = get_template_values(
-                plaques=[plaque], map_markers_str=map_markers_str)
+            template_values = get_template_values(plaques=[plaque])
 
             template = JINJA_ENVIRONMENT.get_template('one.html')
             page_text = template.render(template_values)
@@ -554,8 +552,8 @@ class RandomPlaquesPage(ViewPlaquesPage):
     """
     Get a page of random plaques.
     """
-    def get(self):
-        page_text = self._get_template_text(per_page=5, is_random=True, is_featured=False)
+    def get(self, per_page=5):
+        page_text = self._get_template_text(per_page=per_page, is_random=True, is_featured=False)
         self.response.write(page_text)
 
 class RandomPlaque(ViewOnePlaqueParent):
@@ -704,11 +702,9 @@ class ViewTag(webapp2.RequestHandler):
             plaques = query.filter(Plaque.tags == tag
                            ).order(-Plaque.created_on
                            ).fetch(limit=DEF_NUM_PER_PAGE)
-            map_markers_str = get_map_markers_str(plaques)
 
             template = JINJA_ENVIRONMENT.get_template('all.html')
-            template_values = get_template_values(
-                plaques=plaques, map_markers_str=map_markers_str)
+            template_values = get_template_values(plaques=plaques)
             page_text = template.render(template_values)
             memcache_status = memcache.set(memcache_name, page_text)
             if not memcache_status:
@@ -1141,9 +1137,7 @@ class SearchPlaques(webapp2.RequestHandler):
             plaques = [p for p in plaques if p is not None]
 
         template = JINJA_ENVIRONMENT.get_template('all.html')
-        map_markers_str = get_map_markers_str(plaques)
-        template_values = get_template_values(
-            plaques=plaques, map_markers_str=map_markers_str)
+        template_values = get_template_values(plaques=plaques)
         self.response.write(template.render(template_values))
 
 class SearchPlaquesGeo(webapp2.RequestHandler):
@@ -1188,11 +1182,9 @@ class SearchPlaquesGeo(webapp2.RequestHandler):
         self.response.write(template.render(template_values))
 
     def _write_geo_page(self, geo_plaques_approved, lat, lng):
-        map_markers_str = get_map_markers_str(geo_plaques_approved)
-
         template = JINJA_ENVIRONMENT.get_template('all.html')
         template_values = get_template_values(
-            plaques=geo_plaques_approved, map_markers_str=map_markers_str,
+            plaques=geo_plaques_approved,
             mapcenter={'lat': lat, 'lng': lng})
         self.response.write(template.render(template_values))
 
@@ -1389,9 +1381,7 @@ class ViewPending(webapp2.RequestHandler):
         logging.info("User %s is viewing pending plaques %s" % (name, plaques))
 
         template = JINJA_ENVIRONMENT.get_template('all.html')
-        map_markers_str = get_map_markers_str(plaques)
-        template_values = get_template_values(
-            map_markers_str=map_markers_str, plaques=plaques)
+        template_values = get_template_values(plaques=plaques)
         template_text = template.render(template_values)
         self.response.write(template_text)
 

@@ -23,6 +23,7 @@ def main():
         ('/test/?', h.ViewPlaquesTest),
         ('/plaque/(.+?)/?', h.ViewOnePlaque),
         ('/plaque/?', h.ViewOnePlaque),
+        ('/randompage/(.+?)/?', h.RandomPlaquesPage),
         ('/randompage.*', h.RandomPlaquesPage),
         ('/random.*', h.RandomPlaque),
         #('/plaque_comment/(.+?)', h.ViewOnePlaqueFromComment),
