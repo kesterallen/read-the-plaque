@@ -361,7 +361,7 @@ class ViewPlaquesTest(webapp2.RequestHandler):
         plaques, next_cursor, more = Plaque.fetch_page(20)
         template_values = get_template_values(plaques=plaques)
         template_values['featured_plaque'] = get_featured()
-        template = JINJA_ENVIRONMENT.get_template('all.html')
+        template = JINJA_ENVIRONMENT.get_template('test.html')
         template_text = template.render(template_values)
         self.response.write(template_text)
 

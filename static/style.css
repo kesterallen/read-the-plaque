@@ -161,7 +161,7 @@ body {
     /*background-color: #6796a0;*/  /* RTP blue */
 }
 
-.pinsurround a {
+.nounderline a {
     text-decoration: none;
 }
 
