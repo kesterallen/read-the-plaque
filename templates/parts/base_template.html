@@ -13,16 +13,11 @@
     ga('send', 'pageview');
 </script>
 
-<link rel="stylesheet" href="/static/style.css">
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
-<!--<link rel="stylesheet" href="/static/bootstrap-3.3.5.min.css">-->
+<link rel="stylesheet" href="/static/style.css">
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
-<!--
-<script src="/static/jquery-1.11.3.min.js"></script>
-script src="/static/bootstrap-3.3.5.min.js"></script>
--->
 
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -54,14 +49,14 @@ script src="/static/bootstrap-3.3.5.min.js"></script>
 {% endif %}
 
 <title>Read the Plaque
-{% if plaque %}
+  {% if plaque %}
     -
     {% if fake_plaque_for_root_url_previews %}
-        {{plaque.description}}
+      {{plaque.description}}
     {% else %}
-        {{plaque.title}}
+      {{plaque.title}}
     {% endif %}
-{% endif %}
+  {% endif %}
 </title>
 </head>
 
@@ -72,7 +67,7 @@ script src="/static/bootstrap-3.3.5.min.js"></script>
 {% endblock %}
 
 {% if footer_items %}
-    {% include 'parts/footer.html' %}
+  {% include 'parts/footer.html' %}
 {% endif %}
 
 {% if plaques or bigmap %} {% include 'parts/map_pane.html' %} {% endif %}

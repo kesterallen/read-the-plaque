@@ -1,61 +1,78 @@
 {% extends 'parts/base_template.html' %}
 
 {% block content %}
+
+<!-- Write out the plaques: -->
 <div class="container-fluid">
-    <!--
-    Write out the plaques:
-    -->
-    <div class="row"><div class="col-xs-0 col-sm-1"></div>
-    <div class="col-xs-12 col-sm-10">
-        <!-- 
-        If there is a featured plaque, draw a special pane for it, and draw 
-        a small map.
-        -->
-        {% if featured_plaque %}
-            {% include 'parts/featured_row.html' %}
-        {% endif %}
 
-        <!-- If there is no featured plaque, draw the map at the top of the page -->
-        {% if not featured_plaque and plaques|length > 0 %}
-            <div class="row">
-                <div class="col-xs-12 col-centered">
-                    <div id="map"></div>
-                </div>
-            </div>
-        {% endif %}
+  <!-- If there is a featured plaque, draw a separate row with a small map.  -->
+  {% if featured_plaque %}
+    <div class="row">
+      <div class="col-xs-1"></div>
+      <div class="col-xs-10">
+        {% include 'parts/featured_row.html' %}
+      </div>
+      <div class="col-xs-1"></div>
+   </div>
+  {% endif %}
 
-        {% if plaques|length == 0 %}
-            <h2>No plaques in that search</h2>
-        {% endif %}
+  <!-- If there is no featured plaque, draw the map at the top of the page -->
+  {% if not featured_plaque and plaques|length > 0 %}
+    <div class="row">
+      <div class="col-xs-1"></div>
+      <div class="col-xs-10 col-centered">
+        <div id="map"></div>
+      </div>
+      <div class="col-xs-1"></div>
+    </div>
+  {% endif %}
 
-        <div id="wrapper">
-            <div id="columns">
-                {% for plaque in plaques %}
-                    <a class="nounderline" href="{{plaque.title_page_url}}">
-                        <div class="pin">
-                            <h3>{{plaque.title}}</h3>
-                            <img src="{{plaque.img_url_thumbnail}}"/>
-                            <p>{{plaque.description | striptags | wordwrap(50, True) | truncate(200)}}</p>
-                            <ul class="list-inline">{% for tag in plaque.tags %} <li>{{tag | truncate(15, True)}}</li>{% endfor %}</ul>
-                        </div>
-                    </a>
-                {% endfor %}
-            </div>
+  <!-- Loop over the plaques -->
+  <div class="row">
+    <div class="col-xs-1"></div>
+    <div class="col-xs-10 col-centered">
+
+      {% if plaques|length == 0 %}
+        <h2>No plaques in that search</h2>
+      {% endif %}
+
+      <div id="wrapper">
+        <div id="columns">
+          {% for plaque in plaques %}
+            <a class="nounderline" href="{{plaque.title_page_url}}">
+              <div class="pin">
+                <h3>{{plaque.title}}</h3>
+                <img src="{{plaque.img_url_thumbnail}}"/>
+                <p>{{plaque.description | striptags | wordwrap(50, True) | truncate(200)}}</p>
+                <ul class="list-inline">{% for tag in plaque.tags %} <li>{{tag | truncate(15, True)}}</li>{% endfor %}</ul>
+              </div>
+            </a>
+          {% endfor %}
         </div>
+      </div>
 
-        <!-- If there is an active cursor, make a paginator -->
-        {% if more %}
-            <nav>
-                <ul class="pagination pagination-sm">
-                    <li>
-                        <a class="btn btn-default" href="/page/{{next_cursor_urlsafe}}"><span>Next</span></a>
-                    </li>
-                    <li>{{cursor_urlsafe}}</li>
-                </ul>
-            </nav>
-        {% endif %}
+    </div>
+    <div class="col-xs-1"></div>
+  </div>
 
-    </div><div class="col-xs-0 col-sm-1"></div></div>
+  <!-- If there is an active cursor, make a paginator -->
+  {% if more %}
+    <div class="row">
+      <div class="col-xs-4"></div>
+      <div class="col-xs-4">
+        <nav>
+          <ul class="pagination pagination-sm">
+            <li>
+              <a class="btn btn-default" href="/page/{{next_cursor_urlsafe}}"><span>Next</span></a>
+            </li>
+            <li>{{cursor_urlsafe}}</li>
+          </ul>
+        </nav>
+      </div>
+      <div class="col-xs-4"></div>
+    </div>
+  {% endif %}
+
 </div>
 {% endblock %}
 
@@ -63,12 +80,12 @@
 {% block bottomofbody %}
 <!--
 <script>
-    $('#map').ready(function(){
-        if ($('#featured-plaque').length > 0) {
-            fp_height = $('#featured-plaque').height();
-            $('#map').height(fp_height - 80);
-        }
-    });
+  $('#map').ready(function(){
+    if ($('#featured-plaque').length > 0) {
+      fp_height = $('#featured-plaque').height();
+      $('#map').height(fp_height - 80);
+    }
+  });
 </script>
 -->
 {% endblock %}

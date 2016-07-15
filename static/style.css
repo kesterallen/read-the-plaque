@@ -38,15 +38,6 @@ body {
     color: #6796a0;  /* RTP blue */
 }
 
-
-/* Make navbar buttons stand out more when hovered */
-/* TODO: this isn't working */
-.navbar > a:hover, .navbar > a:focus {
-    background-color: #40495A;
-    color: #FFF;
-}
-
-
 /* Center column class (used by the map) */
 .col-centered {
     float: none;
