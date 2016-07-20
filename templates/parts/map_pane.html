@@ -29,7 +29,6 @@
     });
 
     function make_marker(i) {
-        console.log(i + ' ' + plaques_json[i]['lat'] + ' ' +  plaques_json[i]['lng']);
         var latlng = L.latLng(plaques_json[i]['lat'], plaques_json[i]['lng']);
         var popup_html =
             '<a href="' + plaques_json[i]['title_page_url'] + '" target="_blank">' +

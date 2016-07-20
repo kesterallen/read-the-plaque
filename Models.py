@@ -123,27 +123,6 @@ class Plaque(ndb.Model):
         logging.info("In Plaque.page_url: %s plaques %s %s" % (len(plaques), next_cursor, more))
         return plaques, next_cursor, more
 
-#    @classmethod
-#    def approved_list(cls, offset=0, limit=FETCH_LIMIT_PLAQUES):
-#        #if disable_memcache:
-#        #    plaques = Plaque.query().filter(Plaque.approved == True
-#        #                           ).order(-Plaque.created_on
-#        #                           ).fetch(offset=offset, limit=limit)
-#        #    return plaques
-#
-#        memcache_name = 'approved %s %s' % (offset, limit)
-#        plaques = memcache.get(memcache_name)
-#        if plaques is None:
-#            plaques = Plaque.query().filter(Plaque.approved == True
-#                                   ).order(-Plaque.created_on
-#                                   ).fetch(offset=offset, limit=limit)
-#            memcache_status = memcache.set(memcache_name, plaques)
-#            if not memcache_status:
-#                logging.debug("memcaching for Plaque.approved() failed")
-#        else:
-#            logging.debug("memcache.get worked for Plaque.approved()")
-#        return plaques
-
     @classmethod
     def num_pending(cls, num=20): # num is the max to return
         count = Plaque.query().filter(Plaque.approved != True).count(limit=num)
@@ -312,10 +291,6 @@ class Plaque(ndb.Model):
                 'tags': self.tags,
                 'comments': self.comments,
                 'approved': self.approved,
-                #'created_on': str(self.created_on),
-                #'created_by': self.created_by,
-                #'updated_on': str(self.updated_on),
-                #'updated_by': self.updated_by,
                 'old_site_id': self.old_site_id,
             }
         return plaque_dict
