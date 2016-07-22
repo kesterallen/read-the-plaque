@@ -65,10 +65,10 @@ def main():
             post_url_update, data={'updated_on': last_updated_offset})
 
         new_plaques = json.loads(resp.content)
-        noun = "plauqes"
+        suffix = "s"
         if len(new_plaques) == 1:
-            noun = "plauqe"
-        print "Found %s new %s." % (len(new_plaques), noun)
+            suffix = ""
+        print "Found %s new plauque%s." % (len(new_plaques), suffix)
         if len(new_plaques) == 0:
             sys.exit(1)
 

@@ -6,92 +6,90 @@
 <script src="/static/gmaps-latlng-picker.js"></script>
 
 <div class="container-fluid">
-    <h1>Edit Plaque</h1>
+  <div class="row">
+    <div class="col-xs-6 col-xs-offset-3">
+      <h1>Edit Plaque</h1>
+    </div>
+  </div>
 
-        <form
-            action="/edit"
-            method="POST"
-            enctype="multipart/form-data">
+  <form
+    action="/edit"
+    method="POST"
+    enctype="multipart/form-data">
 
-            <input type="hidden" name="plaque_key" value="{{plaque.key.urlsafe()}}">
-            <div class="col-xs-10 col-xs-offset-1">
-            {% if message %}<h2>{{message}}</h2>{% endif %}
+    <input type="hidden" name="plaque_key" value="{{plaque.key.urlsafe()}}">
+
+    <div class="row">
+      <div class="col-xs-10 col-xs-offset-1">
+        {% if message %}<h2>{{message}}</h2>{% endif %}
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-xs-10 col-xs-offset-1">
+        <div class="form-group">
+          <legend>Plaque Name</legend>
+          <input type="text"
+               class="form-control"
+               id="plaque_title"
+               name="title"
+               required
+               value="{{plaque.title | e}}"
+               placeholder="Plaque Name">
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-xs-10 col-xs-offset-1 col-md-4">
+        <div class="form-group">
+  
+          <legend>Plaque Image:</legend>
+          <a href="{{plaque.img_url_big}}" target="_blank"><img class="img-responsive" src="{{plaque.img_url_display}}"/></a>
+  
+          <div class="row">
+            <div class="col-xs-10 col-xs-offset-1 col-md-4">
+              <label class="btn btn-default btn-file">
+                <input type="file" id="plaque_image_file" name="plaque_image_file">
+              </label>
+            </div>
+  
+            <div class="col-xs-10 col-xs-offset-1 col-md-4">
+              <input type="url" id="plaque_image_url" name="plaque_image_url" placeholder="Image URL" style="width: 100%;">
+              <select id="img_rot" name="img_rot">
+                <option value="0">Rotate Image?</option>
+                <option value="90">90</option>
+                <option value="180">180</option>
+                <option value="270">270</option>
+              </select>
             </div>
 
-            <div class="col-xs-10 col-xs-offset-1 col-md-6">
-                <div class="form-group">
-                    <legend>Plaque Name</legend>
-                    <input type="text"
-                           class="form-control"
-                           id="plaque_title"
-                           name="title"
-                           required
-                           value="{{plaque.title | e}}"
-                           placeholder="Plaque Name">
-                </div>
+          </div>
 
-                <div class="form-group">
-                    <legend>Plaque Image:</legend>
-                    <img class="img-responsive" src="{{plaque.img_url_display}}"/>
-                    <div class="row">
-                        <div class="col-xs-10 col-xs-offset-1 col-md-4">
-                            <label class="btn btn-default btn-file">
-                                <input type="file"
-                                       id="plaque_image_file"
-                                       name="plaque_image_file">
-                            </label>
-                        </div>
-                        <div class="col-xs-10 col-xs-offset-1 col-md-8">
-                            <input type="url"
-                                   id="plaque_image_url"
-                                   name="plaque_image_url"
-                                   placeholder="Image URL"
-                                   style="width: 100%;"
-                                   >
-                            <select id="img_rot"
-                                    name="img_rot">
-                                <option value="0">Rotate Image?</option>
-                                <option value="90">90</option>
-                                <option value="180">180</option>
-                                <option value="270">270</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
+        </div>
+      </div>
 
-                <div class="form-group">
-                    <legend>Plaque Tags</legend>
-                    <input type="text"
-                           class="form-control"
-                           id="plaque_tags"
-                           name="tags"
-                           value="{{plaque.tags| join(', ')}}"
-                           placeholder="Tags to characterize the plaque. Multiple tags can be separated by commas.">
-                </div>
-            </div>
+      <div class="col-xs-10 col-xs-offset-1 col-md-4">
+        <div class="form-group">
+          <legend>Description</legend>
+          <textarea class="form-control" id="plaque_description" name="description" required rows="15">{{plaque.description}}</textarea>
 
-            <div class="col-xs-10 col-xs-offset-1 col-md-6">
+          <legend>Plaque Tags</legend>
+          <input type="text" class="form-control" id="plaque_tags" name="tags" value="{{plaque.tags| join(', ')}}" placeholder="Tags to characterize the plaque. Multiple tags can be separated by commas.">
+        </div>
+      </div>
 
-                {% include 'parts/map_picker.html' %}
-            </div>
+      <div class="col-xs-10 col-xs-offset-1 col-md-4">
+        {% include 'parts/map_picker.html' %}
+      </div>
+    </div>
 
-            <div class="col-xs-10 col-xs-offset-1 col-md-6">
-                <div class="form-group">
-                    <legend>Description</legend>
-                    <textarea class="form-control"
-                              id="plaque_description"
-                              name="description"
-                              required
-                              rows="5">
-                        {{plaque.description}}
-                    </textarea>
-                </div>
-            </div>
+    <div class="col-xs-10 col-xs-offset-1">
+      <button type="submit" class="btn btn-primary">Update Plaque</button>
+    </div>
+  </form>
 
-            <div class="col-xs-10 col-xs-offset-1">
-                <button type="submit" class="btn btn-primary">Update Plaque</button>
-            </div>
-        </form>
+  </div>
 </div>
 
 <script src="https://cdn.tinymce.com/4/tinymce.min.js"></script>
@@ -100,7 +98,7 @@ tinymce.init({
   selector:'#plaque_description',
   browser_spellcheck: true,
   menu: {
-    tools: {title: 'Tools', items: 'spellchecker code'}
+  tools: {title: 'Tools', items: 'spellchecker code'}
   }
 });
 </script>
