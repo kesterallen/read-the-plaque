@@ -104,7 +104,7 @@ tinymce.init({
 <!-- Prevent "enter" keystrokes in the Google Maps search from submiting the plaque -->
 <script>
 $(document).ready(function() {
-  $('.gllpLatlonPicker').keydown(function(event){
+  $('.map_picker_form').keydown(function(event){
     if(event.keyCode == 13) {
       event.preventDefault();
       return false;

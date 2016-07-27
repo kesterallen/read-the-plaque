@@ -166,7 +166,7 @@ $.fn.gMapsLatLonPicker = (function() {
             _self.vars.MAPOPTIONS.zoom   = _self.params.defZoom;
             _self.vars.MAPOPTIONS.center = _self.vars.LATLNG;
 
-            _self.vars.map = new google.maps.Map($(_self.vars.cssID + ".gllpMap").get(0), _self.vars.MAPOPTIONS);
+            _self.vars.map = new google.maps.Map($(_self.vars.cssID + ".map_picker").get(0), _self.vars.MAPOPTIONS);
             _self.vars.geocoder = new google.maps.Geocoder();
             _self.vars.elevator = new google.maps.ElevationService();
 
@@ -240,7 +240,7 @@ $.fn.gMapsLatLonPicker = (function() {
 }(jQuery));
 
 $(document).ready( function() {
-    $(".gllpLatlonPicker").each(function() {
+    $(".map_picker_form").each(function() {
         $(document).gMapsLatLonPicker().init( $(this) );
     });
 });
