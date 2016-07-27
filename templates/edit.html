@@ -12,10 +12,7 @@
     </div>
   </div>
 
-  <form
-    action="/edit"
-    method="POST"
-    enctype="multipart/form-data">
+  <form action="/edit" method="POST" enctype="multipart/form-data">
 
     <input type="hidden" name="plaque_key" value="{{plaque.key.urlsafe()}}">
 
@@ -72,8 +69,15 @@
       <div class="col-xs-10 col-xs-offset-1 col-md-4">
         <div class="form-group">
           <legend>Description</legend>
-          <textarea class="form-control" id="plaque_description" name="description" required rows="15">{{plaque.description}}</textarea>
+          <textarea class="form-control" 
+                    id="plaque_description"
+                    name="description"
+                    required
+                    rows="15">{{plaque.description}}
+          </textarea>
+        </div>
 
+        <div class="form-group">
           <legend>Plaque Tags</legend>
           <input type="text" class="form-control" id="plaque_tags" name="tags" value="{{plaque.tags| join(', ')}}" placeholder="Tags to characterize the plaque. Multiple tags can be separated by commas.">
         </div>
@@ -82,14 +86,13 @@
       <div class="col-xs-10 col-xs-offset-1 col-md-4">
         {% include 'parts/map_picker.html' %}
       </div>
+
+      <div class="col-xs-10 col-xs-offset-1">
+        <button type="submit" class="btn btn-primary">Update Plaque</button>
+      </div>
     </div>
 
-    <div class="col-xs-10 col-xs-offset-1">
-      <button type="submit" class="btn btn-primary">Update Plaque</button>
-    </div>
   </form>
-
-  </div>
 </div>
 
 <script src="https://cdn.tinymce.com/4/tinymce.min.js"></script>
