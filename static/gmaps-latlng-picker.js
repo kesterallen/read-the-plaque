@@ -121,7 +121,8 @@ $.fn.gMapsLatLonPicker = (function() {
             function(results, status) {
                 if (status == google.maps.GeocoderStatus.OK) {
                     $(_self.vars.cssID + ".gllpZoom").val(11);
-                    _self.vars.map.setZoom( parseInt($(_self.vars.cssID + ".gllpZoom").val()) );
+                    //_self.vars.map.setZoom( parseInt($(_self.vars.cssID + ".gllpZoom").val()) );
+                    _self.vars.map.setZoom(18);
                     setPosition( results[0].geometry.location );
                 } else {
                     if (!silent) {
@@ -187,7 +188,8 @@ $.fn.gMapsLatLonPicker = (function() {
                 var lat = $(_self.vars.cssID + ".gllpLatitude").val();
                 var lng = $(_self.vars.cssID + ".gllpLongitude").val();
                 var latlng = new google.maps.LatLng(lat, lng);
-                _self.vars.map.setZoom( parseInt( $(_self.vars.cssID + ".gllpZoom").val() ) );
+                //_self.vars.map.setZoom( parseInt( $(_self.vars.cssID + ".gllpZoom").val() ) );
+                _self.vars.map.setZoom(18);
                 setPosition(latlng);
             });
 
@@ -214,7 +216,7 @@ $.fn.gMapsLatLonPicker = (function() {
                                                             position.coords.longitude);
                         _self.vars.marker.setPosition(latlng);
                         _self.vars.map.panTo(latlng);
-                        _self.vars.map.setZoom(14);
+                        _self.vars.map.setZoom(18);
                         
                         self_button.value = old_self_button_text;
                     },
