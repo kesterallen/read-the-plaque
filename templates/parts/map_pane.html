@@ -94,17 +94,17 @@
         // Turn on the loading spinner
         $('.loading').show();
 
-        var mapCanvasID;
+        var mapCanvasId;
         if (null != document.getElementById('map')) {
-            mapCanvasID = 'map';
+            mapCanvasId = 'map';
         } else if (null != document.getElementById('featured_row_map')) {
-            mapCanvasID = 'featured_row_map';
+            mapCanvasId = 'featured_row_map';
         } else {
-            mapCanvasID = 'bigmap';
+            mapCanvasId = 'bigmap';
         }
 
         L.mapbox.accessToken = 'pk.eyJ1IjoibG9nYW5yb2NrbW9yZSIsImEiOiJjaW10djNoY3QwMjNwdXBra2tndzljZW5kIn0.NVzBF6iK5Xrrre2fjtBP5Q';
-        var map = L.mapbox.map(mapCanvasID, 'mapbox.light').setView([0, 0], 1);
+        var map = L.mapbox.map(mapCanvasId, 'mapbox.light').setView([0, 0], 1);
         {% if bigmap_center %}
             {% if bigmap_zoom %}
                 map.setView([{{bigmap_lat}}, {{bigmap_lng}}], {{bigmap_zoom}});
