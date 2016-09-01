@@ -11,6 +11,7 @@ import os
 import random
 import re
 import urllib
+from utils import latlng_angles_to_dec, SubmitError
 import webapp2
 
 
@@ -59,29 +60,9 @@ JINJA_ENVIRONMENT = jinja2.Environment(
     extensions=['jinja2.ext.autoescape'],
     autoescape=False) # turn off autoescape to allow html descriptions
 
-class SubmitError(Exception):
-    pass
-
 # Set a parent key on the Plaque objects to ensure that they are all in the
 # same entity group. Queries across the single entity group will be consistent.
 # However, the write rate should be limited to ~1/second.
-
-def latlng_angles_to_dec(ref, latlng_angles):
-    """Convert a degrees, hours, minutes tuple to decimal degrees."""
-    latlng = float(latlng_angles[0]) + \
-             float(latlng_angles[1]) / 60.0 + \
-             float(latlng_angles[2]) / 3600.0
-    if ref == 'N' or ref == 'E':
-        pass
-    elif ref == 'S' or ref == 'W':
-        latlng *= -1.0
-    else:
-        raise SubmitError(
-            'reference "%s" needs to be either N, S, E, or W' % ref)
-
-    logging.info("converted %s %s %s to %s" % (
-        latlng_angles[0], latlng_angles[1], latlng_angles[2], latlng))
-    return latlng
 
 def get_template_values(**kwargs):
     memcache_name = 'template_values_%s' % users.is_current_user_admin()
@@ -486,11 +467,16 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
             elif plaque_key is not None:
                 try:
                     logging.debug("Trying old_site_id")
+                    # This int-cast will throw a ValueError and go to the
+                    # except block if plaque_key is not an int
                     old_site_id = int(plaque_key)
                     plaque = Plaque.query(
                         ).filter(Plaque.approved == True
                         ).filter(Plaque.old_site_id == old_site_id
                         ).get()
+                    if plaque is None:
+                        logging.debug("Old_site_id got a None plaque")
+                        raise ValueError("Old_site_id got a None plaque")
                 except ValueError as err:
                     # Get by title, allowing only admins to see unapproved ones:
                     logging.debug("Using plaque.title_url: '%s'" % plaque_key)
@@ -1332,32 +1318,6 @@ class DeleteOnePlaque(webapp2.RequestHandler):
         email_admin('%s Deleted plaque %s' % (name, plaque.title_url),
                     '%s Deleted plaque %s' % (name, plaque.title_url))
         self.redirect('/nextpending')
-
-
-#class DeleteEverything(webapp2.RequestHandler):
-#    def get(self):
-#        comments = Comment.query().fetch()
-#        for comment in comments:
-#            comment.key.delete()
-#
-#        plaques = Plaque.query().fetch()
-#        for plaque in plaques:
-#            plaque.key.delete()
-#
-#        num_images = 0
-#        images = gcs.listbucket(GCS_BUCKET)
-#        for image in images:
-#            num_images += 1
-#            try:
-#                gcs.delete(image.filename)
-#            except:
-#                pass
-#
-#        msg = "Deleted %s comments, %s plaques, %s images" % (
-#                len(comments), len(plaques), num_images)
-#
-#        memcache.flush_all()
-#        self.response.write(msg)
 
 class ViewNextPending(ViewOnePlaqueParent):
     def get(self):
