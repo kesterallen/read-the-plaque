@@ -11,12 +11,15 @@ import os
 import random
 import re
 import urllib
-from utils import latlng_angles_to_dec, SubmitError
+from utils import (
+    email_admin,
+    latlng_angles_to_dec,
+    SubmitError,
+)
 import webapp2
 
 
 from google.appengine.api import images
-from google.appengine.api import mail
 from google.appengine.api import memcache
 from google.appengine.api import search
 from google.appengine.api import users
@@ -30,8 +33,6 @@ import lib.cloudstorage as gcs
 from Models import Comment, Plaque, FeaturedPlaque, FETCH_LIMIT_PLAQUES
 
 PLAQUE_SEARCH_INDEX_NAME = 'plaque_index'
-ADMIN_EMAIL = 'kester+readtheplaque@gmail.com'
-NOTIFICATION_SENDER_EMAIL = 'kester@gmail.com'
 ADD_STATE_SUCCESS = 'success'
 ADD_STATE_ERROR = 'error'
 ADD_STATES = {'ADD_STATE_SUCCESS': ADD_STATE_SUCCESS,
@@ -91,16 +92,6 @@ def get_template_values(**kwargs):
     for k, v in kwargs.items():
         template_values[k] = v
     return template_values
-
-def email_admin(msg, body):
-    try:
-        mail.send_mail(sender=NOTIFICATION_SENDER_EMAIL,
-                       to=ADMIN_EMAIL,
-                       subject=msg,
-                       body=body,
-                       html=body)
-    except Exception as err:
-        logging.debug('mail failed: %s, %s' % (msg, err))
 
 def get_plaqueset_key(plaqueset_name=DEF_PLAQUESET_NAME):
     """

@@ -5,17 +5,17 @@
 <div class="container-fluid">
     <div class="row">
         <div class="col-xs-12">
-            <h1>{{plaque.title}}{% if not plaque.approved %} [Pending] {% endif %}
             {% if loginout.is_admin %}
-                <a class="btn btn-default" role="button" href="/edit/{{plaque.key.urlsafe()}}">Edit</a>
-                <a class="btn btn-default" role="button" href="/setfeatured/{{plaque.key.urlsafe()}}">Feature</a>
+                <a class="btn btn-default pull-right" role="button" href="/edit/{{plaque.key.urlsafe()}}">Edit</a>
+                <a class="btn btn-primary pull-right" role="button" href="/setfeatured/{{plaque.key.urlsafe()}}">Feature</a>
                 {% if not plaque.approved %}
-                    <form class="form-inline" action="/approve" method="POST">
+                    <form class="form-inline pull-right" action="/approve" method="POST">
                         <input type="hidden" name="plaque_key" value="{{plaque.key.urlsafe()}}">
-                        <button type="submit" class="btn btn-success">Approve</button>
+                        <button type="submit" class="btn btn-success pull-right">Approve</button>
                     </form>
                 {% endif %}
             {% endif %}
+            <h1>{{plaque.title}}{% if not plaque.approved %} [Pending] {% endif %}
             </h1>
         </div>
     </div>
@@ -38,7 +38,7 @@
                 {% endif %}
                 <p>
                     <a class="btn btn-primary" role="button" href="/nearby/{{plaque.location.lat}}/{{plaque.location.lon}}">Nearby Plaques</a>
-                    <a class="btn btn-primary pull-right" role="button" href="http://maps.google.com/maps?&z=21&q={{plaque.location.lat}}+{{plaque.location.lon}}&ll={{plaque.location.lat}}+{{plaque.location.lon}}" target="_blank">On Google Maps</a>
+                    <a class="btn btn-primary pull-right" role="button" href="http://maps.google.com/maps?&z=21&t=m&q=loc:{{"%.8f" % plaque.location.lat}}+{{"%.8f" % plaque.location.lon}}" target="_blank">On Google Maps</a>
                 </p>
 
                 <div id="map"></div>
@@ -75,4 +75,17 @@
     {% endif %}
 
 </div>
+{% endblock %}
+
+{% block bottomofbody %}
+<!--
+<script>
+  $('#map').ready(function(){
+    if ($('#featured-plaque').length > 0) {
+      fp_height = $('#featured-plaque').height();
+      $('#map').height(fp_height - 80);
+    }
+  });
+</script>
+-->
 {% endblock %}

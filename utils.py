@@ -1,4 +1,10 @@
 
+from google.appengine.api import mail
+import logging
+
+ADMIN_EMAIL = 'kester+readtheplaque@gmail.com'
+NOTIFICATION_SENDER_EMAIL = 'kester@gmail.com'
+
 class SubmitError(Exception):
     pass
 
@@ -18,4 +24,14 @@ def latlng_angles_to_dec(ref, latlng_angles):
     logging.info("converted %s %s %s to %s" % (
         latlng_angles[0], latlng_angles[1], latlng_angles[2], latlng))
     return latlng
+
+def email_admin(msg, body):
+    try:
+        mail.send_mail(sender=NOTIFICATION_SENDER_EMAIL,
+                       to=ADMIN_EMAIL,
+                       subject=msg,
+                       body=body,
+                       html=body)
+    except Exception as err:
+        logging.debug('mail failed: %s, %s' % (msg, err))
 
