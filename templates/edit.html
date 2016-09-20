@@ -106,4 +106,16 @@ tinymce.init({
 });
 </script>
 
+<!-- Prevent "enter" keystrokes in the Google Maps search from submiting the plaque -->
+<script>
+$(document).ready(function() {
+  $('.map_picker_form').keydown(function(event){
+    if(event.keyCode == 13) {
+      event.preventDefault();
+      return false;
+    }
+  });
+});
+</script>
+
 {% endblock %}

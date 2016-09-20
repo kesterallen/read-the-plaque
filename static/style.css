@@ -63,7 +63,7 @@ body {
 .footer {
     width: 100%;
     /* Set the fixed height of the footer here */
-    height: 350px;
+    height: 400px;
     background-color: #f5f5f5;
     padding-top: 10px; /* put a smidge of blank space at the top of the footer */
 }

@@ -50,6 +50,8 @@ def main():
         ('/pending/?', h.ViewPending),
         ('/pending/(.*?)/?', h.ViewPending),
         ('/nextpending/?', h.ViewNextPending),
+        ('/randpending/?', h.ViewPendingRandom),
+        ('/randpending/(.*?)/?', h.ViewPendingRandom),
         ('/disapprove', h.DisapprovePlaque),
         ('/approve', h.ApprovePending),
         ('/approveall', h.ApproveAllPending),

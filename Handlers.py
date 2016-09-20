@@ -702,27 +702,6 @@ class About(webapp2.RequestHandler):
         template_values = get_template_values()
         self.response.write(template.render(template_values))
 
-#class AddComment(webapp2.RequestHandler):
-#    @ndb.transactional(xg=True)
-#    def post(self):
-#        plaque_key = self.request.get('plaque_key')
-#        plaque = ndb.Key(urlsafe=plaque_key).get()
-#
-#        comment_text = self.request.get('comment_text')
-#        comment = Comment()
-#        comment.text = comment_text
-#        comment.put()
-#
-#        if len(plaque.comments) < 1:
-#            plaque.comments = [comment.key]
-#        else:
-#            plaque.comments.append(comment.key)
-#        plaque.put()
-#        memcache.flush_all()
-#
-#        #email_admin(plaque, comment)
-#        self.redirect(plaque.title_url)
-
 class AddPlaque(webapp2.RequestHandler):
     """
     Add a plaque entity. Transactional in the _post method.
@@ -1237,7 +1216,6 @@ class FlushMemcache(webapp2.RequestHandler):
 class Counts(webapp2.RequestHandler):
     def get(self):
         find_orphans = self.request.get('find_orphans')
-        num_comments = Comment.query().count()
         query = Plaque.query()
         num_plaques = query.count()
         num_pending = query.filter(Plaque.approved == False).count()
@@ -1264,10 +1242,15 @@ class Counts(webapp2.RequestHandler):
         else:
             orphan_pics.add("didn't check for orphans")
 
-        msg = "Count: %s comments, %s plaques (%s pending), " \
-              "%s images, orphans: %s<hr>%s" % (
-              num_comments, num_plaques, num_pending, num_images, orphan_pics,
-              pics_count)
+        msg = """
+            <ul>
+                <li>%s plaques</li>
+                <li>%s pending</li>
+                <li>%s images</li>
+                <li>orphans: %s</li>
+            </ul>
+            """ % (
+            num_plaques, num_pending, num_images, str(orphan_pics))
         self.response.write(msg)
 
 class DeleteOnePlaque(webapp2.RequestHandler):
@@ -1321,12 +1304,8 @@ class ViewNextPending(ViewOnePlaqueParent):
         self.response.write(page_text)
 
 class ViewPending(webapp2.RequestHandler):
-    def get(self, num=DEF_NUM_PENDING):
-        try:
-            num = int(num)
-        except:
-            pass
-        plaques = Plaque.pending_list(num)
+    def write_pending(self, plaques):
+
         user = users.get_current_user()
         name = "anon" if user is None else user.nickname()
         logging.info("User %s is viewing pending plaques %s" % (name, plaques))
@@ -1335,6 +1314,27 @@ class ViewPending(webapp2.RequestHandler):
         template_values = get_template_values(plaques=plaques)
         template_text = template.render(template_values)
         self.response.write(template_text)
+
+    def get(self, num=DEF_NUM_PENDING):
+        try:
+            num = int(num)
+        except:
+            pass
+        plaques = Plaque.pending_list(num)
+        self.write_pending(plaques)
+
+class ViewPendingRandom(ViewPending):
+    def get(self, num=DEF_NUM_PENDING):
+        try:
+            num = int(num)
+        except:
+            pass
+
+        num_to_select_from = 50
+        plaques = Plaque.pending_list(num_to_select_from)
+        return_plaques = random.sample(plaques, num)
+
+        self.write_pending(return_plaques)
 
 class DeleteOneSearchIndex(webapp2.RequestHandler):
     def get(self, doc_id):
