@@ -1215,42 +1215,16 @@ class FlushMemcache(webapp2.RequestHandler):
 
 class Counts(webapp2.RequestHandler):
     def get(self):
-        find_orphans = self.request.get('find_orphans')
         query = Plaque.query()
         num_plaques = query.count()
         num_pending = query.filter(Plaque.approved == False).count()
-        num_images = 0
-        images = gcs.listbucket(GCS_BUCKET)
-        for image in images:
-            num_images += 1
-
-        orphan_pics = set()
-        pics_count = defaultdict(int)
-        pics = set()
-
-        if find_orphans == 'true':
-            # Record which pics are linked to a plaque:
-            plaques = Plaque.query().fetch()
-            for plaque in plaques:
-                pics.add(plaque.pic)
-                pics_count[plaque.pic] += 1
-
-            # Find pics that aren't:
-            for pic in images:
-                if pic not in pics:
-                    orphan_pics.add(pic)
-        else:
-            orphan_pics.add("didn't check for orphans")
 
         msg = """
             <ul>
                 <li>%s plaques</li>
                 <li>%s pending</li>
-                <li>%s images</li>
-                <li>orphans: %s</li>
             </ul>
-            """ % (
-            num_plaques, num_pending, num_images, str(orphan_pics))
+            """ % (num_plaques, num_pending)
         self.response.write(msg)
 
 class DeleteOnePlaque(webapp2.RequestHandler):
@@ -1291,7 +1265,7 @@ class DeleteOnePlaque(webapp2.RequestHandler):
         #memcache.flush_all()
         email_admin('%s Deleted plaque %s' % (name, plaque.title_url),
                     '%s Deleted plaque %s' % (name, plaque.title_url))
-        self.redirect('/nextpending')
+        self.redirect('/randpending')
 
 class ViewNextPending(ViewOnePlaqueParent):
     def get(self):
@@ -1419,7 +1393,7 @@ class ApproveAllPending(webapp2.RequestHandler):
     def get(self):
         if not users.is_current_user_admin():
             return "admin only, please log in"
-        #raise NotImplementedError("Turned off")
+        raise NotImplementedError("Turned off")
         plaques = Plaque.pending_list(num=500)
 
         user = users.get_current_user()
@@ -1454,7 +1428,7 @@ class ApprovePending(webapp2.RequestHandler):
         msg = "{1} approved plaque {0}".format(title, name)
         email_admin(msg, msg)
 
-        self.redirect('/nextpending')
+        self.redirect('/randpending')
 
 class DisapprovePlaque(webapp2.RequestHandler):
     """Disapprove a plaque"""
