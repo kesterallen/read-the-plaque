@@ -5,97 +5,97 @@
 {% else %}
 <nav class="navbar navbar-default navbar-fixed-top">
 {% endif %}
-    <div class="container-fluid">
-        <!-- Brand and toggle get grouped for better mobile display -->
-        <div class="navbar-header">
-            <button type="button"
-                    class="navbar-toggle collapsed"
-                    data-toggle="collapse"
-                    data-target="#navbar-collapse-1"
-                    aria-expanded="false">
-                <span class="sr-only">Toggle navigation</span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-            </button>
-            <a class="navbar-brand" href="/">Read the Plaque</a>
-        </div>
-
-        <div class="collapse navbar-collapse" id="navbar-collapse-1">
-            <ul class="nav navbar-nav navbar-right">
-                <li>
-                    <form class="navbar-form navbar-left" role="search" action="/search" method="POST">
-                        <div class="form-group">
-                            <input name="search_term" type="text" class="form-control" placeholder="Search plaques">
-                        </div>
-                    </form>
-                </li>
-                <li><a href="/geo">Location</a></li>
-                <li><a onclick="find_near_here()" href="#nearby">Nearby</a></li>
-                <li><a href="/map">Big Map</a></li>
-
-                {% if loginout and loginout.is_admin %}
-                    <li><a href="/pending">Pending <span class="badge">{{num_pending}}{% if num_pending %}{% if num_pending > 4 %}+{% endif %}{% endif %}</span></a></li>
-                    <li><a href="/flush">Flush</a></li>
-                {% endif %}
-
-                <li><a href="/randompage">Random</a></li>
-                <li><a href="/about">About</a></li>
-                <li><a href="/add">Submit</a></li>
-            </ul>
-        </div>
+  <div class="container-fluid">
+    <!-- Brand and toggle get grouped for better mobile display -->
+    <div class="navbar-header">
+      <button type="button"
+          class="navbar-toggle collapsed"
+          data-toggle="collapse"
+          data-target="#navbar-collapse-1"
+          aria-expanded="false">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="/">Read the Plaque</a>
+      <ul class="nav navbar-nav navbar-right"><li><a role="button" onclick="find_near_here()" href="#nearby">Nearby</a></li></ul>
     </div>
+
+    <div class="collapse navbar-collapse" id="navbar-collapse-1">
+      <ul class="nav navbar-nav navbar-right">
+        <li>
+          <form class="navbar-form navbar-left" role="search" action="/search" method="POST">
+            <div class="form-group">
+              <input name="search_term" type="text" class="form-control" placeholder="Search plaques">
+            </div>
+          </form>
+        </li>
+        <li><a href="/geo">Location</a></li>
+        <li><a href="/map">Big Map</a></li>
+
+        {% if loginout and loginout.is_admin %}
+          <li><a href="/pending">Pending <span class="badge">{{num_pending}}{% if num_pending %}{% if num_pending > 4 %}+{% endif %}{% endif %}</span></a></li>
+          <li><a href="/flush">Flush</a></li>
+        {% endif %}
+
+        <li><a href="/randompage">Random</a></li>
+        <li><a href="/about">About</a></li>
+        <li><a href="/add">Submit</a></li>
+      </ul>
+    </div>
+  </div>
 </nav>
 
 <a href="/"><div class="logo"></div></a>
 <div class="title">
-    A gigantic map of all the cool plaques in the world.
-    A project of <a href="http://99pi.org/">99% Invisible</a>.
+  A gigantic map of all the cool plaques in the world.
+  A project of <a href="http://99pi.org/">99% Invisible</a>.
 </div>
 
 <!-- Modals -->
 <div class="modal fade" id="locationModal" role="dialog">
-    <div class="modal-dialog">
+  <div class="modal-dialog">
 
-        <!-- Modal content-->
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal">&times;</button>
-                <h4 class="modal-title">Determining Your Location</h4>
-            </div>
-            <div class="modal-body">
-                <p>Read the Plaque is finding your location, this can take a minute.</p>
-                <p>Please authorize your browser to share your location before closing this popup.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-            </div>
-        </div>
-
+    <!-- Modal content-->
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title">Determining Your Location</h4>
+      </div>
+      <div class="modal-body">
+        <p>Read the Plaque is finding your location, this can take a minute.</p>
+        <p>Please authorize your browser to share your location before closing this popup.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
     </div>
+
+  </div>
 </div>
 
 <div class="modal fade" id="failedLocationModal" role="dialog">
-    <div class="modal-dialog">
+  <div class="modal-dialog">
 
-        <!-- Modal content-->
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal">&times;</button>
-                <h4 class="modal-title">Location: Permission Denied</h4>
-            </div>
-            <div class="modal-body">
-                <p>Newer versions of Chrome have disabled geolocation from non-https sources.</p>
-                <p>Try our 
-                <a href="https://read-the-plaque.appspot.com">https server</a>
-                which supports geolocatoin, and can run the the <b>Nearby</b> 
-                and <b>Near Me</b> buttons.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-            </div>
-        </div>
-
+    <!-- Modal content-->
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title">Location: Permission Denied</h4>
+      </div>
+      <div class="modal-body">
+        <p>Newer versions of Chrome have disabled geolocation from non-https sources.</p>
+        <p>Try our 
+        <a href="https://read-the-plaque.appspot.com">https server</a>
+        which supports geolocatoin, and can run the the <b>Nearby</b> 
+        and <b>Near Me</b> buttons.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
     </div>
+
+  </div>
 </div>
 

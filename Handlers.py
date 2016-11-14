@@ -1304,7 +1304,7 @@ class ViewPendingRandom(ViewPending):
         except:
             pass
 
-        num_to_select_from = 50
+        num_to_select_from = 500
         plaques = Plaque.pending_list(num_to_select_from)
         return_plaques = random.sample(plaques, num)
 
