@@ -3,7 +3,7 @@ from google.appengine.api import mail
 import logging
 
 ADMIN_EMAIL = 'kester+readtheplaque@gmail.com'
-NOTIFICATION_SENDER_EMAIL = 'kester@gmail.com'
+NOTIFICATION_SENDER_EMAIL = '"Kester Allen" <kester@gmail.com>'
 
 class SubmitError(Exception):
     pass
