@@ -1,10 +1,6 @@
 <script src="/static/nearhere.js"></script>
 
-{% if loginout and loginout.is_admin %}
-<nav class="navbar navbar-inverse navbar-fixed-top">
-{% else %}
-<nav class="navbar navbar-default navbar-fixed-top">
-{% endif %}
+<nav class="navbar {% if loginout and loginout.is_admin %}navbar-inverse{% else %}navbar-default{% endif %} navbar-fixed-top">
   <div class="container-fluid">
     <!-- Brand and toggle get grouped for better mobile display -->
     <div class="navbar-header">
@@ -19,7 +15,6 @@
         <span class="icon-bar"></span>
       </button>
       <a class="navbar-brand" href="/">Read the Plaque</a>
-      <ul class="nav navbar-nav navbar-right"><li><a role="button" onclick="find_near_here()" href="#nearby">Nearby</a></li></ul>
     </div>
 
     <div class="collapse navbar-collapse" id="navbar-collapse-1">
@@ -31,6 +26,7 @@
             </div>
           </form>
         </li>
+        <li><a role="button" onclick="find_near_here()" href="#nearby">Nearby</a></li><
         <li><a href="/geo">Location</a></li>
         <li><a href="/map">Big Map</a></li>
 
@@ -49,7 +45,7 @@
 
 <a href="/"><div class="logo"></div></a>
 <div class="title">
-  A gigantic map of all the cool plaques in the world.
+  <a href="/map">A gigantic map of all the cool plaques in the world.</a>
   A project of <a href="http://99pi.org/">99% Invisible</a>.
 </div>
 
