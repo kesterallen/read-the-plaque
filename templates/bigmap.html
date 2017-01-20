@@ -2,13 +2,7 @@
 
 {% block content %}
 <div class="container-fluid">
-    <img class="loading img-center" src="/images/loading.png"/>
     <div id="bigmap"></div>
 </div>
 {% endblock %}
 
-{% block bottomofbody %}
-<script>
-    $(document).scrollTop($('#bigmap').offset().top);
-</script>
-{% endblock %}

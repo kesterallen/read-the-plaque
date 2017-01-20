@@ -4,6 +4,7 @@
   <div class="container-fluid">
     <!-- Brand and toggle get grouped for better mobile display -->
     <div class="navbar-header">
+
       <button type="button"
           class="navbar-toggle collapsed"
           data-toggle="collapse"
@@ -14,11 +15,21 @@
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
       </button>
-      <a class="navbar-brand" href="/">Read the Plaque</a>
+
+      <ul class="nav navbar-nav navbar-left">
+        <li><a class="navbar-brand" href="/">Read the Plaque</a></li>
+      </ul>
     </div>
 
     <div class="collapse navbar-collapse" id="navbar-collapse-1">
       <ul class="nav navbar-nav navbar-right">
+        {% if loginout and loginout.is_admin %}
+          <li><a href="/pending">Pending <span class="badge">{{num_pending}}{% if num_pending %}{% if num_pending > 4 %}+{% endif %}{% endif %}</span></a></li>
+          <li><a href="/flush">Flush</a></li>
+        {% endif %}
+        <li>
+          <a role="button" onclick="find_near_here()" href="#nearby">Nearby</a>
+        </li>
         <li>
           <form class="navbar-form navbar-left" role="search" action="/search" method="POST">
             <div class="form-group">
@@ -26,15 +37,8 @@
             </div>
           </form>
         </li>
-        <li><a role="button" onclick="find_near_here()" href="#nearby">Nearby</a></li><
         <li><a href="/geo">Location</a></li>
         <li><a href="/map">Big Map</a></li>
-
-        {% if loginout and loginout.is_admin %}
-          <li><a href="/pending">Pending <span class="badge">{{num_pending}}{% if num_pending %}{% if num_pending > 4 %}+{% endif %}{% endif %}</span></a></li>
-          <li><a href="/flush">Flush</a></li>
-        {% endif %}
-
         <li><a href="/randompage">Random</a></li>
         <li><a href="/about">About</a></li>
         <li><a href="/add">Submit</a></li>
@@ -84,7 +88,7 @@
         <p>Newer versions of Chrome have disabled geolocation from non-https sources.</p>
         <p>Try our 
         <a href="https://read-the-plaque.appspot.com">https server</a>
-        which supports geolocatoin, and can run the the <b>Nearby</b> 
+        which supports geolocation, and can run the the <b>Nearby</b> 
         and <b>Near Me</b> buttons.</p>
       </div>
       <div class="modal-footer">
