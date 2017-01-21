@@ -70,10 +70,8 @@
   {% include 'parts/footer.html' %}
 {% endif %}
 
-{% if plaques %}
-  {% include 'parts/map_pane.html' %} 
-{% elif bigmap %}
-  {% include 'parts/big_map_pane.html' %} 
+{% if plaques or bigmap %}
+  {% include 'parts/map_pane_googlemaps.html' %} 
 {% endif %}
 
 {% block bottomofbody %}
