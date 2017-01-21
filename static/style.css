@@ -199,8 +199,14 @@ body {
     -webkit-animation:spin 2s linear infinite;
     -moz-animation:spin 2s linear infinite;
     animation:spin 2s linear infinite;
-    position: absolute;
-    z-index: 10;
+    position:absolute;
+    top:0;
+    bottom:0;
+    left:0;
+    right:0;
+    width:300px; /* Assign a value */
+    height:300px; /* Assign a value */
+    margin:auto;
 }
 @-moz-keyframes spin { 100% {
     -moz-transform:rotate(360deg);
