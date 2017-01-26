@@ -1,5 +1,6 @@
 
 from collections import defaultdict
+import json
 import logging
 import re
 
@@ -268,6 +269,24 @@ class Plaque(ndb.Model):
             ],
         )
         return doc
+
+    def to_geojson(self, summary=True):
+        if not summary:
+            raise ArgumentError("summary = False isn't implemented yet")
+
+        data = {
+            "geometry": {
+                "type": "Point",
+                "coordinates": [self.location.lon, self.location.lat]
+            }, 
+            "type": "Feature", 
+            "properties": {
+                "img_url_tiny": self.img_url_tiny, 
+                "title_page_url": self.title_page_url,
+                "title": self.title
+            }
+        }
+        return json.dumps(data)
 
     def to_dict(self, summary=False):
         if summary:

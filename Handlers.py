@@ -624,7 +624,7 @@ class JsonAllPlaques(webapp2.RequestHandler):
 
     def _json_for_all(self, summary=True):
         plaques_all = []
-        num = 500
+        num = 300
         more = True
         cursor = None
         while more:

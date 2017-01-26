@@ -16,15 +16,7 @@ function plaquesGeoJson() {
     "type": "FeatureCollection", 
     "features": [
       {% for plaque in plaques %}
-        {
-          "geometry": {"type": "Point", "coordinates": [{{plaque.location.lon}}, {{plaque.location.lat}}]}, 
-          "type": "Feature", 
-          "properties": {
-            "img_url_tiny": "{{plaque.img_url_tiny}}", 
-            "title_page_url": "{{plaque.title_page_url}}",
-            "title": "{{plaque.title}}"
-          }
-        }, 
+        {{plaque.to_geojson()}},
       {% endfor %}
     ]
   };
@@ -92,7 +84,13 @@ function initMap() {
   var geoJson = {% if plaques %}plaquesGeoJson{% else %}allPlaquesGeoJson{% endif %}();
   layer = map.data.addGeoJson(geoJson);
   map.data.setMap(null);
-  map.fitBounds(bounds);
+  {% if plaques|length == 1 %}
+    var center = new google.maps.LatLng({{plaque.location.lat}}, {{plaque.location.lon}});
+    map.setCenter(center);
+    map.setZoom(14);
+  {% else %}
+    map.fitBounds(bounds);
+  {% endif %}
 
   // Turn off the loading spinner
   $('.loading').hide();
