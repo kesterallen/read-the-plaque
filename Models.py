@@ -130,13 +130,17 @@ class Plaque(ndb.Model):
         return count
 
     @classmethod
-    def pending_list(cls, num=20):
+    def pending_list(cls, num=20, desc=True):
         """A separate method from approved() so that it will
         never be memcached."""
-        plaques = Plaque.query().filter(Plaque.approved != True
-                               ).order(Plaque.approved
-                               ).order(-Plaque.created_on
-                               ).fetch(limit=num)
+        query = Plaque.query().filter(Plaque.approved != True
+                             ).order(Plaque.approved)
+        if desc:
+            query = query.order(-Plaque.created_on)
+        else:
+            query = query.order(Plaque.created_on)
+
+        plaques = query.fetch(limit=num)
         return plaques
 
     # Turning off because this doesn't scale.
@@ -296,6 +300,8 @@ class Plaque(ndb.Model):
                 'lat': str(self.location.lat),
                 'lng': str(self.location.lon), # N.B.: 'lng' --> 'lon'
                 'img_url_tiny': self.img_url_tiny,
+                'tweet': "'%s' Always #readtheplaque http://readtheplaque.com%s" % (
+                    self.title, self.title_page_url),
             }
         else:
             plaque_dict = {

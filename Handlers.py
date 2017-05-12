@@ -100,18 +100,6 @@ def get_plaqueset_key(plaqueset_name=DEF_PLAQUESET_NAME):
     """
     return ndb.Key('Plaque', plaqueset_name)
 
-def earliest_approved(cls):
-    item = cls.query(cls.approved == True
-                  ).order(cls.created_on
-                  ).get()
-    return item
-
-def last_five_approved(cls):
-    new_items = cls.query(cls.approved == True
-                  ).order(-cls.created_on
-                  ).fetch(limit=5)
-    return new_items
-
 # TODO: add table UniqueTags
 def random_tags(num=5):
     """
@@ -263,8 +251,7 @@ def get_footer_items():
         random_plaques = [get_random_plaque() for _ in range(5)]
         tags = random_tags()
         footer_items = {'tags': tags,
-                        'new_plaques': random_plaques,
-                        'new_comments': last_five_approved(Comment)}
+                        'new_plaques': random_plaques,}
 
         memcache_status = memcache.set('get_footer_items', footer_items)
         if not memcache_status:
@@ -404,7 +391,6 @@ class ViewPlaquesPage(webapp2.RequestHandler):
 
         template_values = get_template_values(
             plaques=plaques, next_cursor_urlsafe=cursor_urlsafe, more=more)
-        #logging.info('in _get_template_values, next_cursor=%s, cursor_urlsafe=%s, more=%s' % (next_cursor, cursor_urlsafe, more))
         if is_featured:
             featured = get_featured()
             template_values['featured_plaque'] = featured
@@ -414,33 +400,29 @@ class ViewPlaquesPage(webapp2.RequestHandler):
         return template_values
 
 class BigMap(ViewPlaquesPage):
+    @property
+    def template_file(self):
+        return "bigmap.html"
+
     def get(self, lat=None, lng=None, zoom=None):
-        logging.info('lat %s lng %s zoom %s' % (lat,lng,zoom))
+
+        template_values = get_template_values(bigmap=True)
         if lat is not None and lng is not None:
-            template_values = get_template_values(
-                bigmap=True, bigmap_center=True, bigmap_lat=lat, bigmap_lng=lng)
+            template_values['bigmap_center'] = True
+            template_values['bigmap_lat'] = lat
+            template_values['bigmap_lng'] = lng
+
             if zoom is not None:
                 template_values['bigmap_zoom'] = zoom
-        else:
-            template_values = get_template_values(bigmap=True)
-        logging.info(template_values)
-        template = JINJA_ENVIRONMENT.get_template('bigmap.html')
+
+        template = JINJA_ENVIRONMENT.get_template(self.template_file)
         template_text = template.render(template_values)
         self.response.write(template_text)
-class BigMapTest(ViewPlaquesPage):
-    def get(self, lat=None, lng=None, zoom=None):
-        logging.info('lat %s lng %s zoom %s' % (lat,lng,zoom))
-        if lat is not None and lng is not None:
-            template_values = get_template_values(
-                bigmap=True, bigmap_center=True, bigmap_lat=lat, bigmap_lng=lng)
-            if zoom is not None:
-                template_values['bigmap_zoom'] = zoom
-        else:
-            template_values = get_template_values(bigmap=True)
-        logging.info(template_values)
-        template = JINJA_ENVIRONMENT.get_template('test_bigmap.html')
-        template_text = template.render(template_values)
-        self.response.write(template_text)
+
+class BigMapMapboxgl(BigMap):
+    @property
+    def template_file(self):
+        return "bigmap_mapboxgl.html"
 
 class ViewOnePlaqueParent(webapp2.RequestHandler):
     def get(self):
@@ -503,8 +485,11 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
                 logging.debug("Neither comment_key nor plaque_key is specified. "
                               "Serve the first plaque, so that memcache will "
                               "always serve the same thing.")
-                plaque = earliest_approved(Plaque)
-                self.redirect(plaque.title_page_url)
+                earliest_plaque = Plaque.query(
+                    Plaque.approved == True).order(Plaque.created_on).get()
+
+                logging.debug("Plaque is %s" % earliest_plaque.title_page_url)
+                self.redirect(earliest_plaque.title_page_url)
                 return
 
             template_values = get_template_values(plaques=[plaque])
@@ -549,7 +534,7 @@ class RandomPlaquesPage(ViewPlaquesPage):
 
 class RandomPlaque(ViewOnePlaqueParent):
     """
-    Get a random plaque.
+    Get a single random plaque.
     """
     def get(self):
         plaque = get_random_plaque()
@@ -563,11 +548,11 @@ class RandomPlaque(ViewOnePlaqueParent):
 #        page_text = self._get_from_key(comment_key=comment_key)
 #        self.response.write(page_text)
 
-class JsonOnePlaque(ViewOnePlaqueParent):
+class TweetText(ViewOnePlaqueParent):
     """
     Get one plaque's JSON repr.
     """
-    def get(self, plaque_key=None, summary=False):
+    def get(self, plaque_key=None, summary=True):
         if plaque_key is None:
             plaque_key = get_random_plaque_key()
 
@@ -762,8 +747,6 @@ class AddPlaque(webapp2.RequestHandler):
         limited to ~1/second.
         """
 
-        #if users.is_current_user_admin():
-            #memcache.flush_all()
         try:
             plaqueset_name = self.request.get('plaqueset_name',
                                               DEF_PLAQUESET_NAME)
@@ -1105,6 +1088,10 @@ class SearchPlaques(webapp2.RequestHandler):
             logging.debug('search results are "%s"' % results)
             plaques = [ndb.Key(urlsafe=r.doc_id).get() for r in results]
             plaques = [p for p in plaques if p is not None]
+            # Allow admin to see unpublished plaques, hide these from others
+            user = users.get_current_user()
+            if not users.is_current_user_admin():
+                plaques = [p for p in plaques if p.approved]
 
         template = JINJA_ENVIRONMENT.get_template('all.html')
         template_values = get_template_values(plaques=plaques)
@@ -1235,10 +1222,10 @@ class Counts(webapp2.RequestHandler):
 
         msg = """
             <ul>
-                <li>%s plaques</li>
+                <li>%s published</li>
                 <li>%s pending</li>
             </ul>
-            """ % (num_plaques, num_pending)
+            """ % (num_plaques - num_pending, num_pending)
         self.response.write(msg)
 
 class DeleteOnePlaque(webapp2.RequestHandler):
@@ -1310,6 +1297,16 @@ class ViewPending(webapp2.RequestHandler):
             pass
         plaques = Plaque.pending_list(num)
         self.write_pending(plaques)
+
+class ViewOldPending(ViewPending):
+    def get(self, num=DEF_NUM_PENDING):
+        try:
+            num = int(num)
+        except:
+            pass
+        plaques = Plaque.pending_list(num=num, desc=False)
+        self.write_pending(plaques)
+
 
 class ViewPendingRandom(ViewPending):
     def get(self, num=DEF_NUM_PENDING):

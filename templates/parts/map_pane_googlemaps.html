@@ -58,13 +58,9 @@ function initMap() {
     if (e.feature.getGeometry().getType() === 'Point') {
   
       position = e.feature.getGeometry().get();
+      title = e.feature.getProperty('name');
       bounds.extend(position);
-      var marker = new google.maps.Marker({
-        position: position,
-        title: e.feature.getProperty('name'),
-        map: map,
-        icon: icon
-      });
+      var marker = new google.maps.Marker({ position: position, title: title, map: map, icon: icon });
   
       google.maps.event.addListener(marker, 'click', function (marker, e) {
         return function () {
@@ -84,13 +80,22 @@ function initMap() {
   var geoJson = {% if plaques %}plaquesGeoJson{% else %}allPlaquesGeoJson{% endif %}();
   layer = map.data.addGeoJson(geoJson);
   map.data.setMap(null);
-  {% if plaques|length == 1 %}
+
+  // Set center and zoom, with optional override from URL params
+  {% if bigmap_center %}
+    var center = new google.maps.LatLng({{bigmap_lat}}, {{bigmap_lng}});
+    map.setCenter(center);
+    {% if bigmap_zoom %}
+      map.setZoom({{bigmap_zoom}});
+    {% endif %}
+  {% elif plaques|length == 1 %}
     var center = new google.maps.LatLng({{plaque.location.lat}}, {{plaque.location.lon}});
     map.setCenter(center);
     map.setZoom(14);
   {% else %}
     map.fitBounds(bounds);
   {% endif %}
+
 
   // Turn off the loading spinner
   $('.loading').hide();

@@ -8,6 +8,7 @@ handlers:
 - url: /.*php
   static_files: static/nophp.txt
   upload: static/nophp.txt 
+
 - url: /wp-content.*
   static_files: static/nophp.txt
   upload: static/nophp.txt

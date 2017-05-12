@@ -16,8 +16,8 @@ json_filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                              '../static/plaques_updated.json')
 
 ALL = False
-UTC_OFFSET = 8 # PST
-#UTC_OFFSET = 7 # PDT
+#UTC_OFFSET = 8 # PST
+UTC_OFFSET = 7 # PDT
 
 def offset_time(last_updated_str):
     """
@@ -69,7 +69,7 @@ def main():
         suffix = "s"
         if len(new_plaques) == 1:
             suffix = ""
-        print "Found %s new plauque%s." % (len(new_plaques), suffix)
+        print "Found %s new plaque%s." % (len(new_plaques), suffix)
         if len(new_plaques) == 0:
             sys.exit(1)
 

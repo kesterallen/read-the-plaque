@@ -10,7 +10,7 @@ body {
 }
 
 .logo {
-    background: url('/images/rtp_logo_1080square.jpg') no-repeat center center;
+    background: url('/images/rtp_logo_fromvector.png') no-repeat center center;
     background-size: cover;
     background-position: center 55%;
     background-color: #3E3E3E;  /* RTP gray */
@@ -44,8 +44,6 @@ body {
     margin: 0 auto;
 }
 
-.img-center { margin: 0 auto; }
-
 /* Sticky footer styles */
 html {
     position: relative;
@@ -75,7 +73,7 @@ body {
 }
 
 #featured_row_map {
-    height: 700px;
+    height: 600px;
     background-color: #D1D1D1;
 }
 
@@ -157,6 +155,10 @@ body {
     /*background-color: #6796a0;*/  /* RTP blue */
 }
 
+.hoverchange:hover {
+    background-color: #e6e6e6;
+}
+
 .nounderline a {
     text-decoration: none;
 }
@@ -222,3 +224,4 @@ body {
     }
 }
 /* end of Loading spinner */
+

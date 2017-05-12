@@ -1,42 +1,37 @@
-<div class="row row-eq-height">
-  <a class="col-xs-12 col-sm-4" href="{{featured_plaque.title_page_url}}">
-    <div id="featured-plaque" class="pin">
-      <div class="thumbnail right-caption">
-        <h1>Featured Plaque:</h1>
-        <img src="{{featured_plaque.img_url_thumbnail}}"/>
-        <div class="caption">
-          <h2>{{featured_plaque.title}}</h2>
-          {{featured_plaque.description | striptags | wordwrap(100, True) | truncate(400)}}
-          <p>
-            <ul class="list-inline">
-{% for tag in featured_plaque.tags %} <li>{{tag | truncate(15, True)}}</li> {% endfor %}
-            </ul>
-          </p>
-        </div>
-      </div>
-    </div>
-  </a>
+<div class="row">
 
-  <div class="col-xs-12 col-sm-7 col-sm-offset-1" id="mapcolumn">
-
-    <a href="/map">
-      <div class="well well-sm">
-        <div class="row">
-
-          <div class="col-xs-4">
-            Explore the <b>12,000+</b> worldwide plaques on the Big Map
+  <!-- featured plaque: -->
+  <div class="col-xs-12 col-sm-4">
+    <a href="{{featured_plaque.title_page_url}}">
+      <div id="featured-plaque" class="pin">
+        <div class="thumbnail right-caption">
+          <h1>Featured Plaque:</h1>
+          <img src="{{featured_plaque.img_url_thumbnail}}"/>
+          <div class="caption">
+            <h2>{{featured_plaque.title}}</h2>
+            {{featured_plaque.description | striptags | wordwrap(100, True) | truncate(400)}}
+            <p>
+              <ul class="list-inline">
+  {% for tag in featured_plaque.tags %} <li>{{tag | truncate(15, True)}}</li> {% endfor %}
+              </ul>
+            </p>
           </div>
-
-          <div class="col-xs-8">
-            <img class="img-responsive" alt="big map screenshot" src="/images/map_screenshot.png"/>
-          </div>
-
         </div>
       </div>
     </a>
+  </div>
+    
+  <!-- Ad for big map -->
+  <div class="hoverchange col-xs-12 col-sm-4">
+    <a href="/map">
+      Explore the <b>12,000+</b> worldwide plaques on the Big Map
+      <img class="img-responsive center-block" alt="big map screenshot" src="/images/map_screenshot_big.png"/>
+    </a>
+  </div>
 
-    <div id="featured_row_map"></div>
-
+  <!-- Interactive map of the plaques on this page -->
+  <div class="hoverchange col-xs-12 col-sm-4">
+    The most recent 20 plaques: <div id="featured_row_map"></div>
   </div>
 
 </div>

@@ -20,14 +20,16 @@ def main():
         ('/page/(.+?)/(.+?)/?', h.ViewPlaquesPage),
         ('/page/(.+?)/?', h.ViewPlaquesPage),
         ('/page/?', h.ViewPlaquesPage),
-        ('/test/?', h.BigMapTest),
+        ('/test/(.*?)/(.*?)/(.*?)/?', h.BigMapMapboxgl), # lat, lng, zoom.
+        ('/test/(.*?)/(.*?)/?', h.BigMapMapboxgl), # lat, lng
+        ('/test/?', h.BigMapMapboxgl),
         ('/plaque/(.+?)/?', h.ViewOnePlaque),
         ('/plaque/?', h.ViewOnePlaque),
         ('/randompage/(.+?)/?', h.RandomPlaquesPage),
         ('/randompage.*', h.RandomPlaquesPage),
         ('/random.*', h.RandomPlaque),
         #('/plaque_comment/(.+?)', h.ViewOnePlaqueFromComment),
-        ('/jp/?', h.JsonOnePlaque),
+        ('/tweet/?', h.TweetText),
         ('/alljp/(.+?)/?', h.JsonAllPlaques),
         ('/alljp/?', h.JsonAllPlaques),
         ('/updatejp/?', h.JsonAllPlaques),
@@ -44,20 +46,21 @@ def main():
         ('/rss', h.RssFeed),
         ('/flush', h.FlushMemcache),
         ('/counts', h.Counts),
-        #('/reindex', h.RedoIndex),
+        ('/reindex', h.RedoIndex),
         #('/deleteall', h.DeleteEverything),
         ('/delete', h.DeleteOnePlaque),
         ('/pending/?', h.ViewPending),
+        ('/oldpending/?', h.ViewOldPending),
         ('/pending/(.*?)/?', h.ViewPending),
         ('/nextpending/?', h.ViewNextPending),
         ('/randpending/?', h.ViewPendingRandom),
         ('/randpending/(.*?)/?', h.ViewPendingRandom),
         ('/disapprove', h.DisapprovePlaque),
         ('/approve', h.ApprovePending),
-        ('/approveall', h.ApproveAllPending),
-        ('/addsearchall', h.AddSearchIndexAll),
+        #('/approveall', h.ApproveAllPending),
+        #('/addsearchall', h.AddSearchIndexAll),
         ('/deletesearch/(.+?)', h.DeleteOneSearchIndex),
-        ('/addtitleurlall', h.AddTitleUrlAll),
+        #('/addtitleurlall', h.AddTitleUrlAll),
         ('/search/(.+?)', h.SearchPlaques),
         ('/search/?', h.SearchPlaques),
         ('/geo/(.*?)/(.*?)/(.*?)/?', h.SearchPlaquesGeo),
@@ -70,9 +73,10 @@ def main():
         ('/s/?', h.SearchPlaques),
         ('/setupdated', h.SetUpdatedOn),
         ('/setfeatured/(.*?)', h.SetFeatured),
-        ('/map/(.*?)/(.*?)/(.*?)/?', h.BigMap), # lat, lng, zoom.
-        ('/map/(.*?)/(.*?)/?', h.BigMap), # lat, lng
-        ('/map/?', h.BigMap),
+        ('/featured', h.SetFeatured),
+        ('/map/(.*?)/(.*?)/(.*?)/?', h.BigMapMapboxgl), # lat, lng, zoom.
+        ('/map/(.*?)/(.*?)/?', h.BigMapMapboxgl), # lat, lng
+        ('/map/?', h.BigMapMapboxgl),
 
         ('/', h.ViewPlaquesPage),
         ('/(.+?)/(.+?)', h.ViewOnePlaque), # supports the old_site_id
