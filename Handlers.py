@@ -65,6 +65,13 @@ JINJA_ENVIRONMENT = jinja2.Environment(
 # same entity group. Queries across the single entity group will be consistent.
 # However, the write rate should be limited to ~1/second.
 
+# TODO
+def get_bounding_box(plaques):
+    lats = [p.location.lat for p in plaques]
+    lngs = [p.location.lon for p in plaques]
+    bounding_box = [[min(lngs), min(lats)], [max(lngs), max(lats)]]
+    return bounding_box
+
 def get_template_values(**kwargs):
     memcache_name = 'template_values_%s' % users.is_current_user_admin()
     template_values = memcache.get(memcache_name)
@@ -91,6 +98,14 @@ def get_template_values(**kwargs):
 
     for k, v in kwargs.items():
         template_values[k] = v
+
+    if 'plaques' in template_values:
+        plaques = template_values['plaques']
+        bounding_box = get_bounding_box(plaques)
+        logging.info(plaques)
+        logging.info(bounding_box)
+        template_values['bounding_box'] = bounding_box
+
     return template_values
 
 def get_plaqueset_key(plaqueset_name=DEF_PLAQUESET_NAME):
