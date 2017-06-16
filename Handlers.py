@@ -47,7 +47,7 @@ GCS_BUCKET = '/read-the-plaque.appspot.com'
 
 DEF_PLAQUESET_NAME = 'public'
 
-DEF_NUM_PER_PAGE = 20
+DEF_NUM_PER_PAGE = 27
 DYNAMIC_PLAQUE_CUTOFF = 50
 DEF_NUM_PENDING = 5
 DEF_NUM_NEARBY = 5
@@ -446,79 +446,65 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
         raise NotImplementedError("Don't call ViewOnePlaqueParent.get directly")
 
 
-    def _get_from_key(self, comment_key=None, plaque_key=None):
+    def _get_from_key(self, plaque_key=None):
         """
-        Put the single plaque into a list for rendering so that the common
-        map functionality can be used unchanged. Attempt to serve a valid
-        plaque, but if the inputs are completely messed up, serve a random
-        plaque.
+        Put the single plaque into a list for rendering so that the common map
+        functionality can be used unchanged. Attempt to serve a valid plaque,
+        but if the inputs are completely messed up, serve the oldest plaque.
         """
+
+        # If it's memecached, use that:
         is_admin = users.is_current_user_admin()
         memcache_name = 'plaque_%s_%s' % (plaque_key, is_admin)
         logging.info(
             "memcache name in ViewOnePlaqueParent._get_from_key is %s" %
             memcache_name)
         page_text = memcache.get(memcache_name)
-        if page_text is None:
-            plaque = None
-            logging.info("plaque_key=%s" % plaque_key)
-            if comment_key is not None:
-                logging.debug("Using comment key")
-                comment = ndb.Key(urlsafe=comment_key).get()
-                plaque = Plaque.query().filter(Plaque.approved == True
-                                      ).filter(Plaque.comments == comment.key
-                                      ).get()
-            elif plaque_key is not None:
-                try:
-                    logging.debug("Trying old_site_id")
-                    # This int-cast will throw a ValueError and go to the
-                    # except block if plaque_key is not an int
-                    old_site_id = int(plaque_key)
-                    plaque = Plaque.query(
-                        ).filter(Plaque.approved == True
-                        ).filter(Plaque.old_site_id == old_site_id
-                        ).get()
-                    if plaque is None:
-                        logging.debug("Old_site_id got a None plaque")
-                        raise ValueError("Old_site_id got a None plaque")
-                except ValueError as err:
-                    # Get by title, allowing only admins to see unapproved ones:
-                    logging.debug("Using plaque.title_url: '%s'" % plaque_key)
-                    query = Plaque.query().filter(Plaque.title_url == plaque_key)
-                    if not users.is_current_user_admin():
-                        query = query.filter(Plaque.approved == True)
-                    logging.debug("query is %s " % query)
-                    plaque = query.get()
-                    if plaque is None:
-                        try:
-                            logging.debug("Using plaque_key: '%s'" % plaque_key)
-                            plaque = ndb.Key(urlsafe=plaque_key).get()
-                            logging.debug("Using plaque_key, "
-                                          "plaque retrieved was: '%s'" % plaque)
-                        except:
-                            pass
-
-            if plaque is None:
-                logging.debug("Neither comment_key nor plaque_key is specified. "
-                              "Serve the first plaque, so that memcache will "
-                              "always serve the same thing.")
-                earliest_plaque = Plaque.query(
-                    Plaque.approved == True).order(Plaque.created_on).get()
-
-                logging.debug("Plaque is %s" % earliest_plaque.title_page_url)
-                self.redirect(earliest_plaque.title_page_url)
-                return
-
-            template_values = get_template_values(plaques=[plaque])
-
-            template = JINJA_ENVIRONMENT.get_template('one.html')
-            page_text = template.render(template_values)
-            memcache_status = memcache.set(memcache_name, page_text)
-            if not memcache_status:
-                logging.debug("memcache.set for _get_from_key failed for %s" %
-                              memcache_name)
-        else:
+        if page_text is not None:
             logging.debug("memcache.get worked for _get_from_key for %s" %
+                          memcache_name)
+            return page_text
+
+        # Otherwise get from db:
+        plaque = None
+        logging.info("plaque_key=%s" % plaque_key)
+        if plaque_key is not None:
+            # Get by title, allowing only admins to see unapproved ones:
+            logging.debug("Using plaque.title_url: '%s'" % plaque_key)
+            query = Plaque.query().filter(Plaque.title_url == plaque_key)
+            if not users.is_current_user_admin():
+                query = query.filter(Plaque.approved == True)
+            logging.debug("query is %s " % query)
+            plaque = query.get()
+            if plaque is None:
+                try:
+                    logging.debug("Using plaque_key: '%s'" % plaque_key)
+                    plaque = ndb.Key(urlsafe=plaque_key).get()
+                    logging.debug("Using plaque_key, "
+                                  "plaque retrieved was: '%s'" % plaque)
+                except:
+                    pass
+
+        # If that didn't find andything, serve the default couldn't-find-it
+        # plaque:
+        if plaque is None:
+            logging.debug("Neither comment_key nor plaque_key is specified. "
+                          "Serve the first plaque, so that memcache will "
+                          "always serve the same thing.")
+            earliest_plaque = Plaque.query(
+                Plaque.approved == True).order(Plaque.created_on).get()
+
+            logging.debug("Plaque is %s" % earliest_plaque.title_page_url)
+            self.redirect(earliest_plaque.title_page_url)
+            return
+
+        template_values = get_template_values(plaques=[plaque])
+
+        template = JINJA_ENVIRONMENT.get_template('one.html')
+        page_text = template.render(template_values)
+        memcache_status = memcache.set(memcache_name, page_text)
+        if not memcache_status:
+            logging.debug("memcache.set for _get_from_key failed for %s" %
                           memcache_name)
 
         return page_text
@@ -556,14 +542,6 @@ class RandomPlaque(ViewOnePlaqueParent):
     def get(self):
         plaque = get_random_plaque()
         self.redirect(plaque.title_page_url)
-
-#class ViewOnePlaqueFromComment(ViewOnePlaqueParent):
-#    """
-#    Render the single-plaque page from a comment key.
-#    """
-#    def get(self, comment_key):
-#        page_text = self._get_from_key(comment_key=comment_key)
-#        self.response.write(page_text)
 
 class TweetText(ViewOnePlaqueParent):
     """
@@ -776,6 +754,8 @@ class AddPlaque(webapp2.RequestHandler):
             logging.info("Plaque %s is added with is_edit %s." %
                 (plaque.title, is_edit))
 
+            # TODO: maybe catch the no-location error here and redirect, with original form params, back to the add/edit page?
+
             # Make the plaque searchable:
             #
             logging.info('making search document')
@@ -893,14 +873,17 @@ class AddPlaque(webapp2.RequestHandler):
                         gps_tag_decoded = GPSTAGS.get(gps_tag, gps_tag)
                         gps_data[gps_tag_decoded] = value[gps_tag]
 
+        try:
+            gps_lat = gps_data['GPSLatitude']
+            gps_lng = gps_data['GPSLongitude']
+        except KeyError as no_exif:
+            pass # TODO: is this right?
 
-        gps_lat = gps_data['GPSLatitude']
         gps_lat_angles = (
             float(gps_lat[0][0]) / float(gps_lat[0][1]), # degrees
             float(gps_lat[1][0]) / float(gps_lat[1][1]), # hours
             float(gps_lat[2][0]) / float(gps_lat[2][1]), # minutes
         )
-        gps_lng = gps_data['GPSLongitude']
         gps_lng_angles = (
             float(gps_lng[0][0]) / float(gps_lng[0][1]), # degrees
             float(gps_lng[1][0]) / float(gps_lng[1][1]), # hours
@@ -939,8 +922,9 @@ class AddPlaque(webapp2.RequestHandler):
         # info:
         try:
             location = ndb.GeoPt(lat, lng)
-        except Exception as err1:
-            logging.error(err1)
+        except BadValueError as bve:
+            logging.error(bve)
+
             try:
                 lat, lng = self._get_latlng_exif(img_fh)
                 location = ndb.GeoPt(lat, lng)
@@ -953,6 +937,22 @@ class AddPlaque(webapp2.RequestHandler):
                 raise err
 
         return location
+
+    def _get_img(self, img_file=None, img_url=None):
+        # Prefer the file to the URL, if both are given.
+        #
+        if img_file != '' and img_file is not None:
+            img_name = img_file.filename
+            img_fh = img_file.file
+        elif img_url != '':
+            img_name = os.path.basename(img_url)
+            img_fh = urllib.urlopen(img_url)
+        else:
+            img_name = None
+            img_fh = None
+            #don't do anything (for edits where the image isn't being updated)
+
+        return img_name, img_fh
 
     def _get_form_args(self):
         """Get the arguments from the form and return them."""
@@ -970,18 +970,7 @@ class AddPlaque(webapp2.RequestHandler):
         img_file = self.request.POST.get('plaque_image_file')
         img_url = self.request.POST.get('plaque_image_url')
 
-        # Prefer the file to the URL, if both are given.
-        #
-        if img_file != '' and img_file is not None:
-            img_name = img_file.filename
-            img_fh = img_file.file
-        elif img_url != '':
-            img_name = os.path.basename(img_url)
-            img_fh = urllib.urlopen(img_url)
-        else:
-            img_name = None
-            img_fh = None
-            #don't do anything (for edits where the image isn't being updated)
+        img_name, img_fh = self._get_img(img_file, img_url)
 
         location = self._get_location(img_fh)
 
@@ -1055,6 +1044,24 @@ class AddPlaque(webapp2.RequestHandler):
             pass
         op = {b'x-goog-acl': b'public-read'}
         return ct, op
+
+##TODO: make a hidden form that has the image in it, and onlick submit, call this service with ajax before submitting the actual plaque
+#class LocationChecker(AddPlaque):
+#    def post(self):
+#        img_file = self.request.POST.get('plaque_image_file')
+#        img_url = self.request.POST.get('plaque_image_url')
+#        name, fh = self._get_img(img_file, img_url)
+#        try:
+#            location = self._get_location(fh)
+#            #return True
+#            self.response.write("true!")
+#        except SubmitError as err:
+#            #return None
+#            self.response.write("no location")
+#
+#    def get(self, plaque_key=None, message=None):
+#        """ No reponse to GET requests."""
+#        self.redirect('/')
 
 class EditPlaque(AddPlaque):
     """
@@ -1265,8 +1272,6 @@ class DeleteOnePlaque(webapp2.RequestHandler):
                 name, plaque.title_url))
             raise NotImplementedError("delete is turned off for now")
 
-        for comment in plaque.comments:
-            comment.delete()
         try:
             gcs.delete(plaque.pic)
 
