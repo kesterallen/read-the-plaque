@@ -20,9 +20,6 @@ def main():
         ('/page/(.+?)/(.+?)/?', h.ViewPlaquesPage),
         ('/page/(.+?)/?', h.ViewPlaquesPage),
         ('/page/?', h.ViewPlaquesPage),
-        ('/test/(.*?)/(.*?)/(.*?)/?', h.BigMapMapboxgl), # lat, lng, zoom.
-        ('/test/(.*?)/(.*?)/?', h.BigMapMapboxgl), # lat, lng
-        ('/test/?', h.BigMapMapboxgl),
         ('/plaque/(.+?)/?', h.ViewOnePlaque),
         ('/plaque/?', h.ViewOnePlaque),
         ('/randompage/(.+?)/?', h.RandomPlaquesPage),
@@ -34,6 +31,7 @@ def main():
         ('/alljp/?', h.JsonAllPlaques),
         ('/updatejp/?', h.JsonAllPlaques),
         ('/fulljp/?', h.JsonAllPlaquesFull),
+        #('/loc/?', h.LocationChecker),
         ('/add/?', h.AddPlaque),
         ('/submit-your-own/?', h.AddPlaque),
         ('/edit/(.+?)/?', h.EditPlaque),
@@ -74,9 +72,13 @@ def main():
         ('/setupdated', h.SetUpdatedOn),
         ('/setfeatured/(.*?)', h.SetFeatured),
         ('/featured', h.SetFeatured),
-        ('/map/(.*?)/(.*?)/(.*?)/?', h.BigMapMapboxgl), # lat, lng, zoom.
-        ('/map/(.*?)/(.*?)/?', h.BigMapMapboxgl), # lat, lng
-        ('/map/?', h.BigMapMapboxgl),
+        ('/map/(.*?)/(.*?)/(.*?)/?', h.BigMap), # lat, lng, zoom.
+        ('/map/(.*?)/(.*?)/?', h.BigMap), # lat, lng
+        ('/map/?', h.BigMap),
+
+        ('/demo1/?', h.BigMapDemo1), # TODO: remove
+        ('/demo2/?', h.BigMapDemo2), # TODO: remove
+        ('/demo3/?', h.BigMapDemo3), # TODO: remove
 
         ('/', h.ViewPlaquesPage),
         ('/(.+?)/(.+?)', h.ViewOnePlaque), # supports the old_site_id

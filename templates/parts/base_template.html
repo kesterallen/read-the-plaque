@@ -71,7 +71,14 @@
 {% endif %}
 
 {% if plaques or bigmap %}
-  {% include 'parts/map_pane_mapboxgl.html' %} 
+  <!-- TODO: remove demo -->
+  {% if demo == "demo1" %}
+    {% include 'parts/map_pane_googlemaps_nocluster.html' %} 
+  {% elif demo == "demo2" %}
+    {% include 'parts/map_pane_googlemaps.html' %} 
+  {% else %}
+    {% include 'parts/map_pane_mapboxgl.html' %} 
+  {% endif %}
 {% endif %}
 
 {% block bottomofbody %}

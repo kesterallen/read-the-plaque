@@ -45,9 +45,6 @@ var bounds;
 var markerClusterer;
 
 function initMap() {
-  // Turn on the loading spinner
-  $('.loading').show();
-  
   var mapId =  '{% if bigmap %}bigmap{% elif featured_plaque %}featured_row_map{% else %}map{% endif %}';
   var mapOptions = { styles: mapStyles, center: new google.maps.LatLng(10, 0), zoom: 2 };
   map = new google.maps.Map(document.getElementById(mapId), mapOptions);
@@ -95,10 +92,6 @@ function initMap() {
   {% else %}
     map.fitBounds(bounds);
   {% endif %}
-
-
-  // Turn off the loading spinner
-  $('.loading').hide();
 }
 
 google.maps.event.addDomListener(window, 'load', initMap);
