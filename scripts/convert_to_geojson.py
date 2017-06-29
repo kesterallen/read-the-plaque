@@ -39,8 +39,10 @@ def main():
         "features": [],
     }
 
-    for plaque in json_data['plaques']:
+    for i, plaque in enumerate(json_data['plaques']):
         geojson_feature = make_geojson_feature(plaque)
+        if i < 25:
+            geojson_feature["fp"] = True
         output['features'].append(geojson_feature)
 
     json_str = json.dumps(output)
