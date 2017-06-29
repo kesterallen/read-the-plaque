@@ -47,7 +47,7 @@ GCS_BUCKET = '/read-the-plaque.appspot.com'
 
 DEF_PLAQUESET_NAME = 'public'
 
-DEF_NUM_PER_PAGE = 27
+DEF_NUM_PER_PAGE = 25
 DYNAMIC_PLAQUE_CUTOFF = 50
 DEF_NUM_PENDING = 5
 DEF_NUM_NEARBY = 5
@@ -352,9 +352,9 @@ class ViewPlaquesPage(webapp2.RequestHandler):
         self.response.write(template_text)
 
     def _get_template_text(
-        self, cursor_urlsafe=None, per_page=DEF_NUM_PER_PAGE, is_random=False,
-        is_featured=True):
-
+            self, cursor_urlsafe=None, per_page=DEF_NUM_PER_PAGE,
+            is_random=False, is_featured=True
+        ):
         """
         View the nth per_page plaques on a grid.
         """
