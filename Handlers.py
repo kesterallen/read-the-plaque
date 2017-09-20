@@ -1264,11 +1264,11 @@ class Counts(webapp2.RequestHandler):
         num_pending = query.filter(Plaque.approved == False).count()
 
         msg = """
-            <ul>
-                <li>%s published</li>
-                <li>%s pending</li>
-            </ul>
-            """ % (num_plaques - num_pending, num_pending)
+<ul>
+  <li>%s published</li>
+  <li>%s pending</li>
+</ul>
+""" % (num_plaques - num_pending, num_pending)
         self.response.write(msg)
 
 class DeleteOnePlaque(webapp2.RequestHandler):

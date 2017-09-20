@@ -36,7 +36,6 @@
             </div>
 
 
-
             <div class="form-group">
                 <legend>Image of your Plaque (upload a file or type/copy a URL):</legend>
                 <div class="row">
@@ -59,6 +58,8 @@
             <div class="form-group">
                 <legend>Tag your Plaque</legend>
                 <input type="text" class="form-control" id="plaque_tags" name="tags" placeholder="Tags to characterize the plaque. Multiple tags can be separated by commas.">
+
+                {% if loginout.is_admin %} <button type="submit" name="add" class="btn btn-primary">Add your Plaque</button >{% endif %}
             </div>
         </div>
 
@@ -85,7 +86,7 @@
         </div>
 
         <div class="col-xs-10 col-xs-offset-1">
-            <button type="submit" name="add" class="btn btn-primary">Add your Plaque</button>
+            {% if not loginout.is_admin %} <button type="submit" name="add" class="btn btn-primary">Add your Plaque</button >{% endif %}
         </div>
     </form>
 </div>
