@@ -437,6 +437,18 @@ class BigMap(ViewPlaquesPage):
         template_text = template.render(template_values)
         self.response.write(template_text)
 
+class ExifText(BigMap):
+    @property
+    def template_file(self):
+        return "exif.html"
+
+    def get(self):
+        template = JINJA_ENVIRONMENT.get_template(self.template_file)
+        template_values = get_template_values()
+        template_text = template.render(template_values)
+        self.response.write(template_text)
+
+
 class BigMapDemo1(BigMap):
     def get(self):
         template_values = get_template_values(bigmap=True, demo="demo1")
@@ -1065,23 +1077,22 @@ class AddPlaque(webapp2.RequestHandler):
         op = {b'x-goog-acl': b'public-read'}
         return ct, op
 
-##TODO: make a hidden form that has the image in it, and onlick submit, call this service with ajax before submitting the actual plaque
-#class LocationChecker(AddPlaque):
-#    def post(self):
-#        img_file = self.request.POST.get('plaque_image_file')
-#        img_url = self.request.POST.get('plaque_image_url')
-#        name, fh = self._get_img(img_file, img_url)
-#        try:
-#            location = self._get_location(fh)
-#            #return True
-#            self.response.write("true!")
-#        except SubmitError as err:
-#            #return None
-#            self.response.write("no location")
-#
-#    def get(self, plaque_key=None, message=None):
-#        """ No reponse to GET requests."""
-#        self.redirect('/')
+#TODO: Call this service with ajax before submitting the actual plaque
+class LocationChecker(AddPlaque):
+    def post(self):
+        img_file = self.request.POST.get('plaque_image_file')
+        img_url = self.request.POST.get('plaque_image_url')
+        name, fh = self._get_img(img_file, img_url)
+        try:
+            location = self._get_location(fh)
+            reply = json.loads('{ "has_location": true }')
+        except SubmitError as err:
+            reply = json.loads('{ "has_location": false }')
+        return reply
+
+    def get(self, plaque_key=None, message=None):
+        """ No reponse to GET requests."""
+        self.redirect('/')
 
 class EditPlaque(AddPlaque):
     """

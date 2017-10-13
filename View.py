@@ -31,7 +31,7 @@ def main():
         ('/alljp/?', h.JsonAllPlaques),
         ('/updatejp/?', h.JsonAllPlaques),
         ('/fulljp/?', h.JsonAllPlaquesFull),
-        #('/loc/?', h.LocationChecker),
+        ('/loc', h.LocationChecker), # POST only
         ('/add/?', h.AddPlaque),
         ('/submit-your-own/?', h.AddPlaque),
         ('/edit/(.+?)/?', h.EditPlaque),
@@ -76,6 +76,7 @@ def main():
         ('/map/(.*?)/(.*?)/?', h.BigMap), # lat, lng
         ('/map/?', h.BigMap),
 
+        ('/exif/?', h.ExifText), # TODO: remove
         ('/demo1/?', h.BigMapDemo1), # TODO: remove
         ('/demo2/?', h.BigMapDemo2), # TODO: remove
         ('/demo3/?', h.BigMapDemo3), # TODO: remove

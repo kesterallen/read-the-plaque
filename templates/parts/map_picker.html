@@ -3,7 +3,7 @@
     <input type="button" class="gllpSearchButton btn btn-primary" value="Search Google Maps"/>
     <input type="button" id="herebutton" class="gllpHereButton btn btn-primary" value="Near You">
     <br/>
-    <div class="map_picker" style="width: 100%">Google Maps</div>
+    <div id="map_picker" class="map_picker" style="width: 100%">Google Maps</div>
     <input readonly="readonly" type="text" id="lat" name="lat" class="gllpLatitude" {% if plaque %}value="{{plaque.location.lat}}"{% endif %}/>
     <input readonly="readonly" type="text" id="lng" name="lng" class="gllpLongitude" {% if plaque %}value="{{plaque.location.lon}}"{% endif %}/>
     <input hidden type="text" class="gllpZoom" value="{{mapzoom}}"/>

@@ -3,89 +3,94 @@
 {% block content %}
 {% set plaque = plaques[0] %}
 <div class="container-fluid">
-    <div class="row">
-        <div class="col-xs-12">
-            {% if loginout.is_admin %}
-                <a class="btn btn-default pull-right" role="button" href="/edit/{{plaque.key.urlsafe()}}">Edit</a>
-                <a class="btn btn-primary pull-right" role="button" href="/setfeatured/{{plaque.key.urlsafe()}}">Feature</a>
-                {% if not plaque.approved %}
-                    <form class="form-inline pull-right" action="/approve" method="POST">
-                        <input type="hidden" name="plaque_key" value="{{plaque.key.urlsafe()}}">
-                        <button type="submit" class="btn btn-success pull-right">Approve</button>
-                    </form>
-                {% endif %}
-            {% endif %}
-            <h1>{{plaque.title}}{% if not plaque.approved %} [Pending] {% endif %}
-            </h1>
-        </div>
+  <div class="row">
+    <div class="col-xs-12">
+      {% if loginout.is_admin %}
+        <a class="btn btn-default pull-right" role="button" href="/edit/{{plaque.key.urlsafe()}}">Edit</a>
+        <a class="btn btn-primary pull-right" role="button" href="/setfeatured/{{plaque.key.urlsafe()}}">Feature</a>
+        {% if not plaque.approved %}
+          <form class="form-inline pull-right" action="/approve" method="POST">
+            <input type="hidden" name="plaque_key" value="{{plaque.key.urlsafe()}}">
+            <button type="submit" class="btn btn-success pull-right">Approve</button>
+          </form>
+        {% endif %}
+      {% endif %}
+      <h1>{{plaque.title}}{% if not plaque.approved %} [Pending] {% endif %}
+      </h1>
     </div>
-    {% if plaque.approved or loginout.is_admin %}
-        <div class="row">
-            <div class="col-xs-12 col-md-6">
-                <a href="{{plaque.img_url_big}}"><img src="{{plaque.img_url_display}}" class="img-responsive center-block"/></a>
-            </div>
-            <div class="col-xs-12 col-md-6">
-                <div class="panel panel-default">
-                    <div class="panel-body">
-                        <p>{{plaque.description}}</p>
-                        <ul class="list-inline">
+  </div>
+  {% if plaque.approved or loginout.is_admin %}
+    <div class="row">
+      <div class="col-xs-12 col-md-6">
+        <a href="{{plaque.img_url_big}}"><img src="{{plaque.img_url_display}}" class="img-responsive center-block"/></a>
+      </div>
+      <div class="col-xs-12 col-md-6">
+        <div class="panel panel-default">
+          <div class="panel-body">
+            <p>{{plaque.description}}</p>
+            <ul class="list-inline">
 {% for tag in plaque.tags %} <li><a href="/tag/{{tag}}" alt="{{tag}}">{{tag}}</a></li> {% endfor %}
-                        </ul>
-                    </div>
-                </div>
-                {% if loginout.is_admin %}
-                    <p>Originally added {{plaque.created_on.strftime('%Y-%m-%d')}}.</p>
-                {% endif %}
-                <p>
-                    <a class="btn btn-primary" role="button" href="/nearby/{{plaque.location.lat}}/{{plaque.location.lon}}">Nearby Plaques</a>
-                    <a class="btn btn-primary pull-right" role="button" href="http://maps.google.com/maps?&z=21&t=m&q=loc:{{"%.8f" % plaque.location.lat}}+{{"%.8f" % plaque.location.lon}}" target="_blank">On Google Maps</a>
-                </p>
-
-                <div id="map"></div>
-            </div>
+            </ul>
+          </div>
         </div>
+        {% if loginout.is_admin %}
+          <p>Originally added {{plaque.created_on.strftime('%Y-%m-%d')}}.</p>
+          <p id="whatthreewords"></p>
+        {% endif %}
+        <p>
+          <a class="btn btn-primary" role="button" href="/nearby/{{plaque.location.lat}}/{{plaque.location.lon}}">Nearby Plaques</a>
+          <a class="btn btn-primary pull-right" role="button" href="http://maps.google.com/maps?&z=21&t=m&q=loc:{{"%.8f" % plaque.location.lat}}+{{"%.8f" % plaque.location.lon}}" target="_blank">On Google Maps</a>
+        </p>
 
-        <p></p>
+        <div id="map"></div>
+      </div>
+    </div>
 
-        <div class="row">
-            <div class="col-xs-11">
-                {% if loginout.is_admin %}
-                    {% if plaque.approved %}
-                        <div class="panel panel-default">
-                            <div class="panel-body">
-                                <form class="form-inline" action="/disapprove" method="POST">
-                                    <input type="hidden" name="plaque_key" value="{{plaque.key.urlsafe()}}">
-                                    <button type="submit" class="btn btn-default">Unpublish This Plaque</button>
-                                </form>
-                            </div>
-                        </div>
-                    {% else %}
-                        <div class="panel panel-default">
-                            <div class="panel-body">
-                                <form class="form-inline" action="/delete" method="POST">
-                                    <input type="hidden" name="plaque_key" value="{{plaque.key.urlsafe()}}">
-                                    <button type="submit" class="btn btn-danger pull-right">Delete this Plaque</button>
-                                </form>
-                            </div>
-                        </div>
-                    {% endif %}
-                {% endif %}
+    <p></p>
+
+    <div class="row">
+      <div class="col-xs-11">
+        {% if loginout.is_admin %}
+          {% if plaque.approved %}
+            <div class="panel panel-default">
+              <div class="panel-body">
+                <form class="form-inline" action="/disapprove" method="POST">
+                  <input type="hidden" name="plaque_key" value="{{plaque.key.urlsafe()}}">
+                  <button type="submit" class="btn btn-default">Unpublish This Plaque</button>
+                </form>
+              </div>
             </div>
-        </div>
-    {% endif %}
+          {% else %}
+            <div class="panel panel-default">
+              <div class="panel-body">
+                <form class="form-inline" action="/delete" method="POST">
+                  <input type="hidden" name="plaque_key" value="{{plaque.key.urlsafe()}}">
+                  <button type="submit" class="btn btn-danger pull-right">Delete this Plaque</button>
+                </form>
+              </div>
+            </div>
+          {% endif %}
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
 
 </div>
 {% endblock %}
 
 {% block bottomofbody %}
-<!--
 <script>
-  $('#map').ready(function(){
-    if ($('#featured-plaque').length > 0) {
-      fp_height = $('#featured-plaque').height();
-      $('#map').height(fp_height - 80);
-    }
-  });
+var settings = {
+  "async": true,
+  "crossDomain": true,
+  "url": "https://api.what3words.com/v2/reverse?coords={{plaque.location.lat}}%2C{{plaque.location.lon}}&key=ABHVDFTV&lang=en&format=json&display=full",
+  "method": "GET",
+  "headers": {}
+}
+
+$.ajax(settings).done(function (response) {
+  link = '<a href="' + response.map + '">WhatThreeWords: ' + response.words + '</a>';
+  $("#whatthreewords").html(link);
+});
 </script>
--->
 {% endblock %}

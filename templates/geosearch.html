@@ -5,29 +5,29 @@
 <script src="/static/gmaps-latlng-picker.js"></script>
 
 <div class="container-fluid">
-    <h1>Find Plaques by Location</h1>
+  <h1>Find Plaques by Location</h1>
 
-        <form action="/geo" method="POST">
-            <div class="col-xs-12 col-md-8">
-                <legend>Step 1: {{step1text}}</legend>
-                {% include 'parts/map_picker.html' %}
-            </div>
+    <form action="/geo" method="POST">
+      <div class="col-xs-12 col-md-8">
+        <legend>Step 1: {{step1text}}</legend>
+        {% include 'parts/map_picker.html' %}
+      </div>
 
-            <div class="col-xs-12 col-md-4">
-                <legend>Step 2: Pick how far out to search</legend>
-                <select id="search_radius_meters"
-                        name="search_radius_meters" width="100%">
-                    <option value="8046">Within 5 miles</option>
-                    <option value="16093">Within 10 miles</option>
-                    <option value="40233">Within 25 miles</option>
-                    <option value="80466">Within 50 miles</option>
-                    <option value="160934">Within 100 miles</option>
-                </select>
-            </div>
-            <div class="col-xs-12">
-                <legend>Step 3: Find plaques within this search</legend>
-                <button type="submit" class="btn btn-primary">Find Plaques</button>
-            </div>
-        </form>
+      <div class="col-xs-12 col-md-4">
+        <legend>Step 2: Pick how far out to search</legend>
+        <select id="search_radius_meters"
+            name="search_radius_meters" width="100%">
+          <option value="8046">Within 5 miles</option>
+          <option value="16093">Within 10 miles</option>
+          <option value="40233">Within 25 miles</option>
+          <option value="80466">Within 50 miles</option>
+          <option value="160934">Within 100 miles</option>
+        </select>
+      </div>
+      <div class="col-xs-12">
+        <legend>Step 3: Find plaques within this search</legend>
+        <button type="submit" class="btn btn-primary">Find Plaques</button>
+      </div>
+    </form>
 </div>
 {% endblock %}

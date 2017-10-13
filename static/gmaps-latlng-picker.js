@@ -143,7 +143,7 @@ $.fn.gMapsLatLonPicker = (function() {
     var publicfunc = {
 
         // INITIALIZE MAP ON DIV //////////////////////////////////////////////////////////////////
-        init : function(object) {
+        init : function(object, zoom=_self.params.defZoom) {
 
             if ( !$(object).attr("id") ) {
                 if ( $(object).attr("name") ) {
@@ -163,7 +163,7 @@ $.fn.gMapsLatLonPicker = (function() {
             _self.vars.LATLNG = new google.maps.LatLng(_self.params.defLat, _self.params.defLng);
 
             _self.vars.MAPOPTIONS        = _self.params.mapOptions;
-            _self.vars.MAPOPTIONS.zoom   = _self.params.defZoom;
+            _self.vars.MAPOPTIONS.zoom   = zoom;
             _self.vars.MAPOPTIONS.center = _self.vars.LATLNG;
 
             _self.vars.map = new google.maps.Map($(_self.vars.cssID + ".map_picker").get(0), _self.vars.MAPOPTIONS);
@@ -246,6 +246,7 @@ $(document).ready( function() {
 });
 
 $(document).bind("location_changed", function(event, object) {
-    console.log("changed: " + $(object).attr('id') );
+    document.getElementById("add").disabled = false;
+    $("#add").html("Add your Plaque");
 });
 
