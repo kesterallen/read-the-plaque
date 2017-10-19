@@ -1,4 +1,8 @@
 
+<!--
+<script src='https://api.mapbox.com/mapbox-gl-js/v0.41.0/mapbox-gl.js'></script>
+<link href='https://api.mapbox.com/mapbox-gl-js/v0.41.0/mapbox-gl.css' rel='stylesheet' />
+-->
 <script src="https://api.tiles.mapbox.com/mapbox-gl-js/v0.37.0/mapbox-gl.js"></script>
 <link href="https://api.tiles.mapbox.com/mapbox-gl-js/v0.37.0/mapbox-gl.css" rel="stylesheet" />
 <script>
@@ -106,6 +110,9 @@ map.on("load", function() {
         .addTo(map);
       map.flyTo({center: coords, speed: 3.0});
     } else {
+      //var clusterId = e.features[0].properties.cluster_id
+      //var clusterExpansionZoom = getClusterExpansionZoom(clusterId);
+      //map.flyTo({center: coords, speed: 3.0, zoom: clusterExpansionZoom});
       map.flyTo({center: coords, speed: 3.0, zoom: 3 + map.getZoom()});
     }
   }
