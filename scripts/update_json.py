@@ -16,8 +16,8 @@ json_filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                              '../static/plaques_updated.json')
 
 ALL = False
-#UTC_OFFSET = 8 # PST
-UTC_OFFSET = 7 # PDT
+UTC_OFFSET = 8 # PST
+#UTC_OFFSET = 7 # PDT
 
 def offset_time(last_updated_str):
     """

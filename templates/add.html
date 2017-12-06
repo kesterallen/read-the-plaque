@@ -118,6 +118,7 @@ $(document).ready(function() {
 });
 </script>
 
+<!-- Detect exif location from image:when image is selected, if present. Also don't allow upload without location. -->
 <script>
   function convertCoords(gps, ref) {
     $sign = (ref == "W" || ref == "w" || ref == "S" || ref == "s") ? -1.0 : 1.0;

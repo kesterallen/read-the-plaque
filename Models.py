@@ -300,7 +300,7 @@ class Plaque(ndb.Model):
                 'lat': str(self.location.lat),
                 'lng': str(self.location.lon), # N.B.: 'lng' --> 'lon'
                 'img_url_tiny': self.img_url_tiny,
-                'tweet': "'%s' Always #readtheplaque http://readtheplaque.com%s" % (
+                'tweet': "'%s' Always #readtheplaque https://readtheplaque.com%s" % (
                     self.title, self.title_page_url),
             }
         else:

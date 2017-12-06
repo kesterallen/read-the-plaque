@@ -2,22 +2,22 @@
 <rss version="2.0">
     <channel>
         <title>Read The Plaque</title>
-        <link>http://read-the-plaque.appspot.com</link>
+        <link>https://readtheplaque.com</link>
         <description>Always read the plaque</description>
         <language>en-us</language>
-        <atom:link href="http://read-the-plaque.appspot.com/rss" rel="self" type="application/rss+xml" />
+        <atom:link href="https://readtheplaque.com/rss" rel="self" type="application/rss+xml" />
 
         {% for plaque in plaques %}
             <item>
                 <title>{{plaque.title}}</title>
-                <link>http://readtheplaque.com{{plaque.title_page_url}}</link>
-                <guid>http://readtheplaque.com{{plaque.title_page_url}}</guid>
+                <link>https://readtheplaque.com{{plaque.title_page_url}}</link>
+                <guid>https://readtheplaque.com{{plaque.title_page_url}}</guid>
                 <pubDate>{{plaque.created_on}}</pubDate>
                 <description>
                     {{plaque.title}}
                     <![CDATA[
                     <p>
-                        <a href="http://readtheplaque.com{{plaque.title_page_url}}">
+                        <a href="https://readtheplaque.com{{plaque.title_page_url}}">
                             <img src="{{plaque.img_url_thumbnail}}" alt="{{plaque.title}}" title="{{plaque.title}}"/>
                         </a>
                     </p>
