@@ -21,7 +21,8 @@ function found_location(position) {
 function no_location(error) {
   switch(error.code) {
     case error.PERMISSION_DENIED:
-      $("#failedLocationModal").modal();
+      //$("#failedLocationModal").modal();
+      window.location.replace("https://readtheplaque.com");
       return;
     case error.POSITION_UNAVAILABLE:
       alert("Location information is unavailable.");

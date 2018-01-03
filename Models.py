@@ -69,6 +69,11 @@ class Plaque(ndb.Model):
         return count
 
     @classmethod
+    def tokenize_title(cls, title):
+        tokenized_title = re.sub('[^\w]+', '-', title.strip()).lower()
+        return tokenized_title
+
+    @classmethod
     def fetch_page(cls, num, start_cursor=None, urlsafe=True):
         if urlsafe:
             start_cursor_urlsafe = start_cursor
@@ -232,7 +237,7 @@ class Plaque(ndb.Model):
         being edited the same.
         """
         if self.title:
-            title_url = re.sub('[^\w]+', '-', self.title.strip()).lower()
+            title_url = Plaque.tokenize_title(self.title)
         else:
             title_url = 'change-me'
 
@@ -258,6 +263,13 @@ class Plaque(ndb.Model):
         query = Plaque.query(ancestor=ancestor_key
                      ).filter(Plaque.title_url == title_url)
         num_plaques = query.count()
+        return num_plaques
+
+    @classmethod
+    def num_same_title_urls_published(cls, title_url, ancestor_key):
+        num_plaques = Plaque.query(ancestor=ancestor_key
+            ).filter(Plaque.title_url == title_url
+            ).filter(Plaque.approved == True).count()
         return num_plaques
 
     def to_search_document(self):

@@ -328,10 +328,10 @@ def handle_500(request, response, exception):
 class FakePlaqueForRootUrlPreviews(object):
     """Probably a better way to do this."""
     def __init__(self):
-        self.title_page_url = "http://readtheplaque.com"
+        self.title_page_url = "https://readtheplaque.com"
         self.title = "Read the Plaque"
         self.description = "A gigantic map of all the cool plaques in the world"
-        self.img_url_thumbnail = "http://readtheplaque.com/images/rtp_logo_600square.jpg"
+        self.img_url_thumbnail = "https://readtheplaque.com/images/rtp_logo_600square.jpg"
 
 class ViewPlaquesTest(webapp2.RequestHandler):
     def get(self):
@@ -756,7 +756,7 @@ class AddPlaque(webapp2.RequestHandler):
     def get(self, message=None):
         maptext = "Click the plaque's location on the map, or search " + \
                   "for it, or enter its lat/lng location"
-        template_values = get_template_values(maptext=maptext)
+        template_values = get_template_values(maptext=maptext, mapzoom=10)
         message = self._get_message(message)
         if message is not None:
             template_values['message'] = message
@@ -786,8 +786,6 @@ class AddPlaque(webapp2.RequestHandler):
             logging.info("Plaque %s is added with is_edit %s." %
                 (plaque.title, is_edit))
 
-            # TODO: maybe catch the no-location error here and redirect, with original form params, back to the add/edit page?
-
             # Make the plaque searchable:
             #
             logging.info('making search document')
@@ -807,12 +805,12 @@ class AddPlaque(webapp2.RequestHandler):
             msg = '%s %s plaque! %s' %  (name, post_type, plaque.title_page_url)
             body = """
 <p>
-    <a href="http://readtheplaque.com{1.title_page_url}">
+    <a href="https://readtheplaque.com{1.title_page_url}">
         {0} plaque!
     </a>
 </p>
 <p>
-    <a href="http://readtheplaque.com{1.title_page_url}">
+    <a href="https://readtheplaque.com{1.title_page_url}">
         <img alt="plaque alt" title="plaque title" src="{1.img_url}"/>
     </a>
 </p>
@@ -1077,22 +1075,13 @@ class AddPlaque(webapp2.RequestHandler):
         op = {b'x-goog-acl': b'public-read'}
         return ct, op
 
-#TODO: Call this service with ajax before submitting the actual plaque
-class LocationChecker(AddPlaque):
+class DuplicateChecker(AddPlaque):
     def post(self):
-        img_file = self.request.POST.get('plaque_image_file')
-        img_url = self.request.POST.get('plaque_image_url')
-        name, fh = self._get_img(img_file, img_url)
-        try:
-            location = self._get_location(fh)
-            reply = json.loads('{ "has_location": true }')
-        except SubmitError as err:
-            reply = json.loads('{ "has_location": false }')
-        return reply
-
-    def get(self, plaque_key=None, message=None):
-        """ No reponse to GET requests."""
-        self.redirect('/')
+        title_raw = self.request.POST.get('title_url')
+        title = Plaque.tokenize_title(title_raw)
+        n_matches = Plaque.num_same_title_urls_published(title, get_plaqueset_key())
+        response_text = title if n_matches > 0 else ""
+        self.response.write(response_text)
 
 class EditPlaque(AddPlaque):
     """

@@ -31,7 +31,8 @@ def main():
         ('/alljp/?', h.JsonAllPlaques),
         ('/updatejp/?', h.JsonAllPlaques),
         ('/fulljp/?', h.JsonAllPlaquesFull),
-        ('/loc', h.LocationChecker), # POST only
+        #('/loc', h.LocationChecker), # POST only
+        ('/dup', h.DuplicateChecker),
         ('/add/?', h.AddPlaque),
         ('/submit-your-own/?', h.AddPlaque),
         ('/edit/(.+?)/?', h.EditPlaque),

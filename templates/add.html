@@ -8,7 +8,7 @@
 <script type="text/javascript" src="/static/jquery.exif.js"></script>
 
 
-<div class="container-fluid">
+<div id="submitFormContainer" class="container-fluid">
   <div class="col-xs-10 col-xs-offset-1">
     <h3>(You may also tweet plaque photos to <a href="http://www.twitter.com/readtheplaque">@readtheplaque</a> or
       email them to <a href="mailto:info@readtheplaque.com">info@readtheplaque.com</a>).</h3>
@@ -24,12 +24,27 @@
     enctype="multipart/form-data">
 
     <div class="col-xs-10 col-xs-offset-1">
-    {% if message %}<h2>{{message}}</h2>{% endif %}
+      {% if message %}<h2>{{message}}</h2>{% endif %}
     </div>
 
-    <div class="col-xs-10 col-xs-offset-1">
+    <div class="col-xs-8 col-xs-offset-1">
+
       <div class="form-group">
-        <legend>Plaque Name</legend>
+        <legend>1) Image of your Plaque (file or URL):</legend>
+        <div class="row">
+          <label class="btn btn-default btn-file">
+            <input type="file" id="plaque_image_file" name="plaque_image_file">
+          </label>
+          <input type="url"
+              id="plaque_image_url"
+              name="plaque_image_url"
+              placeholder="Image URL"
+              style="width: 100%;">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <legend>2) Your Plaque's Name</legend>
         <input type="text"
              class="form-control"
              id="plaque_title"
@@ -37,60 +52,49 @@
              required
              placeholder="Plaque Name">
       </div>
+      <div id="duplicate_name"></div>
 
-
-      <div class="form-group">
-        <legend>Image of your Plaque (upload a file or type/copy a URL):</legend>
-        <div class="row">
-          <div class="col-xs-10 col-xs-offset-1 col-md-4">
-            <label class="btn btn-default btn-file">
-              <input type="file" id="plaque_image_file" name="plaque_image_file">
-            </label>
-          </div>
-          <div class="col-xs-10 col-xs-offset-1 col-md-4">
-            <input type="url"
-                 id="plaque_image_url"
-                 name="plaque_image_url"
-                 placeholder="Image URL"
-                 style="width: 100%;"
-                 >
-          </div>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <legend>Tag your Plaque</legend>
-        <input type="text" class="form-control" id="plaque_tags" name="tags" placeholder="Tags to characterize the plaque. Multiple tags can be separated by commas.">
-
-        {% if loginout.is_admin %} <button type="submit" name="add" id="add" class="btn btn-primary">Add your Plaque</button >{% endif %}
-      </div>
-    </div>
-
-    <div class="col-xs-10 col-xs-offset-1">
-      <legend>Click the map to pick the plaque's location. If the plaque is a geotagged image, you can skip this.</legend>
+      <legend>
+        3) Click the map to pick the plaque's location. If the plaque is a
+        geotagged image, you can skip this.
+      </legend>
       {% include 'parts/map_picker.html' %}
-    </div>
 
-    <div class="col-xs-10 col-xs-offset-1">
       <div class="form-group">
         <legend>
-        Tell us about the plaque. Transcribe it if you can.
-        Include contact information if you'd like us to let you
-        know when your plaque is published, a 'Submitted by:' line
-        if you'd like credit for the plaque.
+          4) Tell us about the plaque. Transcribe it if you can.
+          Include contact information if you'd like us to let you
+          know when your plaque is published, a 'Submitted by:' line
+          if you'd like credit for the plaque.
         </legend>
         <textarea class="form-control"
-              id="plaque_description"
-              name="description"
-              required
-              rows="5">
+            id="plaque_description"
+            name="description"
+            required
+            rows="5">
         </textarea>
       </div>
+
+      <div class="form-group">
+        <legend>4) [Optional] Tag your Plaque</legend>
+        <input type="text" 
+            class="form-control"
+            id="plaque_tags"
+            name="tags"
+            placeholder="Comma-separated tags to characterize the plaque.">
+      </div>
+
     </div>
 
-    <div class="col-xs-10 col-xs-offset-1">
-      {% if not loginout.is_admin %} <button type="submit" name="add" id="add" class="btn btn-primary">Add your Plaque</button >{% endif %}
+    <div id="submitButtonColumn" class="col-xs-2">
+      <button 
+          type="submit"
+          name="add"
+          id="add"
+          class="btn btn-primary">Add your Plaque
+      </button>
     </div>
+
   </form>
 </div>
 
@@ -120,47 +124,76 @@ $(document).ready(function() {
 
 <!-- Detect exif location from image:when image is selected, if present. Also don't allow upload without location. -->
 <script>
-  function convertCoords(gps, ref) {
-    $sign = (ref == "W" || ref == "w" || ref == "S" || ref == "s") ? -1.0 : 1.0;
-    $out = $sign * (gps[0] * 1.0 + gps[1] / 60.0 + gps[2] / 3600.0);
-    return $out;
+function convertCoords(gps, ref) {
+  $sign = (ref == "W" || ref == "w" || ref == "S" || ref == "s") ? -1.0 : 1.0;
+  $out = $sign * (gps[0] * 1.0 + gps[1] / 60.0 + gps[2] / 3600.0);
+  return $out;
+}
+
+var submitButton = document.getElementById("add");
+submitButton.disabled = true;
+submitButton.innerHTML = "(Specify plaque location)";
+
+// If the location is picked by the user in the visual picker, the button
+// will get updated there.
+// 
+var locationCheck = function(exifObject) {
+  locationInFile = exifObject && 
+                   "GPSLatitude" in exifObject &&
+                   "GPSLatitudeRef" in exifObject &&
+                   "GPSLongitude" in exifObject &&
+                   "GPSLongitudeRef" in exifObject;
+  if (locationInFile) {
+    lat = convertCoords(exifObject.GPSLatitude, exifObject.GPSLatitudeRef);
+    lng = convertCoords(exifObject.GPSLongitude, exifObject.GPSLongitudeRef);
+    $("#lat").val(lat);
+    $("#lng").val(lng);
+
+    picker = $(document).gMapsLatLonPicker();
+    picker.init($('.map_picker_form'), 14);
+
+    submitButton.disabled = false;
+    submitButton.innerHTML = "Add your Plaque";
+    submitButton.className = "btn btn-success";
+    // TODO: this should happen for a user-selected location:also (from the map pane)
   }
+}
 
-  document.getElementById("add").disabled = true;
-  $("#add").html("(Specify plaque location before submitting)");
+try {
+  $('#plaque_image_file').change(function() {
+    $(this).fileExif(locationCheck);
+  });
+} catch (e) {
+  console.log(e);
+}
 
-  // If the location is picked by the user in the visual picker, the button
-  // will get updated there.
-  // 
-  var locationCheck = function(exifObject) {
-    locationInFile = exifObject && 
-                     "GPSLatitude" in exifObject &&
-                     "GPSLatitudeRef" in exifObject &&
-                     "GPSLongitude" in exifObject &&
-                     "GPSLongitudeRef" in exifObject;
-    if (locationInFile) {
-      lat = convertCoords(exifObject.GPSLatitude, exifObject.GPSLatitudeRef);
-      lng = convertCoords(exifObject.GPSLongitude, exifObject.GPSLongitudeRef);
-      $("#lat").val(lat);
-      $("#lng").val(lng);
+try {
+  $('#plaque_title').change(function() {
+    var title = $('#plaque_title').val();
+    $.post(
+      '/dup',
+      {title_url: title},
+      function (result) {
+        var dup_div = document.getElementById("duplicate_name");
+        if (result != "") {
+          dup_div.innerHTML = "Possible <a href=\"/plaque/" + result + "\" target=_blank>duplicate plaque</a>, please review before submitting.";
+        } else {
+          dup_div.innerHTML = "";
+        }
+      }
+    );
+  });
+} catch (e) {
+  console.log(e);
+}
 
-      picker = $(document).gMapsLatLonPicker();
-      picker.init($('.map_picker_form'), 14);
+</script>
 
-      document.getElementById("add").disabled = false;
-      $("#add").html("Add your Plaque");
-    }
-  }
-
-  try {
-    $('#plaque_image_file').change(function() {
-      $(this).fileExif(locationCheck);
-    });
-  }
-  catch (e) {
-    console.log(e);
-  }
-
+<!-- Keep the Submit button visible during scroll-->
+<script>
+$(window).scroll(function() { 
+  $('#submitButtonColumn').animate({top:$(this).scrollTop()});
+});
 </script>
 
 {% endblock %}
