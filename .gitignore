@@ -1,1 +1,6 @@
 *.pyc
+scripts/flikr_scraper.py
+scripts/instagram_scraper.py
+scripts/twitter_scraper.py
+static/plaques.geojson
+static/plaques_updated.json
