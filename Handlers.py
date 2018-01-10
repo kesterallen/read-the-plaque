@@ -425,6 +425,10 @@ class BigMap(ViewPlaquesPage):
     def get(self, lat=None, lng=None, zoom=None):
 
         template_values = get_template_values(bigmap=True)
+        query = Plaque.query()
+        num_plaques = query.filter(Plaque.approved == True).count()
+        template_values['counts'] = num_plaques
+        logging.debug(template_values)
         if lat is not None and lng is not None:
             template_values['bigmap_center'] = True
             template_values['bigmap_lat'] = lat
@@ -815,7 +819,7 @@ class AddPlaque(webapp2.RequestHandler):
     </a>
 </p>
             """.format(post_type, plaque)
-            email_admin(msg, body)
+            #email_admin(msg, body)
             state = ADD_STATES['ADD_STATE_SUCCESS']
             msg = plaque.title_page_url
         except (BadValueError, ValueError, SubmitError) as err:
@@ -1308,7 +1312,7 @@ class DeleteOnePlaque(webapp2.RequestHandler):
         #memcache.flush_all()
         email_admin('%s Deleted plaque %s' % (name, plaque.title_url),
                     '%s Deleted plaque %s' % (name, plaque.title_url))
-        self.redirect('/randpending')
+        self.redirect('/nextpending')
 
 class ViewNextPending(ViewOnePlaqueParent):
     def get(self):
@@ -1479,9 +1483,9 @@ class ApprovePending(webapp2.RequestHandler):
         user = users.get_current_user()
         name = "anon" if user is None else user.nickname()
         msg = "{1} approved plaque {0}".format(title, name)
-        email_admin(msg, msg)
+        #email_admin(msg, msg)
 
-        self.redirect('/randpending')
+        self.redirect('/nextpending')
 
 class DisapprovePlaque(webapp2.RequestHandler):
     """Disapprove a plaque"""
