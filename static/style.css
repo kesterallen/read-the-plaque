@@ -114,7 +114,7 @@ body {
 
 .columns {
     -webkit-column-fill: auto;
-    -moz-column-fill: balance;
+    -moz-column-fill: auto;
     column-fill: auto;
 
     -webkit-column-gap: 10px;
@@ -195,33 +195,3 @@ body {
     }
 }
 /* end of Pintrest style */
-
-/* Loading spinner */
-.loading {
-    -webkit-animation:spin 2s linear infinite;
-    -moz-animation:spin 2s linear infinite;
-    animation:spin 2s linear infinite;
-    position:absolute;
-    top:0;
-    bottom:0;
-    left:0;
-    right:0;
-    width:300px; /* Assign a value */
-    height:300px; /* Assign a value */
-    margin:auto;
-}
-@-moz-keyframes spin { 100% {
-    -moz-transform:rotate(360deg);
-    }
-}
-@-webkit-keyframes spin { 100% {
-    -webkit-transform:rotate(360deg);
-    }
-}
-@keyframes spin { 100% {
-    -webkit-transform:rotate(360deg);
-    transform:rotate(360deg);
-    }
-}
-/* end of Loading spinner */
-
