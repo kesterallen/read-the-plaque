@@ -819,7 +819,7 @@ class AddPlaque(webapp2.RequestHandler):
     </a>
 </p>
             """.format(post_type, plaque)
-            #email_admin(msg, body)
+            email_admin(msg, body)
             state = ADD_STATES['ADD_STATE_SUCCESS']
             msg = plaque.title_page_url
         except (BadValueError, ValueError, SubmitError) as err:
@@ -1483,7 +1483,7 @@ class ApprovePending(webapp2.RequestHandler):
         user = users.get_current_user()
         name = "anon" if user is None else user.nickname()
         msg = "{1} approved plaque {0}".format(title, name)
-        #email_admin(msg, msg)
+        email_admin(msg, msg)
 
         self.redirect('/nextpending')
 
