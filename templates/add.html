@@ -7,7 +7,6 @@
 <script src="/static/jquery.exif.js"></script>
 <script type="text/javascript" src="/static/jquery.exif.js"></script>
 
-
 <div id="submitFormContainer" class="container-fluid">
   <div class="col-xs-10 col-xs-offset-1">
     <h3>(You may also tweet plaque photos to <a href="http://www.twitter.com/readtheplaque">@readtheplaque</a> or
@@ -32,15 +31,16 @@
       <div class="form-group">
         <legend>1) Image of your Plaque (file or URL):</legend>
         <div class="row">
-          <label class="btn btn-default btn-file">
+          <label class="btn btn-default btn-file" style="width: 40%">
             <input type="file" id="plaque_image_file" name="plaque_image_file">
           </label>
           <input type="url"
               id="plaque_image_url"
               name="plaque_image_url"
               placeholder="Image URL"
-              style="width: 100%;">
+              style="width: 40%;">
         </div>
+        <img id="preview" src="#" alt="Image preview" height="50px"/>
       </div>
 
       <div class="form-group">
@@ -159,9 +159,18 @@ var locationCheck = function(exifObject) {
   }
 }
 
+function readURL(input) {
+  if (input.files && input.files[0]) {
+    var reader = new FileReader();
+    reader.onload = function (e) { $('#preview').attr('src', e.target.result); }
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
 try {
   $('#plaque_image_file').change(function() {
     $(this).fileExif(locationCheck);
+    readURL(this);
   });
 } catch (e) {
   console.log(e);

@@ -114,7 +114,7 @@ body {
 
 .columns {
     -webkit-column-fill: auto;
-    -moz-column-fill: auto;
+    -moz-column-fill: balance;
     column-fill: auto;
 
     -webkit-column-gap: 10px;

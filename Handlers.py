@@ -190,7 +190,8 @@ def get_random_plaque_key(method='time'):
     Get a random plaque key.  Limit to total number of runs to 100 to prevent
     infinite loop if there are no plaques.
 
-    There are at least three ways to get a random plaque:
+    There are at least three strategies to get a random plaque:
+
         1. Perform a Plaque.query().count(), get a random int in the [0,count)
            range, and get the plaque at that offset using
            Plaque.query.get(offset=foo).
@@ -452,31 +453,6 @@ class ExifText(BigMap):
         template_text = template.render(template_values)
         self.response.write(template_text)
 
-
-class BigMapDemo1(BigMap):
-    def get(self):
-        template_values = get_template_values(bigmap=True, demo="demo1")
-        logging.debug(template_values)
-        template = JINJA_ENVIRONMENT.get_template(self.template_file)
-        template_text = template.render(template_values)
-        self.response.write(template_text)
-
-class BigMapDemo2(BigMap):
-    def get(self):
-        template_values = get_template_values(bigmap=True, demo="demo2")
-        logging.debug(template_values)
-        template = JINJA_ENVIRONMENT.get_template(self.template_file)
-        template_text = template.render(template_values)
-        self.response.write(template_text)
-
-class BigMapDemo3(BigMap):
-    def get(self):
-        template_values = get_template_values(bigmap=True, demo="demo3")
-        logging.debug(template_values)
-        template = JINJA_ENVIRONMENT.get_template(self.template_file)
-        template_text = template.render(template_values)
-        self.response.write(template_text)
-
 class ViewOnePlaqueParent(webapp2.RequestHandler):
     def get(self):
         raise NotImplementedError("Don't call ViewOnePlaqueParent.get directly")
@@ -521,7 +497,7 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
                 except:
                     pass
 
-        # If that didn't find andything, serve the default couldn't-find-it
+        # If that didn't find anything, serve the default couldn't-find-it
         # plaque:
         if plaque is None:
             logging.debug("Neither comment_key nor plaque_key is specified. "
@@ -1131,6 +1107,7 @@ class SearchPlaques(webapp2.RequestHandler):
         else:
             # TODO: NDB cursor pagination?
             search_term = '"%s"' % search_term.replace('"', '')
+            search_term = search_term.encode('unicode-escape')
             plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
             results = plaque_search_index.search(search_term)
             logging.debug('search results are "%s"' % results)
@@ -1319,10 +1296,12 @@ class ViewNextPending(ViewOnePlaqueParent):
         plaques = Plaque.pending_list(1)
         if plaques:
             plaque = plaques[0]
-            page_text = self._get_from_key(plaque_key=plaque.key.urlsafe())
+            logging.info("redirecting to {}".format(plaque.title_page_url))
+            self.redirect(plaque.title_page_url)
+            return
         else:
             page_text =  self._get_from_key(plaque_key=None)
-        self.response.write(page_text)
+            self.response.write(page_text)
 
 class ViewPending(webapp2.RequestHandler):
     def write_pending(self, plaques):
@@ -1483,7 +1462,7 @@ class ApprovePending(webapp2.RequestHandler):
         user = users.get_current_user()
         name = "anon" if user is None else user.nickname()
         msg = "{1} approved plaque {0}".format(title, name)
-        email_admin(msg, msg)
+        #email_admin(msg, msg)
 
         self.redirect('/nextpending')
 

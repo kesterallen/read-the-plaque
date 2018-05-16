@@ -77,18 +77,13 @@ def main():
         ('/map/(.*?)/(.*?)/?', h.BigMap), # lat, lng
         ('/map/?', h.BigMap),
 
-        ('/exif/?', h.ExifText), # TODO: remove
-        ('/demo1/?', h.BigMapDemo1), # TODO: remove
-        ('/demo2/?', h.BigMapDemo2), # TODO: remove
-        ('/demo3/?', h.BigMapDemo3), # TODO: remove
-
         ('/', h.ViewPlaquesPage),
         ('/(.+?)/(.+?)', h.ViewOnePlaque), # supports the old_site_id
         ('/(.+?)/?', h.ViewOnePlaque), # supports the old_site_id
     ], debug=True)
 
     app.error_handlers[404] = h.handle_404
-    #app.error_handlers[500] = h.handle_500
+    app.error_handlers[500] = h.handle_500
 
     return app
 
