@@ -36,6 +36,7 @@
         {% if loginout.is_admin %}
           <p>Originally added {{plaque.created_on.strftime('%Y-%m-%d')}}.</p>
           <p id="whatthreewords"></p>
+          <p id="ocr">scripts/ocr.sh {{plaque.img_url}}</p>
         {% endif %}
         <p>
           <a class="btn btn-primary" role="button" href="/nearby/{{plaque.location.lat}}/{{plaque.location.lon}}">Nearby Plaques</a>
