@@ -56,7 +56,7 @@ def main():
         ('/randpending/(.*?)/?', h.ViewPendingRandom),
         ('/disapprove', h.DisapprovePlaque),
         ('/approve', h.ApprovePending),
-        #('/approveall', h.ApproveAllPending),
+        ('/approveall', h.ApproveAllPending),
         #('/addsearchall', h.AddSearchIndexAll),
         ('/deletesearch/(.+?)', h.DeleteOneSearchIndex),
         #('/addtitleurlall', h.AddTitleUrlAll),

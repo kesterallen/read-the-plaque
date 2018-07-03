@@ -135,7 +135,7 @@ class Plaque(ndb.Model):
         return count
 
     @classmethod
-    def pending_list(cls, num=20, desc=True):
+    def pending_list(cls, num=25, desc=True):
         """A separate method from approved() so that it will
         never be memcached."""
         query = Plaque.query().filter(Plaque.approved != True
@@ -312,8 +312,6 @@ class Plaque(ndb.Model):
                 'lat': str(self.location.lat),
                 'lng': str(self.location.lon), # N.B.: 'lng' --> 'lon'
                 'img_url_tiny': self.img_url_tiny,
-                'tweet': "'%s' Always #readtheplaque https://readtheplaque.com%s" % (
-                    self.title, self.title_page_url),
             }
         else:
             plaque_dict = {
@@ -331,6 +329,13 @@ class Plaque(ndb.Model):
                 'old_site_id': self.old_site_id,
             }
         return plaque_dict
+
+    @property
+    def json_for_tweet(self):
+        plaque_dict = self.to_dict(summary=True)
+        tmpl = "'%s' Always #readtheplaque https://readtheplaque.com%s"
+        plaque_dict['tweet'] = tmpl % (self.title, self.title_page_url),
+        return json.dumps(plaque_dict)
 
 class FeaturedPlaque(ndb.Model):
     created_on = ndb.DateTimeProperty(auto_now_add=True)

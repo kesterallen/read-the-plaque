@@ -48,7 +48,6 @@ GCS_BUCKET = '/read-the-plaque.appspot.com'
 DEF_PLAQUESET_NAME = 'public'
 
 DEF_NUM_PER_PAGE = 25
-DEF_NUM_PER_PAGE = 27
 DYNAMIC_PLAQUE_CUTOFF = 50
 DEF_NUM_PENDING = 5
 DEF_NUM_NEARBY = 5
@@ -566,7 +565,7 @@ class TweetText(ViewOnePlaqueParent):
         plaque = ndb.Key(urlsafe=plaque_key).get()
         set_featured(plaque)
         memcache.flush_all()
-        self.response.write(json.dumps(plaque.to_dict(summary=summary)))
+        self.response.write(plaque.json_for_tweet)
 
 class JsonAllPlaques(webapp2.RequestHandler):
     """
@@ -616,7 +615,7 @@ class JsonAllPlaques(webapp2.RequestHandler):
 
     def _json_for_all(self, summary=True):
         plaques_all = []
-        num = 300
+        num = 1000
         more = True
         cursor = None
         while more:
@@ -635,8 +634,10 @@ class JsonAllPlaques(webapp2.RequestHandler):
         does those plaques.
         """
         if plaque_keys_str is not None:
+            logging.info("plaque_keys_str is not None")
             json_output = self._json_for_keys(plaque_keys_str, summary)
         else:
+            logging.info("plaque_keys_str is None")
             json_output = self._json_for_all(summary)
         self.response.write(json_output)
 
@@ -720,8 +721,11 @@ class AddPlaque(webapp2.RequestHandler):
         if state is not None:
             if state == ADD_STATE_SUCCESS:
                 if users.is_current_user_admin():
-                    message = """Thanks, admin!
-                        <a href="%s">here</a>.""" % message
+                    url = message
+                    title = message.split('/')[-1]
+
+                    message = """Thanks, admin! 
+                        <a style="float: right" href="%s">%s</a>""" % (url, title)
                 else:
                     message = """Hooray! And thank you. We'll review your
                         plaque and you'll see it appear on the map shortly."""
@@ -795,7 +799,7 @@ class AddPlaque(webapp2.RequestHandler):
     </a>
 </p>
             """.format(post_type, plaque)
-            email_admin(msg, body)
+            #email_admin(msg, body)
             state = ADD_STATES['ADD_STATE_SUCCESS']
             msg = plaque.title_page_url
         except (BadValueError, ValueError, SubmitError) as err:
@@ -1427,10 +1431,12 @@ class AddTitleUrlAll(webapp2.RequestHandler):
 class ApproveAllPending(webapp2.RequestHandler):
     """Approve all pending plaques"""
     def get(self):
+
+        raise NotImplementedError("Turned off")
+
         if not users.is_current_user_admin():
             return "admin only, please log in"
-        raise NotImplementedError("Turned off")
-        plaques = Plaque.pending_list(num=500)
+        plaques = Plaque.pending_list(num=67)
 
         user = users.get_current_user()
         name = "anon" if user is None else user.nickname()
