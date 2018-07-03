@@ -4,3 +4,12 @@ scripts/instagram_scraper.py
 scripts/twitter_scraper.py
 static/plaques.geojson
 static/plaques_updated.json
+.gitignore
+lib/__init__.pyc
+lib/cloudstorage/__init__.pyc
+lib/cloudstorage/api_utils.pyc
+lib/cloudstorage/cloudstorage_api.pyc
+lib/cloudstorage/common.pyc
+lib/cloudstorage/errors.pyc
+lib/cloudstorage/rest_api.pyc
+lib/cloudstorage/storage_api.pyc
