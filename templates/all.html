@@ -37,7 +37,7 @@
         <div class="columns">
           {% for plaque in plaques %}
             <a class="nounderline" href="{{plaque.title_page_url}}">
-              <div class="pin">
+              <div class="card">
                 <h3>{{plaque.title | wordwrap(20, True)}}</h3>
                 <img src="{{plaque.img_url_thumbnail}}"/>
                 <p>{{plaque.description | striptags | wordwrap(50, True) | truncate(200)}}</p>
