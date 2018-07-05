@@ -1,0 +1,13 @@
+
+<!-- Add pretty editor -->
+<script src="https://cdn.tinymce.com/4/tinymce.min.js"></script>
+<script>
+tinymce.init({
+  selector:'#plaque_description',
+  browser_spellcheck: true,
+  forced_root_block: false,
+  menu: {
+    tools: {title: 'Tools', items: 'spellchecker code'}
+  }
+});
+</script>
