@@ -12,8 +12,14 @@ import random
 import re
 import urllib
 from utils import (
+    DEF_NUM_PENDING,
     email_admin,
+    get_bounding_box,
+    get_random_plaque,
+    get_template_values,
     latlng_angles_to_dec,
+    loginout,
+    PLAQUE_SEARCH_INDEX_NAME,
     SubmitError,
 )
 import webapp2
@@ -32,7 +38,6 @@ import lib.cloudstorage as gcs
 
 from Models import Comment, Plaque, FeaturedPlaque, FETCH_LIMIT_PLAQUES
 
-PLAQUE_SEARCH_INDEX_NAME = 'plaque_index'
 ADD_STATE_SUCCESS = 'success'
 ADD_STATE_ERROR = 'error'
 ADD_STATES = {'ADD_STATE_SUCCESS': ADD_STATE_SUCCESS,
@@ -48,67 +53,19 @@ GCS_BUCKET = '/read-the-plaque.appspot.com'
 DEF_PLAQUESET_NAME = 'public'
 
 DEF_NUM_PER_PAGE = 25
-DYNAMIC_PLAQUE_CUTOFF = 50
-DEF_NUM_PENDING = 5
 DEF_NUM_NEARBY = 5
 DEF_MAP_ICON_SIZE_PIX = 16
 
 # Load templates from the /templates dir
 JINJA_ENVIRONMENT = jinja2.Environment(
-    loader=jinja2.FileSystemLoader(
-        os.path.join(os.path.dirname(__file__),
-                     'templates')),
+    loader=jinja2.FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates')),
     extensions=['jinja2.ext.autoescape'],
-    autoescape=False) # turn off autoescape to allow html descriptions
+    autoescape=False, # turn off autoescape to allow html descriptions
+)
 
 # Set a parent key on the Plaque objects to ensure that they are all in the
 # same entity group. Queries across the single entity group will be consistent.
 # However, the write rate should be limited to ~1/second.
-
-def get_bounding_box(plaques):
-    if plaques:
-        lats = [p.location.lat for p in plaques]
-        lngs = [p.location.lon for p in plaques]
-        bounding_box = [[min(lngs), min(lats)], [max(lngs), max(lats)]]
-    else:
-        bounding_box = None
-    return bounding_box
-
-def get_template_values(**kwargs):
-    memcache_name = 'template_values_%s' % users.is_current_user_admin()
-    template_values = memcache.get(memcache_name)
-    if template_values is None:
-        num_pending = Plaque.num_pending(num=DEF_NUM_PENDING)
-        footer_items = get_footer_items()
-        loginout_output = loginout()
-
-        template_values = {
-            'num_pending': num_pending,
-            'footer_items': footer_items,
-            'loginout': loginout_output,
-            'dynamic_plaque_cutoff': DYNAMIC_PLAQUE_CUTOFF,
-        }
-        memcache_status = memcache.set(memcache_name, template_values)
-        if not memcache_status:
-            logging.debug(
-                "memcache.set to %s for default_template_values failed" %
-                memcache_name)
-    else:
-        logging.debug(
-            "memcache.get from %s worked for default_template_values" %
-            memcache_name)
-
-    for k, v in kwargs.items():
-        template_values[k] = v
-
-    if 'plaques' in template_values:
-        plaques = template_values['plaques']
-        bounding_box = get_bounding_box(plaques)
-        logging.info(plaques)
-        logging.info(bounding_box)
-        template_values['bounding_box'] = bounding_box
-
-    return template_values
 
 def get_plaqueset_key(plaqueset_name=DEF_PLAQUESET_NAME):
     """
@@ -118,179 +75,11 @@ def get_plaqueset_key(plaqueset_name=DEF_PLAQUESET_NAME):
     return ndb.Key('Plaque', plaqueset_name)
 
 # TODO: add table UniqueTags
-def random_tags(num=5):
-    """
-    Get a list of random tags. Limit to total number of runs to 100 to prevent
-    infinite loop if there are no plaques or tags.
-    """
-    tags = set()
-    bailout = 0
-    try:
-        while len(tags) < num and bailout < 100:
-            bailout += 1
-            plaque = get_random_plaque()
-            if plaque is None:
-                continue
-            if len(plaque.tags) > 0:
-                tag = random.choice(plaque.tags)
-                tags.add(tag)
-    except ValueError as err:
-        logging.info("no plaques in random_tags")
-        pass
-
-    outtags = list(tags)
-    outtags = outtags[:num]
-    return outtags
-
-def get_random_time():
-    """
-    Get a random time during the operation of the site.
-    """
-    memcache_names = ['first', 'last']
-    memcache_out = memcache.get_multi(memcache_names)
-    memcache_worked = len(memcache_out.keys()) == len(memcache_names)
-    if memcache_worked:
-            first = memcache_out[memcache_names[0]]
-            last = memcache_out[memcache_names[1]]
-    else:
-        first_plaque = Plaque.query().filter(Plaque.approved == True).order(Plaque.created_on).get()
-        if first_plaque:
-            first = first_plaque.created_on
-        else:
-            first = None
-
-        last_plaque = Plaque.query().filter(Plaque.approved == True).order(-Plaque.created_on).get()
-        if last_plaque:
-            last = last_plaque.created_on
-        else:
-            last = None
-
-        memcache_status = memcache.set_multi({
-            memcache_names[0]: first,
-            memcache_names[1]: last
-        })
-        if memcache_status:
-            logging.debug("""memcache.set in Handlers.get_random_time() failed:
-                %s were not set""" % memcache_status)
-
-    if first is None or last is None:
-        random_time = None
-    else:
-        diff = last - first
-        diff_seconds = int(diff.total_seconds())
-        rand_seconds = random.randint(0, diff_seconds)
-        random_delta = datetime.timedelta(seconds=rand_seconds)
-        random_time = first + random_delta
-        return random_time
-
-#TODO: Generate random lat/lng point and get nearest plaque by index search?
-def get_random_plaque_key(method='time'):
-    """
-    Get a random plaque key.  Limit to total number of runs to 100 to prevent
-    infinite loop if there are no plaques.
-
-    There are at least three strategies to get a random plaque:
-
-        1. Perform a Plaque.query().count(), get a random int in the [0,count)
-           range, and get the plaque at that offset using
-           Plaque.query.get(offset=foo).
-
-           This technique favors large submissions of plaques that were
-           imported automatically (e.g. North Carolina, Geographs,
-           Toronto/Ontario), and that large offsets are expensive in the NDB
-           system.
-
-        2. 'time': Pick a random time since the start of the site, and find a
-           plaque that has a created_by value close to that time.
-
-           This technique favors plaques which were submitted by users who have
-           submitted many plaques over a long period of time, and will be
-           unlikely to pick a plaque which would be picked by technique #1.
-
-        3. 'geo': Pick a random geographical spot on the globe, and get the
-           plaque closest to that.
-
-           This will favor plaques that are further away from other plaques.
-
-    """
-    plaque_key = None
-    bailout = 0
-    plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
-    while plaque_key is None and bailout < 100:
-        bailout += 1
-        if method == 'geo':
-            # Math from http://mathworld.wolfram.com/SpherePointPicking.html
-            rand_u = random.random()
-            rand_v = random.random()
-            lng = ((2.0 * rand_u) - 1.0) * 180.0 # Range: [-180.0, 180.0)
-            lat = math.acos(2.0 * rand_v - 1) * 180.0 / math.pi - 90.0
-            search_radius_meters = 100000 # 100 km
-
-            query_string = 'distance(location, geopoint(%s, %s)) < %s' % (
-                            lat, lng, search_radius_meters)
-            query = search.Query(query_string)
-            results = plaque_search_index.search(query)
-            logging.info("bailout %s: produced results (%s)" % (bailout, results))
-            if results.number_found > 0:
-                doc_id= results[0].doc_id
-                plaque_key = ndb.Key(doc_id).get()
-        else: #method == 'time'
-            random_time = get_random_time()
-            if random_time is not None:
-                plaque_key = Plaque.query(
-                                  ).filter(Plaque.approved == True
-                                  ).filter(Plaque.created_on > random_time
-                                  ).get(keys_only=True)
-    if plaque_key is None:
-        return None
-    else:
-        return plaque_key.urlsafe()
-
-def get_random_plaque():
-    plaque_key = get_random_plaque_key()
-    if plaque_key is None:
-        return None
-    plaque = ndb.Key(urlsafe=plaque_key).get()
-    return plaque
-
 def get_pages_list(per_page=DEF_NUM_PER_PAGE):
     num_pages = int(math.ceil(float(Plaque.num_approved()) /
                               float(per_page)))
     pages_list = [1+p for p in range(num_pages)]
     return pages_list
-
-def get_footer_items():
-    """
-    Just 5 tags for the footer.
-    Memcache the output of this so it doesn't get calculated every time.
-    """
-    footer_items = memcache.get('get_footer_items')
-    if footer_items is None:
-        random_plaques = [get_random_plaque() for _ in range(5)]
-        tags = random_tags()
-        footer_items = {'tags': tags,
-                        'new_plaques': random_plaques,}
-
-        memcache_status = memcache.set('get_footer_items', footer_items)
-        if not memcache_status:
-            logging.debug("memcachefor get_footer_items failed")
-    else:
-        logging.debug("memcache.get worked for get_footer_items")
-
-    return footer_items
-
-def loginout():
-    # Login/Logout link:
-    user = users.get_current_user()
-    if user:
-        loginout = {'is_admin': users.is_current_user_admin(),
-                    'url': users.create_logout_url('/'),
-                    'text': 'Log out'}
-    else:
-        loginout = {'is_admin': users.is_current_user_admin(),
-                    'url': users.create_login_url('/'),
-                    'text': 'Admin login'}
-    return loginout
 
 def get_featured():
     featured = FeaturedPlaque.query().order(-Plaque.created_on).get()
@@ -305,17 +94,12 @@ def set_featured(plaque):
     featured.plaque = plaque.key
     featured.put()
 
-def get_map_markers_str(plaques):
-    plaque_title_urls = ['/plaque/%s' % p.title_url for p in plaques]
-    argstr = "&".join(plaque_title_urls)
-    return argstr
-
 def handle_404(request, response, exception):
     email_admin('404 error!', '404 error!\n\n%s\n\n%s\n\n%s' %
                               (request, response, exception))
     template = JINJA_ENVIRONMENT.get_template('error.html')
-    response.write(template.render({'code': 404, 'error_text': exception}))
-    response.set_status(404)
+    #response.write(template.render({'code': 404, 'error_text': exception}))
+    #response.set_status(404)
 
 def handle_500(request, response, exception):
     email_admin('500 error!', '500 error!\n\n%s\n\n%s\n\n%s' %
