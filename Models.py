@@ -331,10 +331,14 @@ class Plaque(ndb.Model):
         return plaque_dict
 
     @property
+    def tweet_text (self):
+        txt = "'{0.title}' Always #readtheplaque https://readtheplaque.com{0.title_page_url}".format(self)
+        return txt 
+
+    @property
     def json_for_tweet(self):
         plaque_dict = self.to_dict(summary=True)
-        tmpl = "'%s' Always #readtheplaque https://readtheplaque.com%s"
-        plaque_dict['tweet'] = tmpl % (self.title, self.title_page_url),
+        plaque_dict['tweet'] = self.tweet_text
         return json.dumps(plaque_dict)
 
 class FeaturedPlaque(ndb.Model):

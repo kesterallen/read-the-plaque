@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from collections import defaultdict
 import datetime
 import jinja2
 import json
@@ -14,8 +13,8 @@ import urllib
 from utils import (
     DEF_NUM_PENDING,
     email_admin,
-    get_bounding_box,
     get_random_plaque,
+    get_random_plaque_key,
     get_template_values,
     latlng_angles_to_dec,
     loginout,
@@ -36,7 +35,7 @@ from google.appengine.ext.db import BadValueError
 
 import lib.cloudstorage as gcs
 
-from Models import Comment, Plaque, FeaturedPlaque, FETCH_LIMIT_PLAQUES
+from Models import Plaque, FeaturedPlaque
 
 ADD_STATE_SUCCESS = 'success'
 ADD_STATE_ERROR = 'error'
@@ -98,8 +97,8 @@ def handle_404(request, response, exception):
     email_admin('404 error!', '404 error!\n\n%s\n\n%s\n\n%s' %
                               (request, response, exception))
     template = JINJA_ENVIRONMENT.get_template('error.html')
-    #response.write(template.render({'code': 404, 'error_text': exception}))
-    #response.set_status(404)
+    response.write(template.render({'code': 404, 'error_text': exception}))
+    response.set_status(404)
 
 def handle_500(request, response, exception):
     email_admin('500 error!', '500 error!\n\n%s\n\n%s\n\n%s' %
@@ -116,15 +115,6 @@ class FakePlaqueForRootUrlPreviews(object):
         self.title = "Read the Plaque"
         self.description = "A gigantic map of all the cool plaques in the world"
         self.img_url_thumbnail = "https://readtheplaque.com/images/rtp_logo_600square.jpg"
-
-class ViewPlaquesTest(webapp2.RequestHandler):
-    def get(self):
-        plaques, next_cursor, more = Plaque.fetch_page(20)
-        template_values = get_template_values(plaques=plaques)
-        template_values['featured_plaque'] = get_featured()
-        template = JINJA_ENVIRONMENT.get_template('test.html')
-        template_text = template.render(template_values)
-        self.response.write(template_text)
 
 class ViewPlaquesPage(webapp2.RequestHandler):
     def head(self, start_curs_str=None):
@@ -349,6 +339,7 @@ class TweetText(ViewOnePlaqueParent):
         plaque = ndb.Key(urlsafe=plaque_key).get()
         set_featured(plaque)
         memcache.flush_all()
+        logging.info(plaque.json_for_tweet)
         self.response.write(plaque.json_for_tweet)
 
 class JsonAllPlaques(webapp2.RequestHandler):
@@ -674,7 +665,7 @@ class AddPlaque(webapp2.RequestHandler):
         try:
             gps_lat = gps_data['GPSLatitude']
             gps_lng = gps_data['GPSLongitude']
-        except KeyError as no_exif:
+        except KeyError:
             pass # TODO: is this right?
 
         gps_lat_angles = (
@@ -959,7 +950,6 @@ class SearchPlaquesGeo(webapp2.RequestHandler):
         self.response.write(template.render(template_values))
 
     def _serve_response(self, lat, lng, search_radius_meters):
-        plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
         geo_plaques_approved = self._geo_search(lat, lng, search_radius_meters)
         self._write_geo_page(geo_plaques_approved, lat, lng)
 
@@ -1047,7 +1037,7 @@ class DeleteOnePlaque(webapp2.RequestHandler):
 
     @ndb.transactional
     def post(self):
-        """Remove one plaque and its associated Comments and GCS image."""
+        """Remove one plaque and its associated GCS image."""
         user = users.get_current_user()
         if not users.is_current_user_admin():
             return "admin only, please log in"
@@ -1249,9 +1239,9 @@ class ApprovePending(webapp2.RequestHandler):
         plaque.created_on = datetime.datetime.now()
         plaque.put()
 
-        user = users.get_current_user()
-        name = "anon" if user is None else user.nickname()
-        msg = "{1} approved plaque {0}".format(title, name)
+        #user = users.get_current_user()
+        #name = "anon" if user is None else user.nickname()
+        #msg = "{1} approved plaque {0}".format(title, name)
         #email_admin(msg, msg)
 
         self.redirect('/nextpending')
