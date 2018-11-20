@@ -55,9 +55,9 @@
               <input type="url" id="plaque_image_url" name="plaque_image_url" placeholder="Image URL" style="width: 100%;">
               <select id="img_rot" name="img_rot">
                 <option value="0">Rotate Image?</option>
-                <option value="90">90</option>
-                <option value="180">180</option>
-                <option value="270">270</option>
+                <option value="90"  {% if plaque.img_rot ==  90 %}selected="selected"{% endif %}>90 degrees clockwise</option>
+                <option value="180" {% if plaque.img_rot == 180 %}selected="selected"{% endif %}>180 degrees clockwise</option>
+                <option value="270" {% if plaque.img_rot == 270 %}selected="selected"{% endif %}>270 degrees clockwise</option>
               </select>
             </div>
 
@@ -80,6 +80,8 @@
         <div class="form-group">
           <legend>Plaque Tags</legend>
           <input type="text" class="form-control" id="plaque_tags" name="tags" value="{{plaque.tags| join(', ')}}" placeholder="Tags to characterize the plaque. Multiple tags can be separated by commas.">
+          <p>Originally added {{plaque.created_on.strftime('%Y-%m-%d')}}.</p>
+          <p id="ocr">scripts/ocr.sh {{plaque.img_url}}</p>
         </div>
       </div>
 

@@ -53,9 +53,13 @@
     -
     {% if fake_plaque_for_root_url_previews %}
       {{plaque.description}}
+    {% elif is_pending %}
+      Pending Plaques
     {% else %}
       {{plaque.title}}
     {% endif %}
+  {% elif page_title %}
+    - {{page_title}}
   {% endif %}
 </title>
 </head>

@@ -61,12 +61,12 @@ def get_template_values(**kwargs):
     memcache_name = 'template_values_%s' % users.is_current_user_admin()
     template_values = memcache.get(memcache_name)
     if template_values is None:
-        num_pending = Plaque.num_pending(num=DEF_NUM_PENDING)
+        #num_pending = Plaque.num_pending(num=DEF_NUM_PENDING)
         footer_items = get_footer_items()
         loginout_output = loginout()
 
         template_values = {
-            'num_pending': num_pending,
+            #'num_pending': num_pending,
             'footer_items': footer_items,
             'loginout': loginout_output,
             'dynamic_plaque_cutoff': DYNAMIC_PLAQUE_CUTOFF,

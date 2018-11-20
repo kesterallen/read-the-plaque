@@ -515,7 +515,7 @@ class AddPlaque(webapp2.RequestHandler):
     def get(self, message=None):
         maptext = "Click the plaque's location on the map, or search " + \
                   "for it, or enter its lat/lng location"
-        template_values = get_template_values(maptext=maptext, mapzoom=10)
+        template_values = get_template_values(maptext=maptext, mapzoom=10, page_title="Add Plaque")
         message = self._get_message(message)
         if message is not None:
             template_values['message'] = message
@@ -865,6 +865,7 @@ class EditPlaque(AddPlaque):
         if message is not None:
             template_values['message'] = message
 
+        logging.debug("In EditPlaque, img_rot is {.img_rot}".format(plaque))
         template = JINJA_ENVIRONMENT.get_template('edit.html')
         self.response.write(template.render(template_values))
 
@@ -1089,7 +1090,7 @@ class ViewPending(webapp2.RequestHandler):
         logging.info("User %s is viewing pending plaques %s" % (name, plaques))
 
         template = JINJA_ENVIRONMENT.get_template('all.html')
-        template_values = get_template_values(plaques=plaques)
+        template_values = get_template_values(plaques=plaques, is_pending=True)
         template_text = template.render(template_values)
         self.response.write(template_text)
 

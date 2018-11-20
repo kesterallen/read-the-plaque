@@ -88,6 +88,6 @@ libraries:
 - name: PIL
   version: latest
 
-builtins:
-- appstats: on
+#builtins:
+#- appstats: on
 
