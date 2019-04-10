@@ -1,49 +1,74 @@
 
+import subprocess
+import sys
 import time
 import requests
 
-# Run this:
-#     exiftool ~/Desktop/IMG*.JPG  | grep 'File Name|GPS Latitude  |GPS Longitude  ' | perl -F: -lane 'print $F[1]' | sed 's/deg //; s/N//; s/W//; s/"//' | sed "s/'//" | xargs -n7 > portland.txt
-# to get the list of filename/lat/lng
-
-post_url = 'http://readtheplaque.com/add'
-#post_url = 'http://localhost:8080/add'
+DEBUG = True
 
 class Plaque(object):
-    def __init__(self, title, filename, lats, lngs, desc):
-        lat = float(lats[0]) + float(lats[1]) / 60.0 + float(lats[2]) / 3600.0
-        lng = float(lngs[0]) + float(lngs[1]) / 60.0 + float(lngs[2]) / 3600.0
+    """
+    Class to encapsulate the image/location of the plaque, and how to submit it.
+    """
+    if DEBUG:
+        submit_url = 'http://localhost:8080/add'
+    else:
+        submit_url = 'http://readtheplaque.com/add'
 
-        self.title = title
+    def __init__(self, filename, title='', description=''):
+        """
+        Lat/Lng is extracted from the exif tags of the image file.
+        """
         self.filename = filename
-        self.lat = lat # north
-        self.lng = -1.0 * lng # west
-        self.description = desc
+        self.title = title
+        self.description = description
+        self._set_exif_lat_lng()
 
-def main():
-    img_list = 'portland.txt'
+    def submit(self):
+        """
+        Submit the plaque with a POST request to Read The Plaque
+        """
+        with open(self.filename,'rb') as plaque_image_fh:
+            files = { 'plaque_image_file': plaque_image_fh }
+            data = {
+                'lat': self.lat,
+                'lng': self.lng,
+                'title': self.title,
+                'description': self.description,
+            }
+            response = requests.post(Plaque.submit_url, files=files, data=data)
+            return response.status_code
+
+    def _set_exif_lat_lng(self):
+        """
+        Extract the location info from the image tags, using exiftool
+        """
+        cmd = "exiftool -c '%.10f' -p '$gpslatitude $gpslongitude' {}"
+        latlng = subprocess.check_output(cmd.format(self.filename), shell=True)
+        lat, lat_dir, lng, lng_dir = latlng.split()
+
+        self.lat = float(lat) * (1.0 if lat_dir == 'N' else -1.0)
+        self.lng = float(lng) * (1.0 if lng_dir == 'E' else -1.0)
+
+    def __repr__(self):
+        return "{0.filename} ({0.lat}, {0.lng})".format(self)
+
+def main(img_filenames):
+    """
+    For a given list of images, make plaque instances and submit them to Read
+    The Plaque.
+    """
 
     plaques = []
-    with open(img_list) as fh:
-        for line in fh.readlines():
-            fields = line.split()
-            filename = "/home/kester/Desktop/{}".format(fields[0])
-            plaque = Plaque('', filename, fields[1:4], fields[4:], '')
-            plaques.append(plaque)
+    for filename in img_filenames:
+        plaque = Plaque(filename)
+        plaques.append(plaque)
         
     for i, plaque in enumerate(plaques):
-        post_resp = requests.post(
-            post_url, 
-            files={'plaque_image_file': open(plaque.filename,'rb')},
-            data={
-                'lat': plaque.lat,
-                'lng': plaque.lng,
-                'title': plaque.title,
-                'description': plaque.description,
-            }
-        )
-        print("done uploading {0} {1.lat} {1.lng}".format(i+1, plaque))
-        time.sleep(10)
+        plaque.submit()
+        print("uploaded {}/{} {}".format(i+1, len(plaques), plaque))
+        if not DEBUG:
+            time.sleep(10)
 
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])
