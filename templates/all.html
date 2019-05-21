@@ -39,7 +39,7 @@
             <a class="nounderline" href="{{plaque.title_page_url}}">
               <div class="pin">
                 <h3>{{plaque.title | wordwrap(20, True)}}</h3>
-                <img src="{{plaque.img_url_thumbnail}}"/>
+                <img src="{{plaque.img_url_thumbnail}}" alt="{{plaque.description | striptags | truncate(200)}}" />
                 <p>{{plaque.description | striptags | wordwrap(50, True) | truncate(200)}}</p>
                 <ul class="list-inline">{% for tag in plaque.tags %} <li>{{tag | truncate(15, True)}}</li>{% endfor %}</ul>
               </div>

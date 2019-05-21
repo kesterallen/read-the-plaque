@@ -1,4 +1,11 @@
 
+# Usage: ocr.sh image_url
+#
+# Given the URL of an image, construct a JSON string to pass to the Google
+# Vision web endpoint, using the API key in ../key.txt.
+# Add an extra space on the end of each line (a Read the Plaque convenience)
+#
+
 if [ "$#" -ne 1 ]
 then
   echo "Usage: $0 image_url"

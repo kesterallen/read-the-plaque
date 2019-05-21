@@ -23,15 +23,14 @@ from utils import (
 )
 import webapp2
 
-
 from google.appengine.api import images
 from google.appengine.api import memcache
 from google.appengine.api import search
 from google.appengine.api import users
 from google.appengine.ext import blobstore
 from google.appengine.ext import ndb
-from google.appengine.ext.ndb.google_imports import ProtocolBuffer
 from google.appengine.ext.db import BadValueError
+from google.appengine.ext.ndb.google_imports import ProtocolBuffer
 
 import lib.cloudstorage as gcs
 
@@ -338,6 +337,7 @@ class TweetText(ViewOnePlaqueParent):
 
         plaque = ndb.Key(urlsafe=plaque_key).get()
         set_featured(plaque)
+        # TODO: If plaque.description matches r'Submitted by @(.*)', tweet to that submitter
         memcache.flush_all()
         logging.info(plaque.json_for_tweet)
         self.response.write(plaque.json_for_tweet)

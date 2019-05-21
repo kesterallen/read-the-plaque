@@ -9,10 +9,10 @@ import sys
 from pprint import pprint
 
 
-input_json_filename = os.path.join(os.path.dirname(
-    os.path.abspath(__file__)), '../static/plaques_updated.json')
-output_json_filename = os.path.join(os.path.dirname(
-    os.path.abspath(__file__)), '../static/plaques.geojson')
+input_json_filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+    '../static/plaques_updated.json')
+output_json_filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+    '../static/plaques.geojson')
 
 def make_geojson_feature(plaque):
     geojson_feature = {

@@ -22,7 +22,7 @@
   {% if plaque.approved or loginout.is_admin %}
     <div class="row">
       <div class="col-xs-12 col-md-6">
-        <a href="{{plaque.img_url_big}}"><img src="{{plaque.img_url_display}}" class="img-responsive center-block"/></a>
+        <a href="{{plaque.img_url_big}}"><img src="{{plaque.img_url_display}}" alt="{{plaque.description | striptags | truncate(200)}}" class="img-responsive center-block"/></a>
       </div>
       <div class="col-xs-12 col-md-6">
         <div class="panel panel-default">

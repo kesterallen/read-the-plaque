@@ -6,7 +6,7 @@
       <div id="featured-plaque" class="pin">
         <div class="thumbnail right-caption">
           <h1>Featured Plaque:</h1>
-          <img src="{{featured_plaque.img_url_thumbnail}}"/>
+          <img src="{{featured_plaque.img_url_thumbnail}}" alt="{{featured_plaque.description | striptags | truncate(200)}}" />
           <div class="caption">
             <h2>{{featured_plaque.title}}</h2>
             {{featured_plaque.description | striptags | wordwrap(100, True) | truncate(400)}}
@@ -25,7 +25,7 @@
   <div class="hoverchange col-xs-12 col-sm-4">
     <a href="/map">
       Explore the <b>17,000+</b> worldwide plaques on the Big Map
-      <img class="img-responsive center-block" alt="big map screenshot" src="/images/map_screenshot_big.png"/>
+      <img class="img-responsive center-block" alt="big map screenshot" src="/images/map_screenshot_big.webp"/>
     </a>
   </div>
 

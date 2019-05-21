@@ -8,12 +8,11 @@ import requests
 import sys
 
 
-url_tmpl = 'http://readtheplaque.com/%s'
-#url_tmpl = 'http://10.10.10.238:8080/%s'
-post_url_all = url_tmpl % 'alljp'
-post_url_update = url_tmpl % 'updatejp'
+url_tmpl = 'http://readtheplaque.com/{}' #url_tmpl = 'http://10.10.10.238:8080/%s'
+post_url_all = url_tmpl.format('alljp')
+post_url_update = url_tmpl.format('updatejp')
 json_filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                             '../static/plaques_updated.json')
+    '../static/plaques_updated.json')
 
 ALL = False
 #UTC_OFFSET = 8 # PST
@@ -51,7 +50,7 @@ def main():
     if ALL:
         resp = requests.get(post_url_all)
         all_plaques = json.loads(resp.content)
-        print "Total: %s plaques" % len(all_plaques)
+        print("Total: {} plaques".format(len(all_plaques)))
         json_data = {
             'plaques': all_plaques,
             'updated_on': now,
@@ -60,16 +59,13 @@ def main():
         with open(json_filename) as fh:
             json_data = json.load(fh)
 
-        last_updated_offset = offset_time(json_data['updated_on'])
+        updated_on = offset_time(json_data['updated_on'])
 
-        resp = requests.post(
-            post_url_update, data={'updated_on': last_updated_offset})
+        resp = requests.post(post_url_update, data={'updated_on': updated_on})
 
-        new_plaques = json.loads(resp.content)
-        suffix = "s"
-        if len(new_plaques) == 1:
-            suffix = ""
-        print "Found %s new plaque%s." % (len(new_plaques), suffix)
+        new_plaques = json.loads(resp.content.decode('utf-8'))
+        suffix = "s" if len(new_plaques) else ""
+        print("Found {} new plaque{}.".format(len(new_plaques), suffix))
         if len(new_plaques) == 0:
             sys.exit(1)
 
