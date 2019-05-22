@@ -18,7 +18,7 @@ class Plaque:
     if DEBUG:
         submit_url = 'http://localhost:8080/add'
     else:
-        submit_url = 'http://readtheplaque.com/add'
+        submit_url = 'https://readtheplaque.com/add'
 
     def __init__(self, fname, title='', description=''):
         """ Lat/Lng is extracted from the exif tags of the image file.  """
