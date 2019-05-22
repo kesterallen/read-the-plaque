@@ -28,4 +28,4 @@ retrieved using a strongly consistent (ancestor) query.
 [7]: http://twitter.github.com/bootstrap/
 
 Update:
-    python scripts/update_json.py && python scripts/convert_to_geojson.py && ../appcfg.py update . && curl -s readtheplaque.com/flush  > /dev/null && curl -s readtheplaque.com > /dev/null  && curl -s readtheplaque.com/counts
+    python scripts/update_json.py && python scripts/convert_to_geojson.py && ../appcfg.py update . && curl -s https://readtheplaque.com/flush  > /dev/null && curl -s https://readtheplaque.com > /dev/null  && curl -s https://readtheplaque.com/counts
