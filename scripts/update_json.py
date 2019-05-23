@@ -8,7 +8,7 @@ import requests
 import sys
 
 
-url_tmpl = 'http://readtheplaque.com/{}' #url_tmpl = 'http://10.10.10.238:8080/%s'
+url_tmpl = 'https://readtheplaque.com/{}' #url_tmpl = 'http://10.10.10.238:8080/%s'
 post_url_all = url_tmpl.format('alljp')
 post_url_update = url_tmpl.format('updatejp')
 json_filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
