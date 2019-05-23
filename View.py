@@ -27,6 +27,8 @@ def main():
             ('/randompage.*', h.RandomPlaquesPage),
             ('/random.*', h.RandomPlaque),
             #('/plaque_comment/(.+?)', h.ViewOnePlaqueFromComment),
+            ('/geojson/(.+?)/?', h.GeoJson),
+            ('/geojson/?', h.GeoJson),
             ('/tweet/?', h.TweetText),
             ('/alljp/(.+?)/?', h.JsonAllPlaques),
             ('/alljp/?', h.JsonAllPlaques),

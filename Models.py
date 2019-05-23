@@ -286,9 +286,11 @@ class Plaque(ndb.Model):
         )
         return doc
 
-    def to_geojson(self, summary=True):
-        if not summary:
-            raise ArgumentError("summary = False isn't implemented yet")
+    @property
+    def geojson(self):
+        return self.to_geojson()
+
+    def to_geojson(self, summary=False):
 
         data = {
             "geometry": {
@@ -302,6 +304,12 @@ class Plaque(ndb.Model):
                 "title": self.title
             }
         }
+        if not summary:
+            data["properties"]["key"] = self.key.urlsafe()
+            data["properties"]["description"] = self.description
+            data["properties"]["img_url"] = self.img_url
+            data["properties"]["tags"] = self.tags
+
         return json.dumps(data)
 
     def to_dict(self, summary=False):

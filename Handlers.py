@@ -230,26 +230,9 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
         raise NotImplementedError("Don't call ViewOnePlaqueParent.get directly")
 
 
-    def _get_from_key(self, plaque_key=None):
-        """
-        Put the single plaque into a list for rendering so that the common map
-        functionality can be used unchanged. Attempt to serve a valid plaque,
-        but if the inputs are completely messed up, serve the oldest plaque.
-        """
-
-        # If it's memecached, use that:
-        is_admin = users.is_current_user_admin()
-        memcache_name = 'plaque_%s_%s' % (plaque_key, is_admin)
-        logging.info(
-            "memcache name in ViewOnePlaqueParent._get_from_key is %s" %
-            memcache_name)
-        page_text = memcache.get(memcache_name)
-        if page_text is not None:
-            logging.debug("memcache.get worked for _get_from_key for %s" %
-                          memcache_name)
-            return page_text
-
-        # Otherwise get from db:
+    # TODO: Separate this out to return the Plaque object GEOJSON
+    def _get_plaque_from_key(self, plaque_key=None):
+        # Get plaque from db from db:
         plaque = None
         logging.info("plaque_key=%s" % plaque_key)
         if plaque_key is not None:
@@ -260,25 +243,36 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
                 query = query.filter(Plaque.approved == True)
             logging.debug("query is %s " % query)
             plaque = query.get()
+
             if plaque is None:
                 try:
-                    logging.debug("Using plaque_key: '%s'" % plaque_key)
                     plaque = ndb.Key(urlsafe=plaque_key).get()
-                    logging.debug("Using plaque_key, "
-                                  "plaque retrieved was: '%s'" % plaque)
                 except:
                     pass
+        return plaque
+
+    def _get_page_from_key(self, plaque_key=None):
+        """
+        Put the single plaque into a list for rendering so that the common map
+        functionality can be used unchanged. Attempt to serve a valid plaque,
+        but if the inputs are completely messed up, serve the oldest plaque.
+        """
+
+        # If it's memecached, use that:
+        is_admin = users.is_current_user_admin()
+        memcache_name = 'plaque_%s_%s' % (plaque_key, is_admin)
+        page_text = memcache.get(memcache_name)
+        if page_text is not None:
+            return page_text
+
+        # If page is not memcached, get the plaque from the db:
+        plaque = self._get_plaque_from_key(plaque_key)
 
         # If that didn't find anything, serve the default couldn't-find-it
-        # plaque:
+        # plaque (currently hacked in as the earliest plaque):
         if plaque is None:
-            logging.debug("Neither comment_key nor plaque_key is specified. "
-                          "Serve the first plaque, so that memcache will "
-                          "always serve the same thing.")
             earliest_plaque = Plaque.query(
                 Plaque.approved == True).order(Plaque.created_on).get()
-
-            logging.debug("Plaque is %s" % earliest_plaque.title_page_url)
             self.redirect(earliest_plaque.title_page_url)
             return
 
@@ -288,7 +282,7 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
         page_text = template.render(template_values)
         memcache_status = memcache.set(memcache_name, page_text)
         if not memcache_status:
-            logging.debug("memcache.set for _get_from_key failed for %s" %
+            logging.debug("memcache.set for _get_page_from_key failed for %s" %
                           memcache_name)
 
         return page_text
@@ -308,7 +302,7 @@ class ViewOnePlaque(ViewOnePlaqueParent):
         self.response.clear()
 
     def get(self, plaque_key=None, ignored_cruft=None):
-        page_text = self._get_from_key(plaque_key=plaque_key)
+        page_text = self._get_page_from_key(plaque_key=plaque_key)
         self.response.write(page_text)
 
 class RandomPlaquesPage(ViewPlaquesPage):
@@ -327,9 +321,17 @@ class RandomPlaque(ViewOnePlaqueParent):
         plaque = get_random_plaque()
         self.redirect(plaque.title_page_url)
 
+class GeoJson(ViewOnePlaqueParent):
+    """ Get one plaque's geoJSON """
+    def get(self, plaque_key=None):
+        # TODO: use _get_from_key when it's ready 
+        # TODO Separate this out to return the Plaque object GEOJSON
+        plaque = self._get_plaque_from_key(plaque_key)
+        self.response.write(plaque.geojson)
+
 class TweetText(ViewOnePlaqueParent):
     """
-    Get one plaque's JSON repr.
+    Get one plaque's JSON repr, and set it to be the featured plaque.
     """
     def get(self, plaque_key=None, summary=True):
         if plaque_key is None:
@@ -359,9 +361,9 @@ class JsonAllPlaques(webapp2.RequestHandler):
         plaque_keys = plaque_keys_str.split('&')
 
         plaques = []
-        for pk in plaque_keys:
+        for plaque_key in plaque_keys:
             try:
-                plaque = ndb.Key(urlsafe=pk).get()
+                plaque = ndb.Key(urlsafe=plaque_key).get()
                 plaques.append(plaque)
             except ProtocolBuffer.ProtocolBufferDecodeError:
                 pass
@@ -1079,7 +1081,7 @@ class ViewNextPending(ViewOnePlaqueParent):
             self.redirect(plaque.title_page_url)
             return
         else:
-            page_text =  self._get_from_key(plaque_key=None)
+            page_text =  self._get_page_from_key(plaque_key=None)
             self.response.write(page_text)
 
 class ViewPending(webapp2.RequestHandler):
