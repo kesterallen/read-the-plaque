@@ -1,11 +1,20 @@
 """Script to upload exif-tagged images as Read the Plaque plaques."""
 
-import subprocess
 import sys
 import time
 import requests
 
-DEBUG = False
+from PIL import Image
+
+# Values in these constants was extracted from:
+# from PIL.ExifTags import TAGS, GPSTAGS
+GPS_INFO_TAG = 34853 # "GPSInfo"
+LAT_REF = 1 # e.g. "N"
+LAT = 2 # e.g. ((37, 1), (50, 1), (2381, 100))
+LNG_REF = 3 # e.g. W
+LNG = 4 # e.g. ((122, 1), (17, 1), (2834, 100))
+
+DEBUG = True
 
 class Plaque:
     """
@@ -21,14 +30,14 @@ class Plaque:
         submit_url = 'https://readtheplaque.com/add'
 
     def __init__(self, fname, title='', description=''):
-        """ Lat/Lng is extracted from the exif tags of the image file.  """
+        """Lat/Lng is extracted from the exif tags of the image file."""
         self.fname = fname
         self.title = title
         self.description = description
         self._set_exif_lat_lng()
 
     def submit(self):
-        """ Submit the plaque with a POST request to Read The Plaque """
+        """Submit the plaque with a POST request to Read The Plaque"""
         with open(self.fname, 'rb') as plaque_image_fh:
             files = {'plaque_image_file': plaque_image_fh}
             data = {
@@ -41,27 +50,25 @@ class Plaque:
             response.raise_for_status()
 
     def _set_exif_lat_lng(self):
-        """ Extract the location info from the image tags, using exiftool """
-        cmd_tmpl = "exiftool -m -c '%.10f' -p '$gpslatitude $gpslongitude' {}"
-        cmd = cmd_tmpl.format(self.fname)
-        if DEBUG:
-            print(cmd)
+        """Extract the location info from the image tags, using exiftool"""
+
+        def _exif_to_deg(exif, ref):
+            degs, mins, secs = [float(exif[i][0]) for i in range(3)]
+            latorlng = degs + mins / 60.0 + secs / 3600.0
+            if ref in ('S', 'W'):
+                latorlng *= -1
+            return latorlng
+
         try:
-            latlng = subprocess.check_output(cmd, shell=True)
-            lat, lat_dir, lng, lng_dir = latlng.split()
-
-            self.lat = float(lat)
-            if lat_dir == b'S': # b-string because latlng appears to be a "<class 'bytes'>" object
-                self.lat *= -1.0
-
-            self.lng = float(lng)
-            if lng_dir == b'W': # b-string because latlng appears to be a "<class 'bytes'>" object
-                self.lng *= -1.0
-
-        except (subprocess.CalledProcessError, ValueError):
-            print("Can't get location of {.fname}, using default".format(self))
-            self.lat = Plaque.DEFAULT_LAT
-            self.lng = Plaque.DEFAULT_LNG
+            with Image.open(self.fname) as img:
+                exif = img._getexif()
+                info = exif[GPS_INFO_TAG]
+                self.lat = _exif_to_deg(info[LAT], info[LAT_REF])
+                self.lng = _exif_to_deg(info[LNG], info[LNG_REF])
+        except TypeError as err:
+            print("typeerr", err)
+            self.lat = self.DEFAULT_LAT
+            self.lng = self.DEFAULT_LNG
 
     def __repr__(self):
         return "{0.fname} ({0.lat}, {0.lng})".format(self)
@@ -71,7 +78,6 @@ def main(img_fnames):
     For a given list of images, make plaque instances and submit them to Read
     The Plaque.
     """
-
     plaques = []
     for fname in img_fnames:
         plaque = Plaque(fname)
@@ -81,7 +87,7 @@ def main(img_fnames):
         try:
             if not DEBUG:
                 plaque.submit()
-            print("uploaded {}/{} {}".format(i+1, len(plaques), plaque))
+            print("Uploaded {}/{} {}".format(i+1, len(plaques), plaque))
         except requests.exceptions.HTTPError as err:
             print("upload for {} failed, {}".format(plaque, err))
         if not DEBUG:
