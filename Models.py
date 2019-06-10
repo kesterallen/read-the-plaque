@@ -138,8 +138,8 @@ class Plaque(ndb.Model):
     def pending_list(cls, num=25, desc=True):
         """A separate method from approved() so that it will
         never be memcached."""
-        query = Plaque.query().filter(Plaque.approved != True
-                             ).order(Plaque.approved)
+        query = Plaque.query(
+            ).filter(Plaque.approved != True).order(Plaque.approved)
         if desc:
             query = query.order(-Plaque.created_on)
         else:
