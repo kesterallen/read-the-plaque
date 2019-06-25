@@ -78,11 +78,11 @@
 {% if plaques or bigmap %}
   <!-- TODO: remove demo -->
   {% if demo == "demo1" %}
-    {% include 'parts/map_pane_googlemaps_nocluster.html' %} 
+    {% include 'parts/map_pane_googlemaps_nocluster.html' %}
   {% elif demo == "demo2" %}
-    {% include 'parts/map_pane_googlemaps.html' %} 
+    {% include 'parts/map_pane_mapboxgl.html' %}
   {% else %}
-    {% include 'parts/map_pane_mapboxgl.html' %} 
+    {% include 'parts/map_pane_googlemaps.html' %}
   {% endif %}
 {% endif %}
 
