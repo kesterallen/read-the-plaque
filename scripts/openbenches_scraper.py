@@ -90,10 +90,10 @@ def bench_to_plaque(bench, user_names):
             desc.append('Original location: <a href="{}">here</a>'.format(url))
 
         # Default license per Terence Eden DM 2019-07-16 to @readtheplaque
-        img_license = 'under <a href="{}">CC by SA 4.0</a>'.format(DEF_LICENSE)
+        img_license = ' under <a href="{}">CC by SA 4.0</a>'.format(DEF_LICENSE)
         # N.B. British spelling of key
         if 'licence' in first_img:
-            img_license = first_img['licence'] 
+            img_license = first_img['licence']
         desc.append('The image and text is licensed {}'.format(img_license))
 
         if 'user' in first_img:
@@ -163,14 +163,14 @@ def cache_url(img_url):
 
 def main():
     """Run the uploader"""
-    host = 'http://localhost:8080' if DEBUG else 'https://readtheplaque.com'
-    submit_url = '{}/add'.format(host)
-
     plaques = load_benches('openbenches.json', 'openbenches.users.json')
-    for i, plaque in enumerate(random.sample(plaques, 5)):
+    #plaques = random.sample(plaques, 5) # for testing
+
+    for i, plaque in enumerate(plaques):
         try:
             plaque['plaque_image_url'] = cache_url(plaque['plaque_image_url'])
             if not DEBUG:
+                submit_url = 'https://readtheplaque.com/add'
                 response = requests.post(submit_url, data=plaque)
                 response.raise_for_status()
 
