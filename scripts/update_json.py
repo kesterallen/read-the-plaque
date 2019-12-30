@@ -29,7 +29,7 @@ def offset_time(last_updated_str):
 
     Anyhow:
         INPUTS:
-            A string representing a date, prefereably in %Y-%m-%d %H:%M:%S.%f 
+            A string representing a date, prefereably in %Y-%m-%d %H:%M:%S.%f
             format, but any string that the datetime constructor will consume
             after being split on hyphen/space/colon/period will work.
         RETURNS:
@@ -50,7 +50,12 @@ def main():
     if ALL:
         resp = requests.get(post_url_all)
         all_plaques = json.loads(resp.content)
-        print("Total: {} plaques".format(len(all_plaques)))
+        suffix = "s"
+        num_plaques = len(all_plaques)
+        if num_plaques == 1:
+            suffix = ""
+        print("Total: {} plaque{}".format(num_plaques, suffix))
+
         json_data = {
             'plaques': all_plaques,
             'updated_on': now,
@@ -64,7 +69,9 @@ def main():
         resp = requests.post(post_url_update, data={'updated_on': updated_on})
 
         new_plaques = json.loads(resp.content.decode('utf-8'))
-        suffix = "s" if len(new_plaques) else ""
+        suffix = "s"
+        if len(new_plaques) == 1:
+            suffix = ""
         print("Found {} new plaque{}.".format(len(new_plaques), suffix))
         if len(new_plaques) == 0:
             sys.exit(1)
