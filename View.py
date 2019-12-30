@@ -79,6 +79,7 @@ def main():
             ('/map/(.*?)/(.*?)/(.*?)/?', h.BigMap), # lat, lng, zoom.
             ('/map/(.*?)/(.*?)/?', h.BigMap), # lat, lng
             ('/map/?', h.BigMap),
+            ('/ocr/(.*?)', h.Ocr),
 
             ('/', h.ViewPlaquesPage),
             ('/(.+?)/(.+?)', h.ViewOnePlaque), # supports the old_site_id

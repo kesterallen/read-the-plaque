@@ -10,6 +10,7 @@ import os
 import random
 import re
 import urllib
+import urllib2
 from utils import (
     DEF_NUM_PENDING,
     email_admin,
@@ -100,11 +101,12 @@ def handle_404(request, response, exception):
     response.set_status(404)
 
 def handle_500(request, response, exception):
-    email_admin('500 error!', '500 error!\n\n%s\n\n%s\n\n%s' %
-                              (request, response, exception))
+    error_text = '500 error!\n{}\n{}\n{}'.format(request, response, exception)
+    email_admin('500 error!', error_text)
     template = JINJA_ENVIRONMENT.get_template('error.html')
     logging.error(exception)
-    response.write(template.render({'code': 500, 'error_text': exception}))
+    error_text = exception
+    response.write(template.render({'code': 500, 'error_text': error_text}))
     response.set_status(500)
 
 class FakePlaqueForRootUrlPreviews(object):
@@ -623,6 +625,7 @@ class AddPlaque(webapp2.RequestHandler):
         # editted plaque, if specified.
         is_upload_pic = (is_edit and img_name is not None) or (not is_edit)
         if is_upload_pic:
+            #TODO openbenches: disable upload here?
             self._upload_image(img_name, img_fh, plaque)
 
         # Write to the updated_* fields if this is an edit:
@@ -730,14 +733,17 @@ class AddPlaque(webapp2.RequestHandler):
         return location
 
     def _get_img(self, img_file=None, img_url=None):
-        # Prefer the file to the URL, if both are given.
-        #
+        """
+        Prefer the file to the URL, if both are given.
+        """
         if img_file != '' and img_file is not None:
             img_name = img_file.filename
             img_fh = img_file.file
         elif img_url != '':
             img_name = os.path.basename(img_url)
             img_fh = urllib.urlopen(img_url)
+            # TODO: Raise error if the img_url doesn't point at an image
+            # TODO openbenches: disable the image download here?
         else:
             img_name = None
             img_fh = None
@@ -761,6 +767,7 @@ class AddPlaque(webapp2.RequestHandler):
         img_file = self.request.POST.get('plaque_image_file')
         img_url = self.request.POST.get('plaque_image_url')
 
+        # TODO openbenches: disable the image download here
         img_name, img_fh = self._get_img(img_file, img_url)
 
         location = self._get_location(img_fh)
@@ -806,35 +813,28 @@ class AddPlaque(webapp2.RequestHandler):
         gcs_filename = '%s/%s/%s' % (GCS_BUCKET, date_slash_time, img_name)
         plaque.pic = gcs_filename
 
+        # TODO openbenches: set plaque.pic to None?
+        # TODO openbenches: skip this try block, set plaque.img_url and return immediately?
+        # TODO openbenches: set img_url to the hotlink URL?
+
         # Write image to GCS
         try:
-            ct, op = self._gcs_extras(img_name)
+            ct = 'image/jpeg'
+            op = {b'x-goog-acl': b'public-read'}
             with gcs.open(gcs_filename, 'w', content_type=ct, options=op) as fh:
                 img_contents = img_fh.read()
                 fh.write(img_contents)
+
+            # Make serving_url for image:
+            blobstore_gs_key = blobstore.create_gs_key('/gs' + gcs_filename)
+            plaque.img_url = images.get_serving_url(blobstore_gs_key)
+
         except AttributeError:
             submit_err = SubmitError("The image for the plaque was not "
                                      "specified-- please click the back button "
                                      "and resubmit.")
             logging.error(submit_err)
             raise submit_err
-
-        # Make serving_url for image:
-        blobstore_gs_key = blobstore.create_gs_key('/gs' + gcs_filename)
-        plaque.img_url = images.get_serving_url(blobstore_gs_key)
-
-    def _gcs_extras(self, img_name):
-        """Hide this here to clarify what _upload_image is doing."""
-        ct = 'image/jpeg'
-        try:
-            if ct is None:
-                guess_type = mimetypes.guess_type(img_name)
-                if len(guess_type) > 0:
-                    ct = guess_type[0]
-        except:
-            pass
-        op = {b'x-goog-acl': b'public-read'}
-        return ct, op
 
 class DuplicateChecker(AddPlaque):
     def post(self):
@@ -915,9 +915,8 @@ class SearchPlaquesGeo(webapp2.RequestHandler):
         search_radius_meters = int(search_radius_meters)
         plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
 
-        query = 'distance(location, geopoint(%s, %s)) < %s' % (
-            lat, lng, search_radius_meters)
-        loc_expr = 'distance(location, geopoint(%s, %s))' % (lat, lng)
+        loc_expr = 'distance(location, geopoint({}, {}))'.format(lat, lng)
+        query    = '{} < {}'.format(loc_expr, search_radius_meters)
         sortexpr = search.SortExpression(
             expression=loc_expr,
             direction=search.SortExpression.ASCENDING,
@@ -926,7 +925,8 @@ class SearchPlaquesGeo(webapp2.RequestHandler):
         search_query = search.Query(
             query_string=query,
             options=search.QueryOptions(
-                    sort_options=search.SortOptions(expressions=[sortexpr])))
+                sort_options=search.SortOptions(expressions=[sortexpr])
+        ))
 
         results = plaque_search_index.search(search_query)
         keys = [ndb.Key(urlsafe=r.doc_id) for r in results]
@@ -1209,7 +1209,7 @@ class ApproveAllPending(webapp2.RequestHandler):
     """Approve all pending plaques"""
     def get(self):
 
-        raise NotImplementedError("Turned off")
+        #raise NotImplementedError("Turned off")
 
         if not users.is_current_user_admin():
             return "admin only, please log in"
@@ -1269,6 +1269,34 @@ class DisapprovePlaque(webapp2.RequestHandler):
         email_admin(msg, msg)
 
         self.redirect('/')
+
+class Ocr(webapp2.RequestHandler):
+    def get(self, img_url=None):
+        with open('key.txt') as key_fh:
+            key = key_fh.read()
+        url = "https://vision.googleapis.com/v1/images:annotate?key=" + key
+        data = json.dumps({
+            "requests": [{
+                "image": { "source": { "imageUri": img_url } },
+                "features": [ { "type": "TEXT_DETECTION" } ],
+            }]
+        })
+        req = urllib2.Request(
+            url,
+            data,
+            {'Content-Type': 'application/json', 'Content-Length': len(data)})
+        f = urllib2.urlopen(req)
+        response = f.read()
+        f.close()
+        report = json.loads(response)
+
+        if 'error' in report['responses'][0]:
+            self.response.write("data {}".format(data))
+            self.response.write("error {}".format(report))
+            return
+
+        text = report['responses'][0]['textAnnotations'][0]['description'].replace('\n', '\n<br/>')
+        self.response.write(text)
 
 class RssFeed(webapp2.RequestHandler):
     def get(self, num_entries=10):

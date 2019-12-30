@@ -2,9 +2,10 @@
 
 import sys
 import time
-import requests
 
+from attrdict import AttrDict
 from PIL import Image
+import requests
 
 DEBUG = False
 
@@ -51,7 +52,7 @@ class Plaque:
             response.raise_for_status()
 
     def _set_exif_lat_lng(self):
-        """Extract the location info from the image tags, using exiftool"""
+        """Extract the location from the image tags, using exiftool"""
 
         def _degs_min_secs_from_exif(exif):
             degs, mins, secs_times_100 = [float(exif[i][0]) for i in range(3)]
@@ -67,17 +68,16 @@ class Plaque:
 
         try:
             with Image.open(self.fname) as img:
-                exif = img._getexif()
-                info = exif[GPS_INFO_TAG]
-                self.lat = _decimal_pos_from_exif(info[LAT], info[LAT_REF])
-                self.lng = _decimal_pos_from_exif(info[LNG], info[LNG_REF])
-        except TypeError as err:
-            print("typeerr", err)
+                gps = AttrDict(img._getexif()[GPS_INFO_TAG])
+                self.lat = _decimal_pos_from_exif(gps[LAT], gps[LAT_REF])
+                self.lng = _decimal_pos_from_exif(gps[LNG], gps[LNG_REF])
+        except (TypeError, KeyError) as err:
+            print("Error in GPS read, using defaults,", err, type(err), self.fname)
             self.lat = self.DEFAULT_LAT
             self.lng = self.DEFAULT_LNG
 
     def __repr__(self):
-        return "{0.fname} ({0.lat}, {0.lng})".format(self)
+        return "{0.fname} ({0.lat:.5f}, {0.lng:.5f})".format(self)
 
 def main(img_fnames):
     """
@@ -91,15 +91,24 @@ def main(img_fnames):
         plaques.append(plaque)
     print("Loading complete")
 
+    succeeded = []
+    failed = []
+
     for i, plaque in enumerate(plaques):
+        print("posting {} / {} {}".format(i+1, len(plaques), plaque))
         try:
             if not DEBUG:
                 plaque.submit()
-            print("Posted {}/{} {}".format(i+1, len(plaques), plaque))
-        except requests.exceptions.HTTPError as err:
-            print("post for {} failed, {}".format(plaque, err))
+            succeeded.append(plaque.fname)
+        except requests.exceptions.HTTPError:
+            failed.append(plaque.fname)
         if not DEBUG:
-            time.sleep(10)
+            time.sleep(30)
+
+    if succeeded:
+        print("\nUploaded successfully:\n\t{}".format("\n\t".join(succeeded)))
+    if failed:
+        print("\n\nFailed:\n\t{}".format("\n\t".join(failed)))
 
 if __name__ == '__main__':
     main(sys.argv[1:])

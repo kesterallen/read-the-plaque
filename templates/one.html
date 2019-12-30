@@ -34,9 +34,12 @@
           </div>
         </div>
         {% if loginout.is_admin %}
-          <p>Originally added {{plaque.created_on.strftime('%Y-%m-%d')}}.</p>
-          <p id="whatthreewords"></p>
-          <p id="ocr">scripts/ocr.sh {{plaque.img_url}}</p>
+          <!--<p id="whatthreewords"></p>-->
+          <!--<p id="ocr">scripts/ocr.sh {{plaque.img_url}}</p>-->
+          <p>
+            Originally added {{plaque.created_on.strftime('%Y-%m-%d')}}.
+            <a href="/ocr/{{plaque.img_url}}">OCR</a>
+          </p>
         {% endif %}
         <p>
           <a class="btn btn-primary" role="button" href="/nearby/{{plaque.location.lat}}/{{plaque.location.lon}}">Nearby Plaques</a>
@@ -81,17 +84,17 @@
 
 {% block bottomofbody %}
 <script>
-var settings = {
-  "async": true,
-  "crossDomain": true,
-  "url": "https://api.what3words.com/v2/reverse?coords={{plaque.location.lat}}%2C{{plaque.location.lon}}&key=ABHVDFTV&lang=en&format=json&display=full",
-  "method": "GET",
-  "headers": {}
-}
-
-$.ajax(settings).done(function (response) {
-  link = '<a href="' + response.map + '">WhatThreeWords: ' + response.words + '</a>';
-  $("#whatthreewords").html(link);
-});
+//var settings = {
+  //"async": true,
+  //"crossDomain": true,
+  //"url": "https://api.what3words.com/v2/reverse?coords={{plaque.location.lat}}%2C{{plaque.location.lon}}&key=ABHVDFTV&lang=en&format=json&display=full",
+  //"method": "GET",
+  //"headers": {}
+//}
+//
+//$.ajax(settings).done(function (response) {
+  //link = '<a href="' + response.map + '">WhatThreeWords: ' + response.words + '</a>';
+  //$("#whatthreewords").html(link);
+//});
 </script>
 {% endblock %}

@@ -53,9 +53,13 @@ def _shorten_title_if_needed(title, max_len):
     return title
 
 def _get_title(bench):
-    """Exgtract titletitle shorter if it's too long"""
+    """Exgtract title, shortern if it's too long"""
     full_title = bench['properties']['popupContent']
-    title = full_title.replace('\r\n', ' ')
+    try:
+        title = full_title.replace('\r\n', ' ')
+    except AttributeError as err:
+        print(err)
+        raise SkipBenchException("bad format for bench")
 
     lines = [l for l in title.splitlines() if l]
     if not lines:
@@ -75,9 +79,10 @@ def _get_title(bench):
 def bench_to_plaque(bench, user_names):
     """Convert a bench's JSON record to a plaque dict"""
 
-    def _get_desc():
+    def _get_desc(plaque):
         # Build description, including image metadata: original source,
         # license, and user:
+        full_title = plaque.full_title.replace('\r\n', '<br/>')
         desc = [
             """ {0.full_title} <br/><br/> This plaque is originally from
             <a href="https://openbenches.org/bench/{0.id}">OpenBenches</a> and
@@ -104,7 +109,7 @@ def bench_to_plaque(bench, user_names):
                 desc.append('<p>Uploaded by <a href="{}">{}</a>'.format(
                     url, name))
 
-        return "<br>".join(desc)
+        return "<br/>".join(desc)
 
     title, full_title = _get_title(bench)
     # If there isn't an image, bail out:
@@ -127,7 +132,7 @@ def bench_to_plaque(bench, user_names):
         'has_origin': False,
     })
 
-    plaque.description = _get_desc()
+    plaque.description = _get_desc(plaque)
     return plaque
 
 def load_benches(fname, users_fname):
@@ -146,7 +151,7 @@ def load_benches(fname, users_fname):
     with open(fname) as json_fh:
         data = json.load(json_fh)
         plaques = []
-        for bench in data['features']:
+        for i, bench in enumerate(data['features']):
             try:
                 plaque = bench_to_plaque(bench, user_names)
                 if plaque:
@@ -163,8 +168,8 @@ def cache_url(img_url):
 
 def main():
     """Run the uploader"""
-    plaques = load_benches('openbenches.json', 'openbenches.users.json')
-    #plaques = random.sample(plaques, 5) # for testing
+    plaques = load_benches('openbenches.20191228.json', 'openbenches.users.json')
+    plaques = plaques[-5:]
 
     for i, plaque in enumerate(plaques):
         try:
@@ -180,7 +185,7 @@ def main():
             print("post for \n{}\n failed,\n {}\n".format(plaque, err))
 
         if not DEBUG:
-            time.sleep(10)
+            time.sleep(120)
 
 if __name__ == '__main__':
     main()
