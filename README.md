@@ -28,4 +28,11 @@ retrieved using a strongly consistent (ancestor) query.
 [7]: http://twitter.github.com/bootstrap/
 
 Update:
-    python scripts/update_json.py && python scripts/convert_to_geojson.py && ../appcfg.py update . && curl -s https://readtheplaque.com/flush  > /dev/null && curl -s https://readtheplaque.com > /dev/null  && curl -s https://readtheplaque.com/counts
+     . ~/.virtualenv/twitter/bin/activate
+    python scripts/update_json.py && 
+    python scripts/convert_to_geojson.py && 
+    deactivate && 
+    gcloud config set project read-the-plaque && gcloud app deploy &&
+    curl -s https://readtheplaque.com/flush  > /dev/null && 
+    curl -s https://readtheplaque.com > /dev/null  && 
+    curl -s https://readtheplaque.com/counts

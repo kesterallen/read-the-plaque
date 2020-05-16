@@ -60,6 +60,7 @@ def get_bounding_box(plaques):
 def get_template_values(**kwargs):
     memcache_name = 'template_values_%s' % users.is_current_user_admin()
     template_values = memcache.get(memcache_name)
+    #TODO: insert the google maps API key here?
     if template_values is None:
         #num_pending = Plaque.num_pending(num=DEF_NUM_PENDING)
         footer_items = get_footer_items()

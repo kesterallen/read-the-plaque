@@ -56,6 +56,12 @@ class Plaque:
 
         def _degs_min_secs_from_exif(exif):
             degs, mins, secs_times_100 = [float(exif[i][0]) for i in range(3)]
+            # Minutes is occasionally thousandX or tenthousandX?
+            if mins > 10000:
+                mins /= 10000.0
+            elif mins > 1000:
+                mins /= 1000.0
+
             secs = secs_times_100 / 100.0 # ??? not sure where this comes from
             return degs, mins, secs
 
@@ -98,12 +104,14 @@ def main(img_fnames):
         print("posting {} / {} {}".format(i+1, len(plaques), plaque))
         try:
             if not DEBUG:
+                print('submitting {}'.format(i+1))
                 plaque.submit()
+                print('done submitting {}'.format(i+1))
             succeeded.append(plaque.fname)
         except requests.exceptions.HTTPError:
             failed.append(plaque.fname)
-        if not DEBUG:
-            time.sleep(30)
+        #if not DEBUG:
+            #time.sleep(30)
 
     if succeeded:
         print("\nUploaded successfully:\n\t{}".format("\n\t".join(succeeded)))

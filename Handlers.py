@@ -326,7 +326,7 @@ class RandomPlaque(ViewOnePlaqueParent):
 class GeoJson(ViewOnePlaqueParent):
     """ Get one plaque's geoJSON """
     def get(self, plaque_key=None):
-        # TODO: use _get_from_key when it's ready 
+        # TODO: use _get_from_key when it's ready
         # TODO Separate this out to return the Plaque object GEOJSON
         plaque = self._get_plaque_from_key(plaque_key)
         self.response.write(plaque.geojson)
@@ -503,7 +503,7 @@ class AddPlaque(webapp2.RequestHandler):
                     url = message
                     title = message.split('/')[-1]
 
-                    message = """Thanks, admin! 
+                    message = """Thanks, admin!
                         <a style="float: right" href="%s">%s</a>""" % (url, title)
                 else:
                     message = """Hooray! And thank you. We'll review your
@@ -1272,7 +1272,7 @@ class DisapprovePlaque(webapp2.RequestHandler):
 
 class Ocr(webapp2.RequestHandler):
     def get(self, img_url=None):
-        with open('key.txt') as key_fh:
+        with open('key_googlevision.txt') as key_fh:
             key = key_fh.read()
         url = "https://vision.googleapis.com/v1/images:annotate?key=" + key
         data = json.dumps({
