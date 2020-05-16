@@ -1304,7 +1304,7 @@ class RssFeed(webapp2.RequestHandler):
                       ).filter(Plaque.approved == True
                       ).order(-Plaque.created_on
                       ).fetch(limit=num_entries)
-        template = JINJA_ENVIRONMENT.get_template('feed.xml')
+        template = JINJA_ENVIRONMENT.get_template('templates/feed.xml')
         template_values = {'plaques': plaques}
         self.response.write(template.render(template_values))
 
