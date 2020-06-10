@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 
+#TODO: New uploader for Openbenches (auto approve)
+#TODO: new class to lazyload the openbenches images
+#           * might need new column in Plaque to indicate if a given row has been loaded or not
+
 import datetime
 import jinja2
 import json

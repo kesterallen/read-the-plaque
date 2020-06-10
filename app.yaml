@@ -39,6 +39,18 @@ handlers:
   static_dir: static/images
   secure: always
 
+- url: /mulberry
+  static_files: static/mulberry_map_demo.html
+  upload: static/mulberry_map_demo.html
+
+- url: /worms
+  static_files: static/mulberry_map_demo.html
+  upload: static/mulberry_map_demo.html
+
+- url: /pancakes
+  static_files: static/pancakes/map.html
+  upload: static/pancakes/map.html
+
 - url: /delete
   script: View.app
   login: admin
