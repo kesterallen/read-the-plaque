@@ -10,7 +10,8 @@ body {
 }
 
 .logo {
-    background: url('/images/rtp_logo_fromvector.webp') no-repeat center center;
+    /*background: url('/images/rtp_logo_fromvector.webp') no-repeat center center;*/
+    background: url('/images/rtp_eye.png') no-repeat center center;
     background-size: cover;
     background-position: center 55%;
     background-color: #3E3E3E;  /* RTP gray */

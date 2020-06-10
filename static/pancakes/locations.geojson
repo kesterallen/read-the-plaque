@@ -1,0 +1,523 @@
+{
+    "features": [
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.2835466",
+                    "37.8622585"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Homemade Cafe",
+                "rating": "delicious!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.3004705",
+                    "37.8698197"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Bette's Oceanview Diner",
+                "rating": "delicious!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.2104356",
+                    "37.8270695"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Montclair Egg Shop",
+                "rating": "delicious!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.332341",
+                    "37.9476609"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Cafe McBryde",
+                "rating": "delicious!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.2696082",
+                    "37.880686"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Saul's",
+                "rating": "delicious!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.2418923",
+                    "37.765695"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Ole's Alameda Waffle Shop",
+                "rating": "delicious!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.3017091",
+                    "37.8795716"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Lama Beans",
+                "rating": "delicious!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.3011782",
+                    "37.8914018"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Royal Cafe",
+                "rating": "delicious!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.2890926",
+                    "37.8381956"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Doyle Street Cafe",
+                "rating": "delicious!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.3003397",
+                    "37.888616"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Sam's Log Cabin",
+                "rating": "delicious!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.2764558",
+                    "37.7965839"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Buttercup",
+                "rating": "delicious!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.2976669",
+                    "37.8397916"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Emery Bay Cafe",
+                "rating": "pretty good!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.2864092",
+                    "37.831108"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Rudy's",
+                "rating": "pretty good!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.2819479",
+                    "37.8319601"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "IHOP",
+                "rating": "pretty good!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.2673394",
+                    "37.8670816"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Venus",
+                "rating": "pretty good!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.2957645",
+                    "37.8725562"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Cafe Leila",
+                "rating": "pretty good!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.2716769",
+                    "37.849502"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "The Vault",
+                "rating": "pretty good!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.260473",
+                    "37.8751044"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "North Side Cafe",
+                "rating": "pretty good!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.2564377",
+                    "37.8277957"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Mama's Royal Cafe",
+                "rating": "pretty good!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.2943069",
+                    "37.8140455"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Pretty Lady",
+                "rating": "pretty good!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.251453",
+                    "37.8423174"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Rockridge Cafe",
+                "rating": "pretty good!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.2587962",
+                    "37.867976"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Cafe Durant",
+                "rating": "pretty good!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.260528",
+                    "37.8653616"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Savory Kitchen",
+                "rating": "pretty good!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.2587172",
+                    "37.8239996"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Kaiser Oakland Cafeteria",
+                "rating": "pretty good!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.2689478",
+                    "37.8586706"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Sconehenge",
+                "rating": "pretty good!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.3057736",
+                    "37.8787881"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Gilman Grill",
+                "rating": "pretty good!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.2766392",
+                    "37.821705"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Nibs",
+                "rating": "pretty good!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.2489931",
+                    "37.8137273"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Coffee Mill",
+                "rating": "pretty good!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.2682014",
+                    "37.8701898"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Sunny Side Cafe",
+                "rating": "any pancakes are better than no pancakes!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.2901559",
+                    "37.8567619"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Broom Bush",
+                "rating": "any pancakes are better than no pancakes!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.2897769",
+                    "37.8911078"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Sunny Side Up",
+                "rating": "any pancakes are better than no pancakes!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.2548581",
+                    "37.8260514"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Piedmont Bakery",
+                "rating": "any pancakes are better than no pancakes!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.2751419",
+                    "37.8447805"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Lois the Pie Queen",
+                "rating": "any pancakes are better than no pancakes!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.2701476",
+                    "37.8710927"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Pollo",
+                "rating": "any pancakes are better than no pancakes!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.2463466",
+                    "37.8585587"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Rick & Ann's",
+                "rating": "any pancakes are better than no pancakes!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.2793287",
+                    "37.822089"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Front Porch Cafe",
+                "rating": "any pancakes are better than no pancakes!"
+            },
+            "type": "Feature"
+        },
+        {
+            "geometry": {
+                "coordinates": [
+                    "-122.2700772",
+                    "37.87189"
+                ],
+                "type": "Point"
+            },
+            "properties": {
+                "name": "Berkeley Social Club",
+                "rating": "any pancakes are better than no pancakes!"
+            },
+            "type": "Feature"
+        }
+    ],
+    "type": "FeatureCollection"
+}
