@@ -104,14 +104,10 @@ def main(img_fnames):
         print("posting {} / {} {}".format(i+1, len(plaques), plaque))
         try:
             if not DEBUG:
-                print('submitting {}'.format(i+1))
                 plaque.submit()
-                print('done submitting {}'.format(i+1))
             succeeded.append(plaque.fname)
         except requests.exceptions.HTTPError:
             failed.append(plaque.fname)
-        #if not DEBUG:
-            #time.sleep(30)
 
     if succeeded:
         print("\nUploaded successfully:\n\t{}".format("\n\t".join(succeeded)))
