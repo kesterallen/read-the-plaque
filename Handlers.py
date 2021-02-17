@@ -77,13 +77,6 @@ def get_plaqueset_key(plaqueset_name=DEF_PLAQUESET_NAME):
     """
     return ndb.Key('Plaque', plaqueset_name)
 
-# TODO: add table UniqueTags
-def get_pages_list(per_page=DEF_NUM_PER_PAGE):
-    num_pages = int(math.ceil(float(Plaque.num_approved()) /
-                              float(per_page)))
-    pages_list = [1+p for p in range(num_pages)]
-    return pages_list
-
 def get_featured():
     featured = FeaturedPlaque.query().order(-Plaque.created_on).get()
     if featured is not None:
@@ -893,7 +886,9 @@ class SearchPlaques(webapp2.RequestHandler):
         else:
             # TODO: NDB cursor pagination?
             search_term = '"%s"' % search_term.replace('"', '')
-            search_term = search_term.encode('unicode-escape')
+            #search_term = search_term.encode('unicode-escape')
+            search_term = str(search_term.decode("ascii", "ignore")) # TODO: this doesn't crash on e.g. 'Piñata'
+
             plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
             results = plaque_search_index.search(search_term)
             logging.debug('search results are "%s"' % results)
@@ -1299,8 +1294,9 @@ class Ocr(webapp2.RequestHandler):
             self.response.write("error {}".format(report))
             return
 
-        text = report['responses'][0]['textAnnotations'][0]['description'].replace('\n', '\n<br/>')
-        self.response.write(text)
+        description = report['responses'][0]['textAnnotations'][0]['description']
+        ocr_text = description.replace('\n', '\n <br/> ')
+        self.response.write(ocr_text)
 
 class RssFeed(webapp2.RequestHandler):
     def get(self, num_entries=10):
