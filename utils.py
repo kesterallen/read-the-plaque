@@ -88,8 +88,8 @@ def get_template_values(**kwargs):
     if 'plaques' in template_values:
         plaques = template_values['plaques']
         bounding_box = get_bounding_box(plaques)
-        logging.info(plaques)
-        logging.info(bounding_box)
+        logging.info("get_template_values: plaques {}".format(plaques))
+        logging.info("get_template_values: bounding box: {}".format(bounding_box))
         template_values['bounding_box'] = bounding_box
 
     return template_values
