@@ -24,7 +24,8 @@
     <div class="collapse navbar-collapse" id="navbar-collapse-1">
       <ul class="nav navbar-nav navbar-right">
         {% if loginout and loginout.is_admin %}
-          <li><a href="/pending">Pending <!--<span class="badge">{{num_pending}}</span>--></a></li>
+          <li><a href="/pending">Pending</a></li>
+          <li><a href="/randpending">(Random)</a></li>
           <li><a href="/flush">Flush</a></li>
           <li><a href="/counts">Counts</a></li>
         {% endif %}

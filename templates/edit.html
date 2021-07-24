@@ -80,13 +80,14 @@
         <div class="form-group">
           <legend>Plaque Tags</legend>
           <input type="text" class="form-control" id="plaque_tags" name="tags" value="{{plaque.tags| join(', ')}}" placeholder="Tags to characterize the plaque. Multiple tags can be separated by commas.">
-          <!--<p id="ocr">scripts/ocr.sh {{plaque.img_url}}</p>-->
           <p>
             Originally added {{plaque.created_on.strftime('%Y-%m-%d')}}.
-            <a href="/ocr/{{plaque.img_url}}">OCR</a>
+            <a href="/ocr/{{plaque.img_url}}">OCR plain</a>
+            <a id="ocrlink" href="#">OCR JS</a>
           </p>
         </div>
       </div>
+
 
       <div class="col-xs-10 col-xs-offset-1 col-md-6 col-md-offset-0">
         {% include 'parts/map_picker.html' %}
@@ -100,7 +101,24 @@
   </form>
 </div>
 
-{% include 'parts/pretty_editor.html' %}
+<!-- 
+Display OCR output instead of pretty editor, for now
+-->
+{# {% include 'parts/pretty_editor.html' %} #}
+<script>
+document.getElementById("ocrlink").onclick = function() {ocrGet()};
+function ocrGet() {
+  $.get("/ocr/{{plaque.img_url}}", function(data) {})
+  .success(function(data) { 
+    oldDescription = $("#plaque_description").text(); 
+    $("#plaque_description").text(oldDescription + "\n<br/> " + data); 
+  })
+  .error(function( jqxhr, textStatus, error ) { 
+    alert("error" + textStatus + " " + error); 
+  })
+  .complete(function() { alert("complete"); });
+}
+</script>
 
 <!-- Prevent "enter" keystrokes in the Google Maps search from submiting the plaque -->
 <script>
