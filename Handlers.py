@@ -879,25 +879,48 @@ class SearchPlaques(webapp2.RequestHandler):
         search_term = self.request.get('search_term')
         self.redirect('/search/%s' % search_term)
 
+    def _search_plaques(self, search_term):
+        search_term = '"%s"' % search_term.replace('"', '') #search_term.encode('unicode-escape')
+        search_term = str(search_term.decode("ascii", "ignore")) # TODO: this doesn't crash on e.g. 'Piñata'
+
+        plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
+        results = plaque_search_index.search(search_term)
+
+        plaques = [ndb.Key(urlsafe=r.doc_id).get() for r in results]
+        plaques = [p for p in plaques if p is not None]
+
+        return plaques
+
     def get(self, search_term=None):
-        logging.debug('search term is "%s"' % search_term)
         if search_term is None:
             plaques = []
         else:
             # TODO: NDB cursor pagination?
-            search_term = '"%s"' % search_term.replace('"', '')
-            #search_term = search_term.encode('unicode-escape')
-            search_term = str(search_term.decode("ascii", "ignore")) # TODO: this doesn't crash on e.g. 'Piñata'
+            plaques = self._search_plaques(search_term)
 
-            plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
-            results = plaque_search_index.search(search_term)
-            logging.debug('search results are "%s"' % results)
-            plaques = [ndb.Key(urlsafe=r.doc_id).get() for r in results]
-            plaques = [p for p in plaques if p is not None]
             # Allow admin to see unpublished plaques, hide these from others
-            user = users.get_current_user()
             if not users.is_current_user_admin():
                 plaques = [p for p in plaques if p.approved]
+
+        template = JINJA_ENVIRONMENT.get_template('all.html')
+        template_values = get_template_values(plaques=plaques)
+        self.response.write(template.render(template_values))
+
+class SearchPlaquesPending(SearchPlaques):
+    """Admin-only: a search the un-approved plaques."""
+
+    def post(self):
+        raise NotImplementedError("POST not allowed for SearchPlaquesPending")
+
+    def get(self, search_term=None):
+        logging.info("SearchPlaquesPending: search_term: {}".format(search_term))
+
+        logging.info("SearchPlaquesPending: IS admin")
+        # Unpublished plaques matching the search term:
+        plaques = self._search_plaques(search_term)
+        logging.info("SearchPlaquesPending: number of plaques {}".format(len(plaques)))
+        plaques = [p for p in plaques if not p.approved]
+        logging.info("SearchPlaquesPending: number of not-approved plaques {}".format(len(plaques)))
 
         template = JINJA_ENVIRONMENT.get_template('all.html')
         template_values = get_template_values(plaques=plaques)
