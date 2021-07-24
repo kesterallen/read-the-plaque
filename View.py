@@ -8,8 +8,7 @@ import Handlers as h
 
 JINJA_ENVIRONMENT = jinja2.Environment (
     loader=jinja2.FileSystemLoader(
-        os.path.join(os.path.dirname(__file__),
-                     'templates')),
+        os.path.join(os.path.dirname(__file__), 'templates')),
     extensions=['jinja2.ext.autoescape'],
     autoescape=False) # autoescape off, to allow html redering of descriptions
 
@@ -64,6 +63,7 @@ def main():
             ('/deletesearch/(.+?)', h.DeleteOneSearchIndex),
             #('/addtitleurlall', h.AddTitleUrlAll),
             ('/search/(.+?)', h.SearchPlaques),
+            ('/search/pending/(.+?)', h.SearchPlaquesPending),
             ('/search/?', h.SearchPlaques),
             ('/geo/(.*?)/(.*?)/(.*?)/?', h.SearchPlaquesGeo),
             ('/geo/.+?', h.SearchPlaquesGeo),
