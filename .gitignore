@@ -2,7 +2,6 @@
 *.pyc
 scripts/flikr_scraper.py
 scripts/instagram_scraper.py
-scripts/twitter_scraper.py
 static/plaques.geojson
 static/plaques_updated.json
 lib/__init__.pyc
@@ -15,4 +14,5 @@ lib/cloudstorage/rest_api.pyc
 lib/cloudstorage/storage_api.pyc
 key_googlemaps.txt   
 key_googlevision.txt 
+key_twitter.txt 
 *.un~
