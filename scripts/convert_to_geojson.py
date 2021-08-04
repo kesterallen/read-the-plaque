@@ -1,54 +1,36 @@
 
-import datetime
-
 import json
 import os
-import re
-import requests
-import sys
-from pprint import pprint
 
+here_path = os.path.dirname(os.path.abspath(__file__))
+json_in = os.path.join(here_path, "../static/plaques_updated.json")
+json_out = os.path.join(here_path, "../static/plaques.geojson")
 
-input_json_filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-    '../static/plaques_updated.json')
-output_json_filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-    '../static/plaques.geojson')
-
-def make_geojson_feature(plaque):
+def plaque_to_geojson_feature(plaque):
     geojson_feature = {
-        "type": "Feature", 
-        "geometry": {
-            "type": "Point", 
-            "coordinates": [float(plaque['lng']), float(plaque['lat'])], # N.B. lng, then lat
-        },
-        "properties": {
-            "img_url_tiny": plaque["img_url_tiny"],
-            "title_page_url": plaque["title_page_url"],
-            "title": plaque["title"],
-        },
+        "type": "Feature",
+        "geometry": dict(
+            type="Point",
+            coordinates=[float(plaque["lng"]), float(plaque["lat"])]),
+        "properties": dict(
+            img_url_tiny=plaque["img_url_tiny"],
+            title_page_url=plaque["title_page_url"],
+            title=plaque["title"]),
     }
     return geojson_feature
 
 def main():
+    with open(json_in) as json_fh:
+        json_data = json.load(json_fh)
 
-    with open(input_json_filename) as fh:
-        json_data = json.load(fh)
+    features = [plaque_to_geojson_feature(p) for p in json_data["plaques"]]
+    geojson = dict(type="FeatureCollection", features=features)
 
-    output = {
-        "type": "FeatureCollection",
-        "features": [],
-    }
+    with open(json_out, "w") as json_fh:
+        json_str = json.dumps(geojson)
+        json_fh.write(json_str)
 
-    for i, plaque in enumerate(json_data['plaques']):
-        geojson_feature = make_geojson_feature(plaque)
-        if i < 25:
-            geojson_feature["fp"] = True
-        output['features'].append(geojson_feature)
-
-    json_str = json.dumps(output)
-
-    with open(output_json_filename, 'w') as fh:
-        fh.write(json_str)
-
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    #main()
+    print("not needed anymore, run update_json.py")
+    pass

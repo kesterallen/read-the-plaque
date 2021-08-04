@@ -1044,16 +1044,17 @@ class FlushMemcache(webapp2.RequestHandler):
 
 class Counts(webapp2.RequestHandler):
     def get(self):
+        compact = self.request.get('compact')
         query = Plaque.query()
         num_plaques = query.count()
         num_pending = query.filter(Plaque.approved == False).count()
 
-        msg = """
-<ul>
-  <li>%s published</li>
-  <li>%s pending</li>
-</ul>
-""" % (num_plaques - num_pending, num_pending)
+        if compact:
+            tmpl = "{} published, {} pending"
+        else:
+            tmpl = "<ul> <li>{} published</li> <li>{} pending</li> </ul>"
+
+        msg = tmpl.format(num_plaques - num_pending, num_pending)
         self.response.write(msg)
 
 class DeleteOnePlaque(webapp2.RequestHandler):
