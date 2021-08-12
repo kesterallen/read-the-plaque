@@ -11,6 +11,8 @@ POST_URL = 'https://readtheplaque.com/add'
 DEFAULT_LAT = 44.0
 DEFAULT_LNG = 46.0
 
+PLAQUE_IMAGE_INDEX = 0
+
 def keys(keyfile="key_twitter.txt"):
     """
     Read the secret keys from a non-git file and return them in the order that
@@ -54,12 +56,18 @@ def get_tweet(tweet_id, tweet_mode='extended'):
     tweet.url = f"https://twitter.com/{tweet.user.screen_name}/status/{tweet_id}"
     return tweet
 
-def get_plaque_description(tweet, imgs):
+def get_plaque_image_url_and_description(tweet):
     """Create plaque description."""
-    # Append any extra images:
-    #
-    urls = [f' <br/><img class="img-responsive" src="{i}"/>' for i in imgs[1:]]
-    img_desc = "\n".join(urls)
+
+    urls = get_img_urls(tweet)
+    img_els = []
+    for i, url in enumerate(urls):
+        if i == PLAQUE_IMAGE_INDEX:
+            img_url = url
+        else:
+            img_els.append(f' <br/><img class="img-responsive" src="{url}"/>')
+
+    img_desc = "\n".join(img_els)
 
     text = ascii(tweet.full_text) #tweet.full_text.encode("utf8")
     user = tweet.user.screen_name
@@ -72,7 +80,7 @@ def get_plaque_description(tweet, imgs):
 
 <br/> <br/>Submitted by <a href="https://twitter.com/{user}">@{user}</a>.
 """
-    return desc
+    return img_url, desc
 
 def get_plaque(tweet_id):
     """Get data for plaque from tweet object."""
@@ -82,14 +90,12 @@ def get_plaque(tweet_id):
     else:
         lat, lng = DEFAULT_LAT, DEFAULT_LNG
 
-    img_urls = get_img_urls(tweet)
-
-    description = get_plaque_description(tweet, img_urls)
+    plaque_img_url, description = get_plaque_image_url_and_description(tweet)
 
     plaque = AttrDict({
         'lat': lat,
         'lng': lng,
-        'plaque_image_url': img_urls[0],
+        'plaque_image_url': plaque_img_url,
         'title': f"From {tweet.url}",
         'description': description,
         'url': tweet.url,
@@ -115,7 +121,7 @@ def main():
     results = {True: [], False: []}
 
     for i, tweet_id in enumerate(tweet_ids):
-        print("Submitting {} / {}".format(i+1, len(tweet_ids)))
+        print(f"Submitting {i+1} / {len(tweet_ids)}")
         try:
             plaque = get_plaque(tweet_id)
             resp = requests.post(POST_URL, data=plaque)
@@ -124,7 +130,7 @@ def main():
             results[is_good].append(plaque)
 
         except (TwythonError, NoImageError, KeyError) as err:
-            print("{} Skipping {}".format(err, tweet_id))
+            print(f"{err} Skipping {tweet_id}")
             no_imgs.append(tweet_id)
             results[False].append(tweet_id)
 
@@ -134,7 +140,7 @@ def main():
     _report(results[True], "Succeeded")
 
     if no_imgs:
-        print("No Image URLS: {}".format(no_imgs))
+        print(f"No image in: {no_imgs}")
 
 if __name__ == '__main__':
     main()
