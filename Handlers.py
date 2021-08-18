@@ -1044,15 +1044,15 @@ class FlushMemcache(webapp2.RequestHandler):
 
 class Counts(webapp2.RequestHandler):
     def get(self):
-        compact = self.request.get('compact')
+        verbose = self.request.get('verbose')
         query = Plaque.query()
         num_plaques = query.count()
         num_pending = query.filter(Plaque.approved == False).count()
 
-        if compact:
-            tmpl = "{} published, {} pending"
-        else:
+        if verbose:
             tmpl = "<ul> <li>{} published</li> <li>{} pending</li> </ul>"
+        else:
+            tmpl = "{} published, {} pending\n"
 
         msg = tmpl.format(num_plaques - num_pending, num_pending)
         self.response.write(msg)
