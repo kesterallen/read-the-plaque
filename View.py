@@ -20,8 +20,13 @@ def main():
             ('/page/(.+?)/(.+?)/?', h.ViewPlaquesPage),
             ('/page/(.+?)/?', h.ViewPlaquesPage),
             ('/page/?', h.ViewPlaquesPage),
-            ('/plaque/(.+?)/?', h.ViewOnePlaque),
-            ('/plaque/?', h.ViewOnePlaque),
+            ('/plaque/?', h.ViewOnePlaque), # home page
+            ('/plaque/(.+?)/?', h.ViewOnePlaque), # specific plaque's page
+            ('/plaque/(.+?)/(.*)', h.ViewOnePlaque), # probably an attack,
+                                                     # absorb extra URL params
+                                                     # into an unused argument
+                                                     # "ignored_cruft" in
+                                                     # ViewOnePlaque.get
             ('/randompage/(.+?)/?', h.RandomPlaquesPage),
             ('/randompage.*', h.RandomPlaquesPage),
             ('/random.*', h.RandomPlaque),
