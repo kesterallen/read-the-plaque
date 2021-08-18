@@ -4,16 +4,19 @@ import sys
 import time
 from attrdict import AttrDict
 import requests
+from typing import Tuple, Iterator#, Union
 from twython import Twython, TwythonError
 
-POST_URL = 'https://readtheplaque.com/add'
+POST_URL = "https://readtheplaque.com/add"
 
-DEFAULT_LAT = 44.0
-DEFAULT_LNG = 46.0
+DEFAULT_LAT_LNG = (44.0, 46.0)
 
 PLAQUE_IMAGE_INDEX = 0
 
-def keys(keyfile="key_twitter.txt"):
+class NoImageError(Exception):
+    """Exception to indicate the there isn't an image in the tweet."""
+
+def _keys(keyfile: str="key_twitter.txt") -> list:
     """
     Read the secret keys from a non-git file and return them in the order that
     the Twython constructor expects.
@@ -26,99 +29,104 @@ def keys(keyfile="key_twitter.txt"):
             file_keys[key_name] = key_value.strip()
 
     # Verify and return in correct order
-    auth_keys = ["APP_KEY", "APP_SECRET", "OAUTH_TOKEN", "OAUTH_TOKEN_SECRET"]
-    for auth_key in auth_keys:
-        assert auth_key in file_keys
-    return([file_keys[k] for k in auth_keys])
+    auth_names = ["APP_KEY", "APP_SECRET", "OAUTH_TOKEN", "OAUTH_TOKEN_SECRET"]
+    for auth_name in auth_names:
+        assert auth_name in file_keys
+    return([file_keys[n] for n in auth_names])
 
-class NoImageError(Exception):
-    """Exception to indicate the there isn't an image in the tweet."""
-
-def get_img_urls(tweet):
+def get_img_urls(tweet: dict) -> list:
     """Extract the URL(s) of the image from the tweet."""
-    if 'extended_entities' in tweet:
+    if "extended_entities" in tweet:
         entities = tweet.extended_entities
-    elif 'entities' in tweet:
+    elif "entities" in tweet:
         entities = tweet.entities
     else:
         raise NoImageError("No entities in tweet.")
 
-    urls = [m['media_url'] for m in entities['media']]
+    urls = [m["media_url"] for m in entities["media"]]
     if not urls:
         raise NoImageError("No images in tweet entities.")
     return urls
 
-def get_tweet(tweet_id, tweet_mode='extended'):
+def get_tweet(tweet_id: str, tweet_mode: str="extended") -> dict:
     """Get the tweet object from twitter"""
-    twitter = Twython(*keys())
+    twitter = Twython(*_keys())
     tweet = twitter.show_status(id=tweet_id, tweet_mode=tweet_mode)
     tweet = AttrDict(tweet)
     tweet.url = f"https://twitter.com/{tweet.user.screen_name}/status/{tweet_id}"
+
+    try:
+        tweet.lat, tweet.lng = tweet.geo.coordinates
+    except (AttributeError, TypeError):
+        tweet.lat, tweet.lng = DEFAULT_LAT_LNG
+
     return tweet
 
-def get_plaque_image_url_and_description(tweet):
+def get_image_url_and_description(tweet: dict) -> Tuple:
     """Create plaque description."""
 
+    img_url = None
+    img_extras = []
+
     urls = get_img_urls(tweet)
-    img_els = []
     for i, url in enumerate(urls):
         if i == PLAQUE_IMAGE_INDEX:
             img_url = url
         else:
-            img_els.append(f' <br/><img class="img-responsive" src="{url}"/>')
+            img_extras.append(f'<br/><img class="img-responsive" src="{url}"/>')
 
-    img_desc = "\n".join(img_els)
+    img_extras_desc = "\n".join(img_extras)
 
-    text = ascii(tweet.full_text) #tweet.full_text.encode("utf8")
-    user = tweet.user.screen_name
+    name = tweet.user.screen_name
+    submitter_link = f"""<a href="https://twitter.com/{name}">@{name}</a>"""
+
     desc = f"""
-{text}
+{ascii(tweet.full_text)}
 
 <a target="_blank" href="{tweet.url}">Tweet</a>
 
-{img_desc}
+{img_extras_desc}
 
-<br/> <br/>Submitted by <a href="https://twitter.com/{user}">@{user}</a>.
+<br/><br/>Submitted by {submitter_link}.
 """
     return img_url, desc
 
-def get_plaque(tweet_id):
+def get_plaque(tweet_id: str) -> dict:
     """Get data for plaque from tweet object."""
     tweet = get_tweet(tweet_id)
-    if tweet.geo is not None:
-        lat, lng = tweet.geo.coordinates
-    else:
-        lat, lng = DEFAULT_LAT, DEFAULT_LNG
 
-    plaque_img_url, description = get_plaque_image_url_and_description(tweet)
+    img_url, description = get_image_url_and_description(tweet)
 
     plaque = AttrDict({
-        'lat': lat,
-        'lng': lng,
-        'plaque_image_url': plaque_img_url,
-        'title': f"From {tweet.url}",
-        'description': description,
-        'url': tweet.url,
+        "lat": tweet.lat,
+        "lng": tweet.lng,
+        "plaque_image_url": img_url,
+        "title": f"From {tweet.url}",
+        "description": description,
+        "url": tweet.url,
     })
     return plaque
 
-def _report(events, title):
-    if events:
-        text = "\n\t".join([e.url for e in  events])
-        print(f"\n{title}:\n\t{text}")
+def _report(results: dict) -> None:
+    for is_success, plaques in results.items():
+        if plaques:
+            print("Success" if is_success else "Failed")
+            print("\t", "\n\t".join(plaques))
+    if results["no_imgs"]:
+        print("No image in:")
+        print("\t", "\n\t".join(results["no_imgs"]))
 
 def main():
     """Extract and upload plaque pages for one or more Twitter URLs or IDs."""
-    no_imgs = []
 
     # If the input is a twitter URL, grab just the ID at the end of the URL,
     # otherwise use the whole input (in which case the input is presumably just
     # the twitter status ID):
     #
     ids = sys.argv[1:]
-    tweet_ids = [t.split('/')[-1] for t in ids]
+    tweet_ids = [t.split("/")[-1] for t in ids]
 
-    results = {True: [], False: []}
+    results = {True: [], False: [], "no_imgs": []}
 
     for i, tweet_id in enumerate(tweet_ids):
         print(f"Submitting {i+1} / {len(tweet_ids)}")
@@ -126,21 +134,17 @@ def main():
             plaque = get_plaque(tweet_id)
             resp = requests.post(POST_URL, data=plaque)
 
-            is_good = not(resp.status_code != 200 or 'resubmit.' in resp.text)
-            results[is_good].append(plaque)
+            is_good = not(resp.status_code != 200 or "resubmit." in resp.text)
+            results[is_good].append(plaque.url)
 
         except (TwythonError, NoImageError, KeyError) as err:
             print(f"{err} Skipping {tweet_id}")
-            no_imgs.append(tweet_id)
+            results["no_imgs"].append(tweet_id)
             results[False].append(tweet_id)
 
         time.sleep(1.5)
 
-    _report(results[False], "Failed")
-    _report(results[True], "Succeeded")
+    _report(results)
 
-    if no_imgs:
-        print(f"No image in: {no_imgs}")
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
