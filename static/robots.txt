@@ -12,3 +12,4 @@ Disallow: /jp
 Disallow: /nearby
 Disallow: /pending
 Disallow: /tag
+Disallow: /search
