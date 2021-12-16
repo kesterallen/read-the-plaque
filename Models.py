@@ -112,10 +112,16 @@ class Plaque(ndb.Model):
 
             if start_cursor:
                 plaques, next_cursor, more = query.fetch_page(num, start_cursor=start_cursor)
-                logging.info('in fetch_page if block, len(plaques)=%s, start_cursor=%s, next_cursor=%s, more=%s' % (len(plaques), start_cursor, next_cursor, more))
+                logging.info(
+                    'in fetch_page if block, len(plaques)=%s, start_cursor=%s, '
+                    'next_cursor=%s, more=%s' % (
+                        len(plaques), start_cursor, next_cursor, more))
             else:
                 plaques, next_cursor, more = query.fetch_page(num)
-                logging.info('in fetch_page else block, len(plaques)=%s, next_cursor=%s, more=%s' % (len(plaques), next_cursor, more))
+                logging.info(
+                    'in fetch_page else block, len(plaques)=%s, '
+                    'next_cursor=%s, more=%s' % (
+                        len(plaques), next_cursor, more))
 
             memcache_status = memcache.set_multi({
                 memcache_names[0]: plaques,
@@ -126,7 +132,8 @@ class Plaque(ndb.Model):
                 logging.debug("""memcache.set in Plaque.plaque_pages() failed: 
                     %s were not set""" % memcache_status)
 
-        logging.info("In Plaque.page_url: %s plaques %s %s" % (len(plaques), next_cursor, more))
+        logging.info("In Plaque.page_url: %s plaques %s %s" % (
+            len(plaques), next_cursor, more))
         return plaques, next_cursor, more
 
     @classmethod
@@ -318,7 +325,7 @@ class Plaque(ndb.Model):
                 'title': self.title,
                 'title_page_url': self.title_page_url,
                 'lat': str(self.location.lat),
-                'lng': str(self.location.lon), # N.B.: 'lng' --> 'lon'
+                'lng': str(self.location.lon), # note spelling difference "lng" vs "lon"
                 'img_url_tiny': self.img_url_tiny,
             }
         else:
