@@ -11,11 +11,14 @@ DEBUG = False
 
 # Values in these constants was extracted from:
 # from PIL.ExifTags import TAGS, GPSTAGS
+# img.getexif().get_ifd(GPS_INFO_TAG)
+# >>> {1: 'N', 2: (37.0, 47.0, 12.85), 3: 'W', 4: (122.0, 15.0, 19.94), 5: b'\x00', 6: 4.120659187112152, 12: 'K', 13: 0.0, 16: 'T', 17: 320.42755102040815, 23: 'T', 24: 320.42755102040815, 29: '2022:01:03', 31: 4.999077948790695}
+
 GPS_INFO_TAG = 34853 # "GPSInfo"
 LAT_REF = 1 # e.g. "N"
-LAT = 2 # e.g. ((37, 1), (50, 1), (2381, 100))
+LAT = 2 # e.g.  (37.0, 47.0, 12.85)
 LNG_REF = 3 # e.g. W
-LNG = 4 # e.g. ((122, 1), (17, 1), (2834, 100))
+LNG = 4 # e.g. (122.0, 15.0, 19.94)
 
 class Plaque:
     """
@@ -54,19 +57,8 @@ class Plaque:
     def _set_exif_lat_lng(self):
         """Extract the location from the image tags, using exiftool"""
 
-        def _degs_min_secs_from_exif(exif):
-            degs, mins, secs_times_100 = [float(exif[i][0]) for i in range(3)]
-            # Minutes is occasionally thousandX or tenthousandX?
-            if mins > 10000:
-                mins /= 10000.0
-            elif mins > 1000:
-                mins /= 1000.0
-
-            secs = secs_times_100 / 100.0 # ??? not sure where this comes from
-            return degs, mins, secs
-
         def _decimal_pos_from_exif(exif, ref):
-            degs, mins, secs = _degs_min_secs_from_exif(exif)
+            degs, mins, secs = [float(exif[i]) for i in range(3)]
             decimal = degs + mins / 60.0 + secs / 3600.0
             if ref in ('S', 'W'):
                 decimal *= -1
@@ -74,7 +66,7 @@ class Plaque:
 
         try:
             with Image.open(self.fname) as img:
-                gps = AttrDict(img._getexif()[GPS_INFO_TAG])
+                gps = img.getexif().get_ifd(GPS_INFO_TAG)
                 self.lat = _decimal_pos_from_exif(gps[LAT], gps[LAT_REF])
                 self.lng = _decimal_pos_from_exif(gps[LNG], gps[LNG_REF])
         except (TypeError, KeyError) as err:
