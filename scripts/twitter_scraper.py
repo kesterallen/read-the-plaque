@@ -101,20 +101,43 @@ def get_plaque(tweet_id: str) -> dict:
         "lat": tweet.lat,
         "lng": tweet.lng,
         "plaque_image_url": img_url,
-        "title": f"From {tweet.url}",
+        "title": tweet.url,
         "description": description,
         "url": tweet.url,
     })
     return plaque
 
 def _report(results: dict) -> None:
+    """
+	Error on failure: Success is reported twice??
+
+			python scripts/twitter_scraper.py https://twitter.com/David_F_Taylor/status/1431574391696003072 https://twitter.com/HerbertHistory/status/1431635636981743622 https://twitter.com/pkmonaghan/status/1431692799162916871 https://twitter.com/thepracticalpen/status/1431765931685040135
+			Submitting 1 / 4
+			Submitting 2 / 4
+			Submitting 3 / 4
+			'media' Skipping 1431692799162916871
+			Submitting 4 / 4
+			Success:
+					https://twitter.com/David_F_Taylor/status/1431574391696003072
+					https://twitter.com/HerbertHistory/status/1431635636981743622
+					https://twitter.com/thepracticalpen/status/1431765931685040135
+			Failed:
+					1431692799162916871
+			Success:
+					1431692799162916871
+			No image in:
+					1431692799162916871
+
+    """
     for is_success, plaques in results.items():
         if plaques:
-            print("Success" if is_success else "Failed")
-            print("\t", "\n\t".join(plaques))
+            msg_str = "\n\t".join(plaques)
+            print("Success:" if is_success else "Failed:")
+            print(f"\t{msg_str}")
     if results["no_imgs"]:
+        msg_str= "\n\t".join(results["no_imgs"])
         print("No image in:")
-        print("\t", "\n\t".join(results["no_imgs"]))
+        print(f"\t{msg_str}")
 
 def main():
     """Extract and upload plaque pages for one or more Twitter URLs or IDs."""
