@@ -61,7 +61,8 @@ DEF_MAP_ICON_SIZE_PIX = 16
 
 # Load templates from the /templates dir
 JINJA_ENVIRONMENT = jinja2.Environment(
-    loader=jinja2.FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates')),
+    loader=jinja2.FileSystemLoader(
+        os.path.join(os.path.dirname(__file__), 'templates')),
     extensions=['jinja2.ext.autoescape'],
     autoescape=False, # turn off autoescape to allow html descriptions
 )
@@ -99,7 +100,7 @@ def handle_404(request, response, exception):
 
 def handle_500(request, response, exception):
     error_text = '500 error!\n{}\n{}\n{}'.format(request, response, exception)
-    email_admin('500 error!', error_text)
+    #email_admin('500 error!', error_text)
     template = JINJA_ENVIRONMENT.get_template('error.html')
     logging.error(exception)
     error_text = exception
@@ -344,9 +345,8 @@ class TweetText(ViewOnePlaqueParent):
         self.response.write(plaque.json_for_tweet)
 
 class JsonAllPlaques(webapp2.RequestHandler):
-    """
-    Get every plaques' JSON repr.
-    """
+    """ Get the JSON representation for a group of plaques """
+
     def _plaques_to_json(self, plaques, summary=True):
         if plaques:
             logging.info("plaque date range is %s - %s" %
@@ -1048,13 +1048,15 @@ class Counts(webapp2.RequestHandler):
         query = Plaque.query()
         num_plaques = query.count()
         num_pending = query.filter(Plaque.approved == False).count()
+        num_published = num_plaques - num_pending
+
 
         if verbose:
             tmpl = "<ul> <li>{} published</li> <li>{} pending</li> </ul>"
         else:
             tmpl = "{} published, {} pending\n"
 
-        msg = tmpl.format(num_plaques - num_pending, num_pending)
+        msg = tmpl.format(num_published, num_pending)
         self.response.write(msg)
 
 class DeleteOnePlaque(webapp2.RequestHandler):
