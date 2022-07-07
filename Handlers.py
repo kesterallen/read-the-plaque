@@ -229,7 +229,6 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
     def get(self):
         raise NotImplementedError("Don't call ViewOnePlaqueParent.get directly")
 
-
     # TODO: Separate this out to return the Plaque object GEOJSON
     def _get_plaque_from_key(self, plaque_key=None):
         # Get plaque from db from db:
@@ -321,14 +320,6 @@ class RandomPlaque(ViewOnePlaqueParent):
         plaque = get_random_plaque()
         self.redirect(plaque.title_page_url)
 
-class GeoJson(ViewOnePlaqueParent):
-    """ Get one plaque's geoJSON """
-    def get(self, plaque_key=None):
-        # TODO: use _get_from_key when it's ready
-        # TODO Separate this out to return the Plaque object GEOJSON
-        plaque = self._get_plaque_from_key(plaque_key)
-        self.response.write(plaque.geojson)
-
 class TweetText(ViewOnePlaqueParent):
     """
     Get one plaque's JSON repr, and set it to be the featured plaque.
@@ -348,9 +339,6 @@ class JsonAllPlaques(webapp2.RequestHandler):
     """ Get the JSON representation for a group of plaques """
 
     def _plaques_to_json(self, plaques, summary=True):
-        if plaques:
-            logging.info("plaque date range is %s - %s" %
-                (plaques[0].created_on, plaques[-1].created_on))
         plaque_dicts = [p.to_dict(summary=summary) for p in plaques]
         json_output = json.dumps(plaque_dicts)
         return json_output
@@ -375,19 +363,6 @@ class JsonAllPlaques(webapp2.RequestHandler):
 
         return json_output
 
-    def _json_for_update(self, updated_on, summary=True):
-        logging.info("Updated_on is %s in _json_for_update" % updated_on)
-        plaques = Plaque.query(
-                       ).filter(Plaque.approved == True
-                       ).filter(Plaque.created_on > updated_on
-                       ).order(-Plaque.created_on
-                       ).fetch()
-        logging.info("_json_for_update got %s plaques" % len(plaques))
-        for i, plaque in enumerate(plaques):
-            logging.info("_json_for_update plaque %s date: %s" % (
-                i, plaque.updated_on))
-        json_output = self._plaques_to_json(plaques, summary)
-        return json_output
 
     def _json_for_all(self, summary=True):
         plaques_all = []
@@ -418,14 +393,26 @@ class JsonAllPlaques(webapp2.RequestHandler):
         self.response.write(json_output)
 
     def post(self):
-        """Updates just the new plaques."""
-        date_fmt =  "%Y-%m-%d %H:%M:%S.%f"
+        """Returnes the JSON for plaques with updated_on after the specified date."""
         updated_on_str = self.request.get('updated_on')
-        updated_on = datetime.datetime.strptime(updated_on_str, date_fmt)
-        logging.info('updated_on_str: %s, updated_on %s' % (
-            updated_on_str, updated_on))
-        json_output = self._json_for_update(updated_on, summary=True)
+        plaques = Plaque.created_after(updated_on_str)
+        json_output = self._plaques_to_json(plaques, summary)
+        # TODO: return a list of plaque.geojson with summary=True?
+
         self.response.write(json_output)
+
+class GeoJson(ViewOnePlaqueParent):
+
+    def get(self, plaque_key=None):
+        """ Get one plaque's geoJSON """
+        plaque = self._get_plaque_from_key(plaque_key)
+        self.response.write(plaque.geojson)
+
+    def post(self):
+        """Returnes the JSON for plaques with updated_on after the specified date."""
+        updated_on_str = self.request.get('updated_on')
+        plaques_geojson = Plaque.created_after_geojson(updated_on_str)
+        self.response.write(plaques_geojson)
 
 class JsonAllPlaquesFull(JsonAllPlaques):
     """

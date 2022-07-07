@@ -1,5 +1,6 @@
 
 from collections import defaultdict
+import datetime
 import json
 import logging
 import re
@@ -278,6 +279,36 @@ class Plaque(ndb.Model):
             ).filter(Plaque.title_url == title_url
             ).filter(Plaque.approved == True).count()
         return num_plaques
+
+    @classmethod
+    def created_after(cls, updated_on_str):
+        """
+        List of Plaque objects with created_on > updated_on_str.
+        """
+        date_fmt =  "%Y-%m-%d %H:%M:%S.%f"
+        updated_on = datetime.datetime.strptime(updated_on_str, date_fmt)
+        plaques = (
+            Plaque.query()
+            .filter(Plaque.approved == True)
+            .filter(Plaque.created_on > updated_on)
+            .order(-Plaque.created_on)
+            .fetch()
+        )
+        return plaques
+
+    @classmethod
+    def created_after_geojson(cls, updated_on_str):
+        """
+        Geojson FeatureCollection of Plaque objects with created_on > updated_on_str.
+        """
+        plaques = Plaque.created_after(updated_on_str)
+        features = [p.geojson for p in plaques if p] # Remove empties
+        geojson = {
+            "type": "FeatureCollection",
+            "features": features,
+            "updated_on": str(datetime.datetime.now()),
+        }
+        return geojson
 
     def to_search_document(self):
         doc = search.Document(
