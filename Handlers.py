@@ -412,7 +412,7 @@ class GeoJson(ViewOnePlaqueParent):
         """Returnes the JSON for plaques with updated_on after the specified date."""
         updated_on_str = self.request.get('updated_on')
         plaques_geojson = Plaque.created_after_geojson(updated_on_str)
-        self.response.write(plaques_geojson)
+        self.response.write(json.dumps(plaques_geojson))
 
 class JsonAllPlaquesFull(JsonAllPlaques):
     """

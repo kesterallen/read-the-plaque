@@ -27,5 +27,4 @@ retrieved using a strongly consistent (ancestor) query.
 [7]: http://twitter.github.com/bootstrap/
 
 Update:
-    . ~/.virtualenv/twitter/bin/activate
-    python scripts/update_json.py && gcloud app deploy --quiet --project=read-the-plaque && curl -s https://readtheplaque.com/{flush,counts}
+    ~/.virtualenv/twitter/bin/python scripts/update_geojson_map_file.py && gcloud app deploy --quiet --project=read-the-plaque && curl -s https://readtheplaque.com/{flush,counts}

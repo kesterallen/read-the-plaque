@@ -302,7 +302,7 @@ class Plaque(ndb.Model):
         Geojson FeatureCollection of Plaque objects with created_on > updated_on_str.
         """
         plaques = Plaque.created_after(updated_on_str)
-        features = [p.geojson for p in plaques if p] # Remove empties
+        features = [p.to_geojson(jsonify=False)for p in plaques if p] # Remove empties
         geojson = {
             "type": "FeatureCollection",
             "features": features,
@@ -328,7 +328,7 @@ class Plaque(ndb.Model):
     def geojson(self):
         return self.to_geojson()
 
-    def to_geojson(self, summary=False):
+    def to_geojson(self, summary=False, jsonify=True):
 
         data = {
             "geometry": {
@@ -348,7 +348,7 @@ class Plaque(ndb.Model):
             data["properties"]["img_url"] = self.img_url
             data["properties"]["tags"] = self.tags
 
-        return json.dumps(data)
+        return json.dumps(data) if jsonify else data
 
     def to_dict(self, summary=False):
         if summary:
