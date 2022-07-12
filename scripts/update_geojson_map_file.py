@@ -17,15 +17,17 @@ GEOJSON_FILE = os.path.join(HERE_PATH, "../static/plaques.geojson")
 
 ALL = False
 
+COUNT_UPDATED_LOCATIONS = 0
+
 
 def print_status(tmpl, num_plaques):
     """Print a status message for num_plaques"""
     suffix = "" if num_plaques == 1 else "s"
-    print(tmpl.format(num_plaques, suffix))
 
-    num_updates = len(sys.argv) - 1
-    suffix2 = "" if num_updates == 1 else "s"
-    print(f"Updated {num_updates} location{suffix2} in plaques.geojson")
+    suffix2 = "" if COUNT_UPDATED_LOCATIONS == 1 else "s"
+    txt = f"Updated {COUNT_UPDATED_LOCATIONS} location{suffix2} in plaques.geojson"
+
+    print(tmpl.format(num_plaques, suffix), txt)
 
 
 def time_to_utc(last_updated_str):
@@ -103,8 +105,8 @@ def fix_json_location(url):
     """
     resp = requests.get(f"{GEOJSON_URL}/{url}")
     if resp.status_code != 200:
-        print(f"no plaque at {url}")
-        return
+        raise requests.exceptions.RequestException("no plaque at {url}")
+
     geojson = resp.json()
     lng, lat = geojson["geometry"]["coordinates"]
 
@@ -131,7 +133,12 @@ def main():
     # if any URLs are specified on the command line.
     if len(sys.argv) > 1:
         for fix_json_location_url in sys.argv[1:]:
-            fix_json_location(fix_json_location_url)
+            try:
+                fix_json_location(fix_json_location_url)
+                COUNT_UPDATED_LOCATIONS += 1
+            except requests.exceptions.RequestException as err:
+                print(err)
+
 
     # Get the list of existing plaques from json file, and add new plaques:
     geojson_plaques = get_all_plaques() if ALL else add_new_plaques()
