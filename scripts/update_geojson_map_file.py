@@ -25,7 +25,7 @@ def print_status(tmpl, num_plaques):
     suffix = "" if num_plaques == 1 else "s"
 
     suffix2 = "" if COUNT_UPDATED_LOCATIONS == 1 else "s"
-    txt = f"Updated {COUNT_UPDATED_LOCATIONS} location{suffix2} in plaques.geojson"
+    txt = f"Updated {COUNT_UPDATED_LOCATIONS} location{suffix2} in plaques.geojson."
 
     print(tmpl.format(num_plaques, suffix), txt)
 
@@ -74,7 +74,7 @@ def get_all_plaques():
     """
     Get every published plaque from the site to make a new GEOJSON file.
     """
-    return _get_plaques_geojson(ALL_PLAQUES_DATE, "Total: {} plaque{}")
+    return _get_plaques_geojson(ALL_PLAQUES_DATE, "Total: {} plaque{}.")
 
 
 def add_new_plaques():
