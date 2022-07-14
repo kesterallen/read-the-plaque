@@ -72,6 +72,13 @@ class Plaque(ndb.Model):
     @classmethod
     def tokenize_title(cls, title):
         tokenized_title = re.sub('[^\w]+', '-', title.strip()).lower()
+
+        # Strip leading or trailing dashes
+        if title_url[0] == '-':
+            title_url = title_url[1:]
+        if title_url[-1] == '-':
+            title_url = title_url[:-1]
+
         return tokenized_title
 
     @classmethod
@@ -85,9 +92,9 @@ class Plaque(ndb.Model):
                 start_cursor_urlsafe = None
 
         memcache_names = [
-            'fetch_page_%s_%s' % (num, start_cursor_urlsafe),
-            'page_start_cursor_urlsafe_%s_%s' % (num, start_cursor_urlsafe),
-            'page_more_%s_%s' % (num, start_cursor_urlsafe),
+            'fetch_page_{}_{}'.format(num, start_cursor_urlsafe),
+            'page_start_cursor_urlsafe_{}_{}'.format(num, start_cursor_urlsafe),
+            'page_more_{}_{}'.format(num, start_cursor_urlsafe),
         ]
 
         memcache_out =  memcache.get_multi(memcache_names)
@@ -113,28 +120,15 @@ class Plaque(ndb.Model):
 
             if start_cursor:
                 plaques, next_cursor, more = query.fetch_page(num, start_cursor=start_cursor)
-                logging.info(
-                    'in fetch_page if block, len(plaques)=%s, start_cursor=%s, '
-                    'next_cursor=%s, more=%s' % (
-                        len(plaques), start_cursor, next_cursor, more))
             else:
                 plaques, next_cursor, more = query.fetch_page(num)
-                logging.info(
-                    'in fetch_page else block, len(plaques)=%s, '
-                    'next_cursor=%s, more=%s' % (
-                        len(plaques), next_cursor, more))
 
             memcache_status = memcache.set_multi({
                 memcache_names[0]: plaques,
                 memcache_names[1]: start_cursor,
                 memcache_names[2]: more,
             })
-            if memcache_status:
-                logging.debug("""memcache.set in Plaque.plaque_pages() failed: 
-                    %s were not set""" % memcache_status)
 
-        logging.info("In Plaque.page_url: %s plaques %s %s" % (
-            len(plaques), next_cursor, more))
         return plaques, next_cursor, more
 
     @classmethod
@@ -195,47 +189,44 @@ class Plaque(ndb.Model):
 
         return tag_counts
 
-    @property
-    def img_url_tiny(self):
-        """A URL for a square, tiny image for infowindow popups."""
-        url = '%s=s%s-c' % (self.img_url, self.TINY_SIZE_PX)
+    def img_url_base(self, size):
+        """Base method for  image URLs"""
+        url = '{}=s{}-c'.format(self.img_url, size)
+
         if self.img_rot in Plaque.ALLOWED_ROTATIONS:
-            url = "%s-r%s" % (url, self.img_rot)
+            url = "{}-r{}".format(url, self.img_rot)
+
         return url
 
     @property
+    def img_url_tiny(self):
+        """A URL for a tiny image for infowindow popups."""
+        return self.img_url_big(self.TINY_SIZE_PX)
+
+    @property
     def img_url_thumbnail(self):
-        """A URL for a square, THUMBNAIL_SIZE_PX wide image for thumbnails."""
-        url = '%s=s%s-c' % (self.img_url, self.THUMBNAIL_SIZE_PX)
-        if self.img_rot in Plaque.ALLOWED_ROTATIONS:
-            url = "%s-r%s" % (url, self.img_rot)
-        return url
+        """A URL for a THUMBNAIL_SIZE_PX wide image for thumbnails."""
+        return self.img_url_big(self.THUMBNAIL_SIZE_PX)
 
     @property
     def img_url_display(self):
         """A URL for a display-size image for display."""
-        url = '%s=s%s' % (self.img_url, self.DISPLAY_SIZE_PX)
-        if self.img_rot in Plaque.ALLOWED_ROTATIONS:
-            url = "%s-r%s" % (url, self.img_rot)
-        return url
+        return self.img_url_big(self.DISPLAY_SIZE_PX)
 
     @property
     def img_url_big(self):
         """A URL for a big rotated image."""
-        url = '%s=s%s' % (self.img_url, self.BIG_SIZE_PX)
-        if self.img_rot in Plaque.ALLOWED_ROTATIONS:
-            url = "%s-r%s" % (url, self.img_rot)
-        return url
+        return self.img_url_big(self.BIG_SIZE_PX)
 
     @property
     def title_page_url(self):
         """This plaque's key-based page URL."""
-        url = '/plaque/%s' % self.title_url
+        url = '/plaque/{}'.format(self.title_url)
         return url
 
     def page_url(self):
         """This plaque's key-based page URL."""
-        url = '/plaque/%s' % self.key.urlsafe()
+        url = '/plaque/{}'.format(self.key.urlsafe())
         return url
 
     def set_title_url(self, ancestor_key):
@@ -249,36 +240,34 @@ class Plaque(ndb.Model):
         else:
             title_url = 'change-me'
 
-        if title_url[0] == '-':
-            title_url = title_url[1:]
-        if title_url[-1] == '-':
-            title_url = title_url[:-1]
-
-
         orig_title_url = title_url
-
         count = 1
         n_matches = Plaque.num_same_title_urls(title_url, ancestor_key)
         while n_matches > 0:
-            count += 1
-            title_url = "%s%s" % (orig_title_url, count)
+            count += n_matches
+            title_url = "{}{}".format(orig_title_url, count)
             n_matches = Plaque.num_same_title_urls(title_url, ancestor_key)
 
         self.title_url = title_url
 
     @classmethod
     def num_same_title_urls(cls, title_url, ancestor_key):
-        query = Plaque.query(ancestor=ancestor_key
-                     ).filter(Plaque.title_url == title_url)
-        num_plaques = query.count()
-        return num_plaques
+        num_same_title= (
+            Plaque.query(ancestor=ancestor_key)
+            .filter(Plaque.title_url == title_url)
+            .count()
+        )
+        return num_same_title
 
     @classmethod
     def num_same_title_urls_published(cls, title_url, ancestor_key):
-        num_plaques = Plaque.query(ancestor=ancestor_key
-            ).filter(Plaque.title_url == title_url
-            ).filter(Plaque.approved == True).count()
-        return num_plaques
+        num_same_title = (
+            Plaque.query(ancestor=ancestor_key)
+            .filter(Plaque.title_url == title_url)
+            .filter(Plaque.approved == True)
+            .count()
+        )
+        return num_same_title
 
     @classmethod
     def created_after(cls, updated_on_str):
