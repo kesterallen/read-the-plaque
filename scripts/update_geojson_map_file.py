@@ -5,8 +5,6 @@ import json
 import os
 import sys
 
-from pytz import timezone
-import dateutil.parser
 import requests
 
 GEOJSON_URL = "https://readtheplaque.com/geojson"
@@ -30,36 +28,37 @@ def print_status(tmpl, num_plaques):
     print(tmpl.format(num_plaques, suffix), txt)
 
 
-def time_to_utc(last_updated_str):
-    """
-    This shift into UTC time seems to be necessary. The GAE datastore shows
-    the times recorded in the Plaque entities are in "PDT". As of this writing,
-    it is Daylight Savings Times.
-
-    Unclear to me why this is required. I think that something in the process
-    is assuming dates are in UTC, but I don't see where.
-
-    INPUTS:
-        A string representing a date that the dateutil parser can consume.
-    RETURNS:
-        A string representing a date utc_offset later than the input.
-
-    Ref: https://stackoverflow.com/questions/17173298/is-a-specific-timezone-using-dst-right-now
-    """
-    zone = "America/Los_Angeles"
-    is_dst = datetime.datetime.now(tz=timezone(zone)).dst()
-    utc_offset = 7 if is_dst else 8  # PST vs PDT
-
-    last_updated = dateutil.parser.parse(last_updated_str)
-    utc_time = last_updated + datetime.timedelta(hours=utc_offset)
-    return utc_time.strftime("%Y-%m-%d %H:%M:%S.%f")
+#def time_to_utc(last_updated_str):
+#    """
+#    This shift into UTC time seems to be necessary. The GAE datastore shows
+#    (https://console.cloud.google.com/datastore/entities;kind=Plaque;ns=__$DEFAULT$__/query/kind?project=read-the-plaque)
+#    the times recorded in the Plaque entities are either PST or PDT. 
+#
+#    The Plaque.created_after method in Models.py (line 284) that GEOJSON_URL
+#    exercises must be assumning incoming dates are in is assuming dates are in
+#    UTC, but I'm not sure why.
+#
+#    INPUTS:
+#        A string representing a date that the dateutil parser can consume.
+#    RETURNS:
+#        A string representing a date utc_offset later than the input.
+#
+#    Ref: https://stackoverflow.com/questions/17173298/is-a-specific-timezone-using-dst-right-now
+#    """
+#    zone = "America/Los_Angeles"
+#    is_dst = datetime.datetime.now(tz=timezone(zone)).dst()
+#    utc_offset = 7 if is_dst else 8  # PST vs PDT
+#
+#    last_updated = dateutil.parser.parse(last_updated_str)
+#    utc_time = last_updated + datetime.timedelta(hours=utc_offset)
+#    return utc_time.strftime("%Y-%m-%d %H:%M:%S.%f")
 
 
 def _get_plaques_geojson(updated_on, tmpl):
     """
     Get the geojson representation of plaques published since updated_on.
     """
-    updated_on = time_to_utc(updated_on)
+    #updated_on = time_to_utc(updated_on)
     resp = requests.post(GEOJSON_URL, data={"updated_on": updated_on})
     geojson = json.loads(resp.content.decode("utf-8"))
 

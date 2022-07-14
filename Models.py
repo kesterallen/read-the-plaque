@@ -5,8 +5,8 @@ import json
 import logging
 import re
 
-FETCH_LIMIT_PLAQUES = 500
-
+from pytz import timezone
+import dateutil.parser
 from google.appengine.api import memcache
 from google.appengine.ext import ndb
 from google.appengine.api import search
@@ -130,7 +130,7 @@ class Plaque(ndb.Model):
                 memcache_names[2]: more,
             })
             if memcache_status:
-                logging.debug("""memcache.set in Plaque.plaque_pages() failed: 
+                logging.debug("""memcache.set in Plaque.plaque_pages() failed:
                     %s were not set""" % memcache_status)
 
         logging.info("In Plaque.page_url: %s plaques %s %s" % (
@@ -241,7 +241,7 @@ class Plaque(ndb.Model):
     def set_title_url(self, ancestor_key):
         """
         Set the title_url. For new plaques, if the title_url already exists on
-        another plaque, add a suffix to make it unique. Keep plaques which are 
+        another plaque, add a suffix to make it unique. Keep plaques which are
         being edited the same.
         """
         if self.title:
@@ -285,8 +285,34 @@ class Plaque(ndb.Model):
         """
         List of Plaque objects with created_on > updated_on_str.
         """
+        def _time_to_utc(datetime_str):
+            """
+            This shift into UTC time seems to be necessary. The GAE datastore shows
+            (https://console.cloud.google.com/datastore/entities;kind=Plaque;ns=__$DEFAULT$__/query/kind?project=read-the-plaque)
+            the times recorded in the Plaque entities are either PST or PDT.
+
+            The Plaque.created_on filter below must be assumning incoming dates
+            are in is assuming dates are in UTC, but I'm not sure why.
+
+            INPUTS:
+                A string representing a date that the dateutil parser can consume.
+            RETURNS:
+                A string representing a date utc_offset later than the input.
+
+            Ref: https://stackoverflow.com/questions/17173298/is-a-specific-timezone-using-dst-right-now
+            """
+            zone = "America/Los_Angeles"
+            is_dst = datetime.datetime.now(tz=timezone(zone)).dst()
+            utc_offset = 7 if is_dst else 8  # PST vs PDT
+
+            last_updated = dateutil.parser.parse(last_updated_str)
+            utc_time = last_updated + datetime.timedelta(hours=utc_offset)
+            return utc_time.strftime("%Y-%m-%d %H:%M:%S.%f")
+
         date_fmt =  "%Y-%m-%d %H:%M:%S.%f"
         updated_on = datetime.datetime.strptime(updated_on_str, date_fmt)
+        updated_on = _time_to_utc(updated_on)
+
         plaques = (
             Plaque.query()
             .filter(Plaque.approved == True)
@@ -334,10 +360,10 @@ class Plaque(ndb.Model):
             "geometry": {
                 "type": "Point",
                 "coordinates": [self.location.lon, self.location.lat]
-            }, 
-            "type": "Feature", 
+            },
+            "type": "Feature",
             "properties": {
-                "img_url_tiny": self.img_url_tiny, 
+                "img_url_tiny": self.img_url_tiny,
                 "title_page_url": self.title_page_url,
                 "title": self.title
             }
@@ -379,7 +405,7 @@ class Plaque(ndb.Model):
     @property
     def tweet_text (self):
         txt = "'{0.title}' Always #readtheplaque https://readtheplaque.com{0.title_page_url}".format(self)
-        return txt 
+        return txt
 
     @property
     def json_for_tweet(self):
