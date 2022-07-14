@@ -5,8 +5,8 @@ import json
 import logging
 import re
 
-FETCH_LIMIT_PLAQUES = 500
-
+from pytz import timezone
+import dateutil.parser
 from google.appengine.api import memcache
 from google.appengine.ext import ndb
 from google.appengine.api import search
@@ -232,7 +232,7 @@ class Plaque(ndb.Model):
     def set_title_url(self, ancestor_key):
         """
         Set the title_url. For new plaques, if the title_url already exists on
-        another plaque, add a suffix to make it unique. Keep plaques which are 
+        another plaque, add a suffix to make it unique. Keep plaques which are
         being edited the same.
         """
         if self.title:
@@ -276,6 +276,8 @@ class Plaque(ndb.Model):
         """
         date_fmt =  "%Y-%m-%d %H:%M:%S.%f"
         updated_on = datetime.datetime.strptime(updated_on_str, date_fmt)
+        updated_on = _time_to_utc(updated_on)
+
         plaques = (
             Plaque.query()
             .filter(Plaque.approved == True)
@@ -323,10 +325,10 @@ class Plaque(ndb.Model):
             "geometry": {
                 "type": "Point",
                 "coordinates": [self.location.lon, self.location.lat]
-            }, 
-            "type": "Feature", 
+            },
+            "type": "Feature",
             "properties": {
-                "img_url_tiny": self.img_url_tiny, 
+                "img_url_tiny": self.img_url_tiny,
                 "title_page_url": self.title_page_url,
                 "title": self.title
             }
@@ -368,7 +370,7 @@ class Plaque(ndb.Model):
     @property
     def tweet_text (self):
         txt = "'{0.title}' Always #readtheplaque https://readtheplaque.com{0.title_page_url}".format(self)
-        return txt 
+        return txt
 
     @property
     def json_for_tweet(self):
