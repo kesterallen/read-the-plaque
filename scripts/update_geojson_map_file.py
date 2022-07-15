@@ -5,6 +5,8 @@ import json
 import os
 import sys
 
+import dateutil.parser
+from pytz import timezone
 import requests
 
 GEOJSON_URL = "https://readtheplaque.com/geojson"
@@ -58,7 +60,7 @@ def _get_plaques_geojson(updated_on, tmpl):
     """
     Get the geojson representation of plaques published since updated_on.
     """
-    #updated_on = time_to_utc(updated_on)
+    updated_on = time_to_utc(updated_on)
     resp = requests.post(GEOJSON_URL, data={"updated_on": updated_on})
     geojson = json.loads(resp.content.decode("utf-8"))
 

@@ -263,7 +263,6 @@ class Plaque(ndb.Model):
         """
         date_fmt =  "%Y-%m-%d %H:%M:%S.%f"
         updated_on = datetime.datetime.strptime(updated_on_str, date_fmt)
-        updated_on = _time_to_utc(updated_on)
 
         plaques = (
             Plaque.query()
