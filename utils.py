@@ -28,9 +28,9 @@ def latlng_angles_to_dec(ref, latlng_angles):
     latlng = float(latlng_angles[0]) + \
              float(latlng_angles[1]) / 60.0 + \
              float(latlng_angles[2]) / 3600.0
-    if ref == 'N' or ref == 'E':
+    if ref in ['N', 'E']:
         pass
-    elif ref == 'S' or ref == 'W':
+    elif ref in ['S', 'W']:
         latlng *= -1.0
     else:
         raise SubmitError(
@@ -67,7 +67,6 @@ def get_template_values(**kwargs):
         loginout_output = loginout()
 
         template_values = {
-            #'num_pending': num_pending,
             'footer_items': footer_items,
             'loginout': loginout_output,
             'dynamic_plaque_cutoff': DYNAMIC_PLAQUE_CUTOFF,
@@ -88,8 +87,6 @@ def get_template_values(**kwargs):
     if 'plaques' in template_values:
         plaques = template_values['plaques']
         bounding_box = get_bounding_box(plaques)
-        logging.info("get_template_values: plaques {}".format(plaques))
-        logging.info("get_template_values: bounding box: {}".format(bounding_box))
         template_values['bounding_box'] = bounding_box
 
     return template_values
@@ -103,8 +100,10 @@ def get_footer_items():
     if footer_items is None:
         random_plaques = [get_random_plaque() for _ in range(5)]
         tags = get_random_tags()
-        footer_items = {'tags': tags,
-                        'new_plaques': random_plaques,}
+        footer_items = {
+            'tags': tags,
+            'new_plaques': random_plaques,
+        }
 
         memcache_status = memcache.set('get_footer_items', footer_items)
         if not memcache_status:
@@ -135,7 +134,7 @@ def get_random_plaque_key(method='time'):
 
            This technique favors large submissions of plaques that were
            imported automatically (e.g. North Carolina, Geographs,
-           Toronto/Ontario), and that large offsets are expensive in the NDB
+           Toronto/Ontario), and using large offsets is expensive in the NDB
            system.
 
         2. 'time': Pick a random time since the start of the site, and find a

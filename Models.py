@@ -5,8 +5,6 @@ import json
 import logging
 import re
 
-FETCH_LIMIT_PLAQUES = 500
-
 from google.appengine.api import memcache
 from google.appengine.ext import ndb
 from google.appengine.api import search
@@ -71,8 +69,10 @@ class Plaque(ndb.Model):
 
     @classmethod
     def tokenize_title(cls, title):
-        tokenized_title = re.sub('[^\w]+', '-', title.strip()).lower()
-        return tokenized_title
+        title = title.strip().lower()
+        title = re.sub('[^\w]+', '-', title) # replace one or more non-word chars with a single dash
+        title = re.sub('^-+|-+$', '', title) # remove leading or trailing dashes
+        return title
 
     @classmethod
     def fetch_page(cls, num, start_cursor=None, urlsafe=True):
@@ -113,28 +113,15 @@ class Plaque(ndb.Model):
 
             if start_cursor:
                 plaques, next_cursor, more = query.fetch_page(num, start_cursor=start_cursor)
-                logging.info(
-                    'in fetch_page if block, len(plaques)=%s, start_cursor=%s, '
-                    'next_cursor=%s, more=%s' % (
-                        len(plaques), start_cursor, next_cursor, more))
             else:
                 plaques, next_cursor, more = query.fetch_page(num)
-                logging.info(
-                    'in fetch_page else block, len(plaques)=%s, '
-                    'next_cursor=%s, more=%s' % (
-                        len(plaques), next_cursor, more))
 
             memcache_status = memcache.set_multi({
                 memcache_names[0]: plaques,
                 memcache_names[1]: start_cursor,
                 memcache_names[2]: more,
             })
-            if memcache_status:
-                logging.debug("""memcache.set in Plaque.plaque_pages() failed: 
-                    %s were not set""" % memcache_status)
 
-        logging.info("In Plaque.page_url: %s plaques %s %s" % (
-            len(plaques), next_cursor, more))
         return plaques, next_cursor, more
 
     @classmethod
@@ -195,37 +182,32 @@ class Plaque(ndb.Model):
 
         return tag_counts
 
-    @property
-    def img_url_tiny(self):
-        """A URL for a square, tiny image for infowindow popups."""
-        url = '%s=s%s-c' % (self.img_url, self.TINY_SIZE_PX)
+    def img_url_base(self, size):
+        """Base method for  image URLs"""
+        url = '{}=s{}-c'.format(self.img_url, size)
         if self.img_rot in Plaque.ALLOWED_ROTATIONS:
-            url = "%s-r%s" % (url, self.img_rot)
+            url = "{}-r{}".format(url, self.img_rot)
         return url
 
     @property
+    def img_url_tiny(self):
+        """A URL for a tiny image for infowindow popups."""
+        return self.img_url_base(self.TINY_SIZE_PX)
+
+    @property
     def img_url_thumbnail(self):
-        """A URL for a square, THUMBNAIL_SIZE_PX wide image for thumbnails."""
-        url = '%s=s%s-c' % (self.img_url, self.THUMBNAIL_SIZE_PX)
-        if self.img_rot in Plaque.ALLOWED_ROTATIONS:
-            url = "%s-r%s" % (url, self.img_rot)
-        return url
+        """A URL for a THUMBNAIL_SIZE_PX wide image for thumbnails."""
+        return self.img_url_base(self.THUMBNAIL_SIZE_PX)
 
     @property
     def img_url_display(self):
         """A URL for a display-size image for display."""
-        url = '%s=s%s' % (self.img_url, self.DISPLAY_SIZE_PX)
-        if self.img_rot in Plaque.ALLOWED_ROTATIONS:
-            url = "%s-r%s" % (url, self.img_rot)
-        return url
+        return self.img_url_base(self.DISPLAY_SIZE_PX)
 
     @property
     def img_url_big(self):
         """A URL for a big rotated image."""
-        url = '%s=s%s' % (self.img_url, self.BIG_SIZE_PX)
-        if self.img_rot in Plaque.ALLOWED_ROTATIONS:
-            url = "%s-r%s" % (url, self.img_rot)
-        return url
+        return self.img_url_base(self.BIG_SIZE_PX)
 
     @property
     def title_page_url(self):
@@ -241,26 +223,15 @@ class Plaque(ndb.Model):
     def set_title_url(self, ancestor_key):
         """
         Set the title_url. For new plaques, if the title_url already exists on
-        another plaque, add a suffix to make it unique. Keep plaques which are 
+        another plaque, add a suffix to make it unique. Keep plaques which are
         being edited the same.
         """
-        if self.title:
-            title_url = Plaque.tokenize_title(self.title)
-        else:
-            title_url = 'change-me'
-
-        if title_url[0] == '-':
-            title_url = title_url[1:]
-        if title_url[-1] == '-':
-            title_url = title_url[:-1]
-
-
+        title_url = Plaque.tokenize_title(self.title) if self.title else 'change-me'
         orig_title_url = title_url
-
         count = 1
         n_matches = Plaque.num_same_title_urls(title_url, ancestor_key)
         while n_matches > 0:
-            count += 1
+            count += n_matches
             title_url = "%s%s" % (orig_title_url, count)
             n_matches = Plaque.num_same_title_urls(title_url, ancestor_key)
 
@@ -268,17 +239,22 @@ class Plaque(ndb.Model):
 
     @classmethod
     def num_same_title_urls(cls, title_url, ancestor_key):
-        query = Plaque.query(ancestor=ancestor_key
-                     ).filter(Plaque.title_url == title_url)
-        num_plaques = query.count()
-        return num_plaques
+        num_same_title= (
+            Plaque.query(ancestor=ancestor_key)
+            .filter(Plaque.title_url == title_url)
+            .count()
+        )
+        return num_same_title
 
     @classmethod
     def num_same_title_urls_published(cls, title_url, ancestor_key):
-        num_plaques = Plaque.query(ancestor=ancestor_key
-            ).filter(Plaque.title_url == title_url
-            ).filter(Plaque.approved == True).count()
-        return num_plaques
+        num_same_title = (
+            Plaque.query(ancestor=ancestor_key)
+            .filter(Plaque.title_url == title_url)
+            .filter(Plaque.approved == True)
+            .count()
+        )
+        return num_same_title
 
     @classmethod
     def created_after(cls, updated_on_str):
@@ -334,10 +310,10 @@ class Plaque(ndb.Model):
             "geometry": {
                 "type": "Point",
                 "coordinates": [self.location.lon, self.location.lat]
-            }, 
-            "type": "Feature", 
+            },
+            "type": "Feature",
             "properties": {
-                "img_url_tiny": self.img_url_tiny, 
+                "img_url_tiny": self.img_url_tiny,
                 "title_page_url": self.title_page_url,
                 "title": self.title
             }
@@ -379,7 +355,7 @@ class Plaque(ndb.Model):
     @property
     def tweet_text (self):
         txt = "'{0.title}' Always #readtheplaque https://readtheplaque.com{0.title_page_url}".format(self)
-        return txt 
+        return txt
 
     @property
     def json_for_tweet(self):
