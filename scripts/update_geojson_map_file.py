@@ -17,15 +17,14 @@ GEOJSON_FILE = os.path.join(HERE_PATH, "../static/plaques.geojson")
 
 ALL = False
 
-COUNT_UPDATED_LOCATIONS = 0
-
 
 def print_status(tmpl, num_plaques):
     """Print a status message for num_plaques"""
     suffix = "" if num_plaques == 1 else "s"
 
-    suffix2 = "" if COUNT_UPDATED_LOCATIONS == 1 else "s"
-    txt = f"Updated {COUNT_UPDATED_LOCATIONS} location{suffix2} in plaques.geojson."
+    update_count = len(sys.argv) - 1
+    suffix2 = "" if update_count == 1 else "s"
+    txt = f"Updated {update_count} location{suffix2} in plaques.geojson."
 
     print(tmpl.format(num_plaques, suffix), txt)
 
@@ -34,7 +33,7 @@ def time_to_utc(last_updated_str):
     """
     This shift into UTC time seems to be necessary. The GAE datastore shows
     (https://console.cloud.google.com/datastore/entities;kind=Plaque;ns=__$DEFAULT$__/query/kind?project=read-the-plaque)
-    the times recorded in the Plaque entities are either PST or PDT. 
+    the times recorded in the Plaque entities are either PST or PDT.
 
     The Plaque.created_after method in Models.py (line 284) that GEOJSON_URL
     exercises must be assumning incoming dates are in is assuming dates are in
@@ -136,10 +135,8 @@ def main():
         for fix_json_location_url in sys.argv[1:]:
             try:
                 fix_json_location(fix_json_location_url)
-                COUNT_UPDATED_LOCATIONS += 1
             except requests.exceptions.RequestException as err:
                 print(err)
-
 
     # Get the list of existing plaques from json file, and add new plaques:
     geojson_plaques = get_all_plaques() if ALL else add_new_plaques()
