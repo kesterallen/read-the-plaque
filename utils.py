@@ -34,7 +34,7 @@ def latlng_angles_to_dec(ref, latlng_angles):
         latlng *= -1.0
     else:
         raise SubmitError(
-            'reference "%s" needs to be either N, S, E, or W' % ref)
+            'reference "{}" needs to be either N, S, E, or W'.format(ref))
 
     return latlng
 
@@ -46,7 +46,7 @@ def email_admin(msg, body):
                        body=body,
                        html=body)
     except Exception as err:
-        logging.debug('mail failed: %s, %s' % (msg, err))
+        logging.debug('mail failed: {}, {}'.format(msg, err))
 
 def get_bounding_box(plaques):
     if plaques:
@@ -58,7 +58,7 @@ def get_bounding_box(plaques):
     return bounding_box
 
 def get_template_values(**kwargs):
-    memcache_name = 'template_values_%s' % users.is_current_user_admin()
+    memcache_name = 'template_values_{}'.format(users.is_current_user_admin())
     template_values = memcache.get(memcache_name)
     #TODO: insert the google maps API key here?
     if template_values is None:
@@ -74,12 +74,10 @@ def get_template_values(**kwargs):
         memcache_status = memcache.set(memcache_name, template_values)
         if not memcache_status:
             logging.debug(
-                "memcache.set to %s for default_template_values failed" %
-                memcache_name)
+                "memcache.set for default_template_values failed for {}".format(memcache_name))
     else:
         logging.debug(
-            "memcache.get from %s worked for default_template_values" %
-            memcache_name)
+            "memcache.get from {} worked for default_template_values".format(memcache_name))
 
     for key, val in kwargs.items():
         template_values[key] = val
@@ -163,11 +161,9 @@ def get_random_plaque_key(method='time'):
             lat = math.acos(2.0 * rand_v - 1) * 180.0 / math.pi - 90.0
             search_radius_meters = 100000 # 100 km
 
-            query_string = 'distance(location, geopoint(%s, %s)) < %s' % (
-                            lat, lng, search_radius_meters)
+            query_string = 'distance(location, geopoint({}, {})) < {}'.format(lat, lng, search_radius_meters)
             query = search.Query(query_string)
             results = plaque_search_index.search(query)
-            logging.info("bailout %s: produced results (%s)" % (bailout, results))
             if results.number_found > 0:
                 doc_id= results[0].doc_id
                 plaque_key = ndb.Key(doc_id).get()
@@ -211,8 +207,7 @@ def get_random_time():
             memcache_names[1]: last
         })
         if memcache_status:
-            logging.debug("""memcache.set in Handlers.get_random_time() failed:
-                %s were not set""" % memcache_status)
+            logging.debug("memcache.set in Handlers.get_random_time() failed: {} were not set".format(memcache_status))
 
     if first is None or last is None:
         random_time = None
@@ -249,15 +244,16 @@ def get_random_tags(num=5):
     return outtags
 
 def loginout():
-    # Login/Logout link:
-    user = users.get_current_user()
-    if user:
-        loginout = {'is_admin': users.is_current_user_admin(),
-                    'url': users.create_logout_url('/'),
-                    'text': 'Log out'}
+    """Login/Logout link"""
+    if users.get_current_user():
+        text = "Log out"
+        url = users.create_logout_url('/')
     else:
-        loginout = {'is_admin': users.is_current_user_admin(),
-                    'url': users.create_login_url('/'),
-                    'text': 'Admin login'}
-    return loginout
+        text = "Admin login"
+        url = users.create_login_url('/')
 
+    return {
+        'is_admin': users.is_current_user_admin(),
+        'url': url,
+        'text': text,
+    }

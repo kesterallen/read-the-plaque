@@ -85,9 +85,9 @@ class Plaque(ndb.Model):
                 start_cursor_urlsafe = None
 
         memcache_names = [
-            'fetch_page_%s_%s' % (num, start_cursor_urlsafe),
-            'page_start_cursor_urlsafe_%s_%s' % (num, start_cursor_urlsafe),
-            'page_more_%s_%s' % (num, start_cursor_urlsafe),
+            'fetch_page_{}_{}'.format(num, start_cursor_urlsafe),
+            'page_start_cursor_urlsafe_{}_{}'.format(num, start_cursor_urlsafe),
+            'page_more_{}_{}'.format(num, start_cursor_urlsafe),
         ]
 
         memcache_out =  memcache.get_multi(memcache_names)
@@ -212,12 +212,12 @@ class Plaque(ndb.Model):
     @property
     def title_page_url(self):
         """This plaque's key-based page URL."""
-        url = '/plaque/%s' % self.title_url
+        url = '/plaque/{}'.format(self.title_url)
         return url
 
     def page_url(self):
         """This plaque's key-based page URL."""
-        url = '/plaque/%s' % self.key.urlsafe()
+        url = '/plaque/{}'.format(self.key.urlsafe())
         return url
 
     def set_title_url(self, ancestor_key):
@@ -263,6 +263,8 @@ class Plaque(ndb.Model):
         """
         date_fmt =  "%Y-%m-%d %H:%M:%S.%f"
         updated_on = datetime.datetime.strptime(updated_on_str, date_fmt)
+        updated_on = _time_to_utc(updated_on)
+
         plaques = (
             Plaque.query()
             .filter(Plaque.approved == True)

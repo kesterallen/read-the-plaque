@@ -393,7 +393,7 @@ class JsonAllPlaques(webapp2.RequestHandler):
         self.response.write(json_output)
 
     def post(self):
-        """Returnes the JSON for plaques with updated_on after the specified date."""
+        """Returns the JSON for plaques with updated_on after the specified date."""
         updated_on_str = self.request.get('updated_on')
         plaques = Plaque.created_after(updated_on_str)
         json_output = self._plaques_to_json(plaques, summary)
