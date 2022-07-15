@@ -5,16 +5,17 @@
 #           * might need new column in Plaque to indicate if a given row has been loaded or not
 
 import datetime
-import jinja2
 import json
 import logging
-import math
-import mimetypes
 import os
 import random
 import re
 import urllib
 import urllib2
+import webapp2
+
+import jinja2
+
 from utils import (
     DEF_NUM_PENDING,
     email_admin,
@@ -26,7 +27,6 @@ from utils import (
     PLAQUE_SEARCH_INDEX_NAME,
     SubmitError,
 )
-import webapp2
 
 from google.appengine.api import images
 from google.appengine.api import memcache
@@ -288,8 +288,7 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
 
 class AdminLogin(webapp2.RequestHandler):
     def get(self):
-        #url = users.create_login_url('/flush'),
-        url = users.create_login_url('/'),
+        url = users.create_login_url('/')
         self.response.write("<a href='%s'>Login</a>" % url)
 
 class ViewOnePlaque(ViewOnePlaqueParent):
@@ -776,20 +775,18 @@ class AddPlaque(webapp2.RequestHandler):
         for updating the picture.
         """
 
-#       Turn this off while Tony Bonomolo is editing:
-#
-#        # Kill old image and URL, if they exist. Tolerate failure in case
-#        # this is a redo:
-#        if plaque.pic is not None:
-#            try:
-#                gcs.delete(plaque.pic)
-#            except:
-#                pass
-#        if plaque.img_url is not None:
-#            try:
-#                images.delete_serving_url(plaque.img_url)
-#            except:
-#                pass
+        # Kill old image and URL, if they exist. Tolerate failure in case
+        # this is a redo:
+        if plaque.pic is not None:
+            try:
+                gcs.delete(plaque.pic)
+            except:
+                pass
+        if plaque.img_url is not None:
+            try:
+                images.delete_serving_url(plaque.img_url)
+            except:
+                pass
 
         # Make GCS filename
         date_slash_time = datetime.datetime.now().strftime("%Y%m%d/%H%M%S")
@@ -1124,7 +1121,6 @@ class ViewOldPending(ViewPending):
         plaques = Plaque.pending_list(num=num, desc=False)
         self.write_pending(plaques)
 
-
 class ViewPendingRandom(ViewPending):
     def get(self, num=DEF_NUM_PENDING):
         try:
@@ -1195,9 +1191,7 @@ class RedoIndex(webapp2.RequestHandler):
             except search.Error as err:
                 ibad += 1
                 logging.error(err)
-            #if ip % 100 == 0:
-                #logging.debug('in process: wrote %s good docs, %s failed' % (
-                              #igood, ibad))
+
         iput = 0
         for i in range(0, len(docs), 100):
             iput += 100
@@ -1219,8 +1213,7 @@ class AddTitleUrlAll(webapp2.RequestHandler):
 class ApproveAllPending(webapp2.RequestHandler):
     """Approve all pending plaques"""
     def get(self):
-
-        #raise NotImplementedError("Turned off")
+        raise NotImplementedError("Turned off")
 
         if not users.is_current_user_admin():
             return "admin only, please log in"
@@ -1239,6 +1232,16 @@ class ApproveAllPending(webapp2.RequestHandler):
         self.redirect('/')
 
 class ApprovePending(webapp2.RequestHandler):
+    def toggle_approval(self, plaque_key, approval=True):
+        plaque = ndb.Key(urlsafe=plaque_key).get()
+        title = plaque.title.encode('unicode-escape')
+
+        plaque.approved = approval
+        if plaque.approved:
+            plaque.created_on = datetime.datetime.now()
+            plaque.updated_on = datetime.datetime.now()
+        plaque.put()
+
     """Approve a plaque"""
     @ndb.transactional
     def post(self):
@@ -1246,21 +1249,10 @@ class ApprovePending(webapp2.RequestHandler):
             return "admin only, please log in"
 
         plaque_key = self.request.get('plaque_key')
-        plaque = ndb.Key(urlsafe=plaque_key).get()
-        title = plaque.title.encode('unicode-escape')
-        logging.info("Approving plaque %s" % title)
-        plaque.approved = True
-        plaque.created_on = datetime.datetime.now()
-        plaque.put()
-
-        #user = users.get_current_user()
-        #name = "anon" if user is None else user.nickname()
-        #msg = "{1} approved plaque {0}".format(title, name)
-        #email_admin(msg, msg)
-
+        self.toggle_approval(plaque_key)
         self.redirect('/randpending')
 
-class DisapprovePlaque(webapp2.RequestHandler):
+class DisapprovePlaque(ApprovePending):
     """Disapprove a plaque"""
     @ndb.transactional
     def post(self):
@@ -1268,17 +1260,7 @@ class DisapprovePlaque(webapp2.RequestHandler):
             return "admin only, please log in"
 
         plaque_key = self.request.get('plaque_key')
-        plaque = ndb.Key(urlsafe=plaque_key).get()
-        title = plaque.title.encode('unicode-escape')
-        logging.info("disapproving plaque {0}".format(title))
-        plaque.approved = False
-        plaque.put()
-
-        user = users.get_current_user()
-        name = "anon" if user is None else user.nickname()
-        msg = "{1} disapproved plaque {0}".format(title, name)
-        email_admin(msg, msg)
-
+        self.toggle_approval(plaque_key, approval=False)
         self.redirect('/')
 
 class Ocr(webapp2.RequestHandler):
@@ -1339,4 +1321,3 @@ class SetFeatured(webapp2.RequestHandler):
             set_featured(plaque)
             memcache.flush_all()
             self.redirect('/')
-
