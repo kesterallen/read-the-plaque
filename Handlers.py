@@ -5,6 +5,7 @@
 #           * might need new column in Plaque to indicate if a given row has been loaded or not
 
 import datetime
+import jinja2
 import json
 import logging
 import os
@@ -14,7 +15,15 @@ import urllib
 import urllib2
 import webapp2
 
-import jinja2
+from google.appengine.api import images
+from google.appengine.api import memcache
+from google.appengine.api import search
+from google.appengine.api import users
+from google.appengine.ext import blobstore
+from google.appengine.ext import ndb
+from google.appengine.ext.db import BadValueError
+from google.appengine.ext.ndb.google_imports import ProtocolBuffer
+import lib.cloudstorage as gcs
 
 from utils import (
     DEF_NUM_PENDING,
@@ -27,18 +36,6 @@ from utils import (
     PLAQUE_SEARCH_INDEX_NAME,
     SubmitError,
 )
-
-from google.appengine.api import images
-from google.appengine.api import memcache
-from google.appengine.api import search
-from google.appengine.api import users
-from google.appengine.ext import blobstore
-from google.appengine.ext import ndb
-from google.appengine.ext.db import BadValueError
-from google.appengine.ext.ndb.google_imports import ProtocolBuffer
-
-import lib.cloudstorage as gcs
-
 from Models import Plaque, FeaturedPlaque
 
 ADD_STATE_SUCCESS = 'success'
@@ -95,10 +92,11 @@ def set_featured(plaque):
     featured.plaque = plaque.key
     featured.put()
 
-def _handle_error(code, request, response, exception):
+def _handle_error(code, request, response, exception, is_email=True):
     error_text = '{} error!\n\n{}\n\n{}\n\n{}'.format(code, request, response, exception)
     logging.error(error_text)
-    email_admin("error in RTP", error_text)
+    if is_email:
+        email_admin("error in RTP", error_text)
     text_ = _render_template("error.html", {'code': code, 'error_text': error_text})
     response.write(text_)
     response.set_status(code)
@@ -107,7 +105,7 @@ def handle_404(request, response, exception):
     _handle_error(404, request, response, exception)
 
 def handle_500(request, response, exception):
-    _handle_error(500, request, response, exception)
+    _handle_error(500, request, response, exception, is_email=False)
 
 def make_memcache_name(*args):
     return "_".join([str(x) for x in args])
@@ -126,8 +124,7 @@ class ViewPlaquesPage(webapp2.RequestHandler):
         self.response.clear()
 
     def get(self, cursor_urlsafe=None):
-        template_text = self._get_template_text(
-            cursor_urlsafe, is_random=False, is_featured=True)
+        template_text = self._get_template_text(cursor_urlsafe, is_random=False, is_featured=True)
         self.response.write(template_text)
 
     def _get_template_text(
@@ -152,7 +149,6 @@ class ViewPlaquesPage(webapp2.RequestHandler):
         #
         is_admin = users.is_current_user_admin()
         user = users.get_current_user()
-        name = "anon" if user is None else user.nickname()
 
         memcache_name = make_memcache_name("plaques", per_page, cursor_urlsafe, is_admin)
         text_ = None if is_random else memcache.get(memcache_name)
@@ -169,14 +165,12 @@ class ViewPlaquesPage(webapp2.RequestHandler):
 
     def _get_template_values(self, per_page, cursor_urlsafe, is_random, is_featured):
         if is_random:
-            plaques = []
+            plaques = [get_random_plaque() for _ in range(per_page)]
             cursor_urlsafe = None
             more = False
-            for i in range(per_page):
-                plaques.append(get_random_plaque())
         else:
             plaques, next_cursor, more = Plaque.fetch_page(
-                per_page, start_cursor=cursor_urlsafe, urlsafe=True)
+                per_page, startcur=cursor_urlsafe, urlsafe=True)
 
             if next_cursor is None:
                 cursor_urlsafe = ''
@@ -222,8 +216,8 @@ class ExifText(BigMap):
         return "exif.html"
 
     def get(self):
-        text_ = _render_template(template, get_template_values())
-        self.response.write(template_text_)
+        text_ = _render_template(self.template_file, get_template_values())
+        self.response.write(text_)
 
 class ViewOnePlaqueParent(webapp2.RequestHandler):
     def get(self):
@@ -362,7 +356,7 @@ class JsonAllPlaques(webapp2.RequestHandler):
         cursor = None
         while more:
             plaques, cursor, more = Plaque.fetch_page(
-                num=num, start_cursor=cursor, urlsafe=False)
+                num=num, startcur=cursor, urlsafe=False)
             plaques_all.extend(plaques)
             logging.info("tot: %s, current: %s, cursor: %s, more?: %s" % (
                 len(plaques_all), len(plaques_all), cursor, more))
@@ -460,7 +454,7 @@ class AddPlaque(webapp2.RequestHandler):
                     title = message.split('/')[-1]
 
                     message = """Thanks, admin!
-                        <a style="float: right" href="%s">%s</a>""" % (url, title)
+                        <a id="thanks_admin" style="float: right" href="%s">%s</a>""" % (url, title)
                 else:
                     message = """Hooray! And thank you. We'll review your
                         plaque and you'll see it appear on the map shortly."""
@@ -1201,9 +1195,9 @@ class ApproveAllPending(webapp2.RequestHandler):
         self.redirect('/')
 
 class ApprovePending(webapp2.RequestHandler):
-    def toggle_approval(self, plaque_key, approval=True):
+    @classmethod
+    def toggle_approval(cls, plaque_key, approval=True):
         plaque = ndb.Key(urlsafe=plaque_key).get()
-        title = plaque.title.encode('unicode-escape')
 
         plaque.approved = approval
         if plaque.approved:
@@ -1218,8 +1212,8 @@ class ApprovePending(webapp2.RequestHandler):
             return "admin only, please log in"
 
         plaque_key = self.request.get('plaque_key')
-        self.toggle_approval(plaque_key)
-        self.redirect('/randpending')
+        ApprovePending.toggle_approval(plaque_key)
+        self.redirect('/nextpending')
 
 class DisapprovePlaque(ApprovePending):
     """Disapprove a plaque"""
@@ -1247,9 +1241,9 @@ class Ocr(webapp2.RequestHandler):
             url,
             data,
             {'Content-Type': 'application/json', 'Content-Length': len(data)})
-        f = urllib2.urlopen(req)
-        response = f.read()
-        f.close()
+        resp = urllib2.urlopen(req)
+        response = resp.read()
+        resp.close()
         report = json.loads(response)
 
         if 'error' in report['responses'][0]:

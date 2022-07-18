@@ -196,3 +196,12 @@ $('#preview').hide();
 </script>
 
 {% endblock %}
+
+{% block bottomofbody %}
+<script>
+function set_focus() {
+    var element = document.getElementById("thanks_admin");
+    element.focus();
+}
+</script>
+{% endblock %}

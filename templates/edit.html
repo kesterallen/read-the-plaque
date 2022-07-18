@@ -133,3 +133,12 @@ $(document).ready(function() {
 </script>
 
 {% endblock %}
+
+{% block bottomofbody %}
+<script>
+function set_focus() {
+    var element = document.getElementById("plaque_title");
+    element.focus();
+}
+</script>
+{% endblock %}

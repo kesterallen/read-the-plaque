@@ -75,54 +75,45 @@ class Plaque(ndb.Model):
         return title
 
     @classmethod
-    def fetch_page(cls, num, start_cursor=None, urlsafe=True):
-        if urlsafe:
-            start_cursor_urlsafe = start_cursor
-        else:
-            if start_cursor:
-                start_cursor_urlsafe = start_cursor.urlsafe()
-            else:
-                start_cursor_urlsafe = None
+    def fetch_page(cls, num, startcur=None, urlsafe=True):
+        """
+        The "startcur" and "nextcur" variables refer to the start cursor and
+        next cursors for this pagination.
+        """
+        if not urlsafe:
+            startcur = startcur.urlsafe() if startcur else None
 
-        memcache_names = [
-            'fetch_page_{}_{}'.format(num, start_cursor_urlsafe),
-            'page_start_cursor_urlsafe_{}_{}'.format(num, start_cursor_urlsafe),
-            'page_more_{}_{}'.format(num, start_cursor_urlsafe),
-        ]
+        # Make the memcache name keys:
+        def _make_mn(mn_prefix):
+            return "_".join([mn_prefix, str(num), str(startcur)])
+        mn_prefixes = ['fetch_page', 'page_start_cursor_urlsafe', 'page_more']
+        memcache_names = [_make_mn(mn_prefix) for mn_prefix in mn_prefixes]
 
-        memcache_out =  memcache.get_multi(memcache_names)
-        memcache_worked = len(memcache_out.keys()) == len(memcache_names)
+        # Get the cached page, if it exists, otherwise make a page and cache it:
+        memcache_result=  memcache.get_multi(memcache_names)
+        memcache_worked = len(memcache_result.keys()) == len(memcache_names)
         if memcache_worked:
-            logging.debug("memcache.get_multi worked for Plaque.fetch_page()")
-            plaques = memcache_out[memcache_names[0]]
-            next_cursor = memcache_out[memcache_names[1]]
-            more = memcache_out[memcache_names[2]]
+            # Return cached plaques, nextcur, more 
+            plaques = memcache_result[memcache_names[0]]
+            nextcur = memcache_result[memcache_names[1]]
+            more = memcache_result[memcache_names[2]]
         else:
-            query = Plaque.query(
-                ).filter(Plaque.approved == True).order(-Plaque.created_on)
+            # Protect against bad values of startcur, like the old /page/3.
+            try:
+                startcur = Cursor(urlsafe=startcur) if startcur else None
+            except BadValueError:
+                startcur = None
 
-            # Protect agains bad values of start_cursor_urlsafe, like the old
-            # type of request to /page/3.
-            if start_cursor_urlsafe:
-                try:
-                    start_cursor = Cursor(urlsafe=start_cursor_urlsafe)
-                except BadValueError:
-                    start_cursor = None
-            else:
-                start_cursor = None
-
-            if start_cursor:
-                plaques, next_cursor, more = query.fetch_page(num, start_cursor=start_cursor)
-            else:
-                plaques, next_cursor, more = query.fetch_page(num)
+            query = Plaque.query().filter(Plaque.approved == True).order(-Plaque.created_on)
+            plaques, nextcur, more = query.fetch_page(num, start_cursor=startcur)
 
             memcache_status = memcache.set_multi({
                 memcache_names[0]: plaques,
-                memcache_names[1]: start_cursor,
+                memcache_names[1]: startcur,
                 memcache_names[2]: more,
             })
 
-        return plaques, next_cursor, more
+        return plaques, nextcur, more
 
     @classmethod
     def num_pending(cls, num=20): # num is the max to return
@@ -232,7 +223,7 @@ class Plaque(ndb.Model):
         n_matches = Plaque.num_same_title_urls(title_url, ancestor_key)
         while n_matches > 0:
             count += n_matches
-            title_url = "%s%s" % (orig_title_url, count)
+            title_url = "{}{}".format(orig_title_url, count)
             n_matches = Plaque.num_same_title_urls(title_url, ancestor_key)
 
         self.title_url = title_url
@@ -288,15 +279,14 @@ class Plaque(ndb.Model):
         return geojson
 
     def to_search_document(self):
+        location = search.GeoPoint(self.location.lat, self.location.lon)
         doc = search.Document(
             doc_id = self.key.urlsafe(),
             fields=[
                 search.TextField(name='tags', value=" ".join(self.tags)),
                 search.TextField(name='title', value=self.title),
                 search.HtmlField(name='description', value=self.description),
-                search.GeoField(name='location',
-                                value=search.GeoPoint(self.location.lat,
-                                                      self.location.lon)),
+                search.GeoField(name='location', value=location),
             ],
         )
         return doc
