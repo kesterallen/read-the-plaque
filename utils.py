@@ -191,23 +191,17 @@ def get_random_time():
         last = memcache_out[memcache_names[1]]
     else:
         first_plaque = Plaque.query().filter(Plaque.approved == True).order(Plaque.created_on).get()
-        if first_plaque:
-            first = first_plaque.created_on
-        else:
-            first = None
-
         last_plaque = Plaque.query().filter(Plaque.approved == True).order(-Plaque.created_on).get()
-        if last_plaque:
-            last = last_plaque.created_on
-        else:
-            last = None
+
+        first = first_plaque.created_on if first_plaque else None
+        last = last_plaque.created_on if last_plaque else None
 
         memcache_status = memcache.set_multi({
             memcache_names[0]: first,
             memcache_names[1]: last
         })
         if memcache_status:
-            logging.debug("memcache.set in Handlers.get_random_time() failed: {} were not set".format(memcache_status))
+            logging.debug("memcache.set in utils.get_random_time() failed: {} were not set".format(memcache_status))
 
     if first is None or last is None:
         random_time = None

@@ -5,6 +5,7 @@ import os
 import webapp2
 
 import Handlers as h
+import AdminHandlers as ah
 
 JINJA_ENVIRONMENT = jinja2.Environment (
     loader=jinja2.FileSystemLoader(
@@ -15,7 +16,17 @@ JINJA_ENVIRONMENT = jinja2.Environment (
 def main():
     app = webapp2.WSGIApplication(
         [
-            ('/admin', h.AdminLogin),
+            # Admin routes
+            ('/admin', ah.AdminLogin),
+            ('/dup', ah.DuplicateChecker),
+            ('/counts', ah.Counts),
+            ('/flush', ah.FlushMemcache),
+            ('/add/?', ah.AddPlaque),
+            ('/submit-your-own/?', ah.AddPlaque),
+            ('/edit/(.+?)/?', ah.EditPlaque),
+            ('/edit/?', ah.EditPlaque),
+
+            # Non-admin routes
             ('/page/(.+?)/(.+?)/(.+?)/?', h.ViewPlaquesPage),
             ('/page/(.+?)/(.+?)/?', h.ViewPlaquesPage),
             ('/page/(.+?)/?', h.ViewPlaquesPage),
@@ -39,19 +50,12 @@ def main():
             ('/updatejp/?', h.JsonAllPlaques),
             ('/fulljp/?', h.JsonAllPlaquesFull),
             #('/loc', h.LocationChecker), # POST only
-            ('/dup', h.DuplicateChecker),
-            ('/add/?', h.AddPlaque),
-            ('/submit-your-own/?', h.AddPlaque),
-            ('/edit/(.+?)/?', h.EditPlaque),
-            ('/edit/?', h.EditPlaque),
             #('/comment', h.AddComment),
             ('/tag/(.+?)/(.+?)/?', h.ViewTag),
             ('/tag/(.+?)', h.ViewTag),
             #('/tags/?', h.ViewAllTags),
             ('/about', h.About),
             ('/rss', h.RssFeed),
-            ('/flush', h.FlushMemcache),
-            ('/counts', h.Counts),
             ('/reindex', h.RedoIndex),
             #('/deleteall', h.DeleteEverything),
             ('/delete', h.DeleteOnePlaque),
