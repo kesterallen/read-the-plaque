@@ -173,9 +173,11 @@ class Plaque(ndb.Model):
 
         return tag_counts
 
-    def img_url_base(self, size):
+    def img_url_base(self, size, crop=False):
         """Base method for  image URLs"""
-        url = '{}=s{}-c'.format(self.img_url, size)
+        url = '{}=s{}'.format(self.img_url, size)
+        if crop:
+            url += '-c'
         if self.img_rot in Plaque.ALLOWED_ROTATIONS:
             url = "{}-r{}".format(url, self.img_rot)
         return url
@@ -183,12 +185,12 @@ class Plaque(ndb.Model):
     @property
     def img_url_tiny(self):
         """A URL for a tiny image for infowindow popups."""
-        return self.img_url_base(self.TINY_SIZE_PX)
+        return self.img_url_base(self.TINY_SIZE_PX, crop=True)
 
     @property
     def img_url_thumbnail(self):
         """A URL for a THUMBNAIL_SIZE_PX wide image for thumbnails."""
-        return self.img_url_base(self.THUMBNAIL_SIZE_PX)
+        return self.img_url_base(self.THUMBNAIL_SIZE_PX, crop=True)
 
     @property
     def img_url_display(self):
