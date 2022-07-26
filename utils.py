@@ -12,6 +12,7 @@ from google.appengine.ext import ndb
 
 from Models import Plaque
 
+DELETE_PRIVS = ['kester']
 ADMIN_EMAIL = 'kester+readtheplaque@gmail.com'
 NOTIFICATION_SENDER_EMAIL = '"Kester Allen" <kester@gmail.com>'
 
@@ -22,6 +23,15 @@ PLAQUE_SEARCH_INDEX_NAME = 'plaque_index'
 
 class SubmitError(Exception):
     pass
+
+def latlng_get_angles(coords_tags):
+    """
+    Convert GPS exif tag format to hours/degrees/minutes triplet
+    """
+    hours   = float(coords_tags[0][0]) / float(coords_tags[0][1])
+    degrees = float(coords_tags[1][0]) / float(coords_tags[1][1])
+    minutes = float(coords_tags[2][0]) / float(coords_tags[2][1])
+    return (hours, degrees, minutes)
 
 def latlng_angles_to_dec(ref, latlng_angles):
     """Convert a degrees, hours, minutes tuple to decimal degrees."""

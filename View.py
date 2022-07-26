@@ -2,10 +2,12 @@
 import jinja2
 import logging
 import os
+
 import webapp2
 
 import Handlers as h
 import AdminHandlers as ah
+import SearchHandlers as sh
 
 JINJA_ENVIRONMENT = jinja2.Environment (
     loader=jinja2.FileSystemLoader(
@@ -25,6 +27,25 @@ def main():
             ('/submit-your-own/?', ah.AddPlaque),
             ('/edit/(.+?)/?', ah.EditPlaque),
             ('/edit/?', ah.EditPlaque),
+            ('/setfeatured/(.*?)', ah.SetFeatured),
+            ('/featured', ah.SetFeatured),
+            ('/setupdated', ah.SetUpdatedOn),
+            ('/disapprove', ah.DisapprovePlaque),
+            ('/approve', ah.ApprovePending),
+            ('/approveall', ah.ApproveAllPending),
+
+            # Search routes
+            ('/search/(.+?)', sh.SearchPlaques),
+            ('/search/pending/(.+?)', sh.SearchPlaquesPending),
+            ('/search/?', sh.SearchPlaques),
+            ('/geo/(.*?)/(.*?)/(.*?)/?', sh.SearchPlaquesGeo),
+            ('/geo/.+?', sh.SearchPlaquesGeo),
+            ('/geo/?', sh.SearchPlaquesGeo),
+            ('/nearby/(.+?)/(.+?)/(.+?)/?', sh.NearbyPage),
+            ('/nearby/(.+?)/(.+?)/?', sh.NearbyPage),
+            ('/nearby/?', sh.NearbyPage),
+            ('/s/(.+?)', sh.SearchPlaques),
+            ('/s/?', sh.SearchPlaques),
 
             # Non-admin routes
             ('/page/(.+?)/(.+?)/(.+?)/?', h.ViewPlaquesPage),
@@ -33,11 +54,7 @@ def main():
             ('/page/?', h.ViewPlaquesPage),
             ('/plaque/?', h.ViewOnePlaque), # home page
             ('/plaque/(.+?)/?', h.ViewOnePlaque), # specific plaque's page
-            ('/plaque/(.+?)/(.*)', h.ViewOnePlaque), # probably an attack,
-                                                     # absorb extra URL params
-                                                     # into an unused argument
-                                                     # "ignored_cruft" in
-                                                     # ViewOnePlaque.get
+            ('/plaque/(.+?)/(.*)', h.ViewOnePlaque), # attack? ignore extra params in an unused arg
             ('/randompage/(.+?)/?', h.RandomPlaquesPage),
             ('/randompage.*', h.RandomPlaquesPage),
             ('/random.*', h.RandomPlaque),
@@ -65,26 +82,9 @@ def main():
             ('/nextpending/?', h.ViewNextPending),
             ('/randpending/?', h.ViewPendingRandom),
             ('/randpending/(.*?)/?', h.ViewPendingRandom),
-            ('/disapprove', h.DisapprovePlaque),
-            ('/approve', h.ApprovePending),
-            ('/approveall', h.ApproveAllPending),
             #('/addsearchall', h.AddSearchIndexAll),
             ('/deletesearch/(.+?)', h.DeleteOneSearchIndex),
             #('/addtitleurlall', h.AddTitleUrlAll),
-            ('/search/(.+?)', h.SearchPlaques),
-            ('/search/pending/(.+?)', h.SearchPlaquesPending),
-            ('/search/?', h.SearchPlaques),
-            ('/geo/(.*?)/(.*?)/(.*?)/?', h.SearchPlaquesGeo),
-            ('/geo/.+?', h.SearchPlaquesGeo),
-            ('/geo/?', h.SearchPlaquesGeo),
-            ('/nearby/(.+?)/(.+?)/(.+?)/?', h.NearbyPage),
-            ('/nearby/(.+?)/(.+?)/?', h.NearbyPage),
-            ('/nearby/?', h.NearbyPage),
-            ('/s/(.+?)', h.SearchPlaques),
-            ('/s/?', h.SearchPlaques),
-            ('/setupdated', h.SetUpdatedOn),
-            ('/setfeatured/(.*?)', h.SetFeatured),
-            ('/featured', h.SetFeatured),
             ('/map/(.*?)/(.*?)/(.*?)/?', h.BigMap), # lat, lng, zoom.
             ('/map/(.*?)/(.*?)/?', h.BigMap), # lat, lng
             ('/map/?', h.BigMap),

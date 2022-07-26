@@ -98,14 +98,15 @@ def add_new_plaques():
     return existing_geojson
 
 
-def fix_json_location(url):
+def fix_json_location(url_suffix):
     """
     Update the Big Map entry for a plaque in the static/plaques.geojson file
     with the location data from the website.
     """
-    resp = requests.get(f"{GEOJSON_URL}/{url}")
+    url = f"{GEOJSON_URL}/{url_suffix}"
+    resp = requests.get(url)
     if resp.status_code != 200:
-        raise requests.exceptions.RequestException("no plaque at {url}")
+        raise requests.exceptions.RequestException(f"no plaque at {url}")
 
     geojson = resp.json()
     lng, lat = geojson["geometry"]["coordinates"]

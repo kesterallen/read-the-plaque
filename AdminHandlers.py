@@ -4,9 +4,9 @@ import logging
 import os
 import json
 import re
-import webapp2
 import urllib
 
+import webapp2
 from google.appengine.api import memcache
 from google.appengine.api import users
 from google.appengine.ext import ndb
@@ -17,19 +17,21 @@ from google.appengine.ext.db import BadValueError
 import lib.cloudstorage as gcs
 
 from Models import Plaque
+
 from Handlers import (
     DEF_PLAQUESET_NAME,
     JINJA_ENVIRONMENT,
     _render_template,
-    get_plaqueset_key,
-    loginout,
 )
 
 from utils import (
-    get_template_values,
-    latlng_angles_to_dec,
-    SubmitError,
     PLAQUE_SEARCH_INDEX_NAME,
+    SubmitError,
+    email_admin,
+    get_template_values,
+    latlng_get_angles,
+    latlng_angles_to_dec,
+    loginout,
 )
 
 ADD_STATE_SUCCESS = 'success'
@@ -43,6 +45,30 @@ ADD_STATES = {'ADD_STATE_SUCCESS': ADD_STATE_SUCCESS,
 #
 GCS_BUCKET = '/read-the-plaque.appspot.com'
 # Don't change this to, say, readtheplaque.com
+
+# Set a parent key on the Plaque objects to ensure that they are all in the
+# same entity group. Queries across the single entity group will be consistent.
+# However, the write rate should be limited to ~1/second.
+#
+def get_plaqueset_key(plaqueset_name=DEF_PLAQUESET_NAME):
+    """
+    Constructs a Datastore key for a Plaque entity. Use plaqueset_name as
+    the key.
+    """
+    return ndb.Key('Plaque', plaqueset_name)
+
+class FormArgs(object):
+    """ Data class for AddPlaque """
+    def __init__(
+        self, location, created_by, title, description, img_name, img_fh, tags
+    ):
+        self.location = location
+        self.created_by = created_by
+        self.title = title
+        self.description = description
+        self.img_name = img_name
+        self.img_fh = img_fh
+        self.tags = tags
 
 class AdminLogin(webapp2.RequestHandler):
     def get(self):
@@ -74,16 +100,6 @@ class FlushMemcache(webapp2.RequestHandler):
     def post(self):
         memcache.flush_all()
         self.redirect('/')
-
-class FormArgs(object):
-    def __init__(self, location, created_by, title, description, img_name, img_fh, tags):
-        self.location = location
-        self.created_by = created_by
-        self.title = title
-        self.description = description
-        self.img_name = img_name
-        self.img_fh = img_fh
-        self.tags = tags
 
 class AddPlaque(webapp2.RequestHandler):
     """
@@ -210,16 +226,16 @@ class AddPlaque(webapp2.RequestHandler):
             try:
                 plaque.old_site_id = int(old_site_id)
             except ValueError as err:
-                logging.info('Eating bad ValueError for '
-                             'old_site_id in AddPlaque')
+                logging.info('Eating bad ValueError for old_site_id in AddPlaque')
         plaque.put()
         return plaque
 
     def _get_latlng_exif(self, img_fh):
-        logging.info("Getting exif lat lng in _get_latlng_exif")
         from PIL import Image
         from PIL.ExifTags import TAGS, GPSTAGS
 
+        # Get GPS data out of image:
+        #
         gps_data = {}
         image = Image.open(img_fh)
         info = image._getexif()
@@ -233,29 +249,16 @@ class AddPlaque(webapp2.RequestHandler):
                         gps_data[gps_tag_decoded] = value[gps_tag]
 
         try:
-            gps_lat = gps_data['GPSLatitude']
-            gps_lng = gps_data['GPSLongitude']
+            lat_ref = gps_data['GPSLatitudeRef'] # N/S
+            lat_angles = latlng_get_angles(gps_data['GPSLatitude'])
+
+            lng_ref = gps_data['GPSLongitudeRef'] # E/W
+            lng_angles = latlng_get_angles(gps_data['GPSLongitude'])
+
+            lat = latlng_angles_to_dec(lat_ref, lat_angles)
+            lng = latlng_angles_to_dec(lng_ref, lng_angles)
         except KeyError:
             pass # TODO: is this right?
-
-        gps_lat_angles = (
-            float(gps_lat[0][0]) / float(gps_lat[0][1]), # degrees
-            float(gps_lat[1][0]) / float(gps_lat[1][1]), # hours
-            float(gps_lat[2][0]) / float(gps_lat[2][1]), # minutes
-        )
-        gps_lng_angles = (
-            float(gps_lng[0][0]) / float(gps_lng[0][1]), # degrees
-            float(gps_lng[1][0]) / float(gps_lng[1][1]), # hours
-            float(gps_lng[2][0]) / float(gps_lng[2][1]), # minutes
-        )
-        gps_lat_ref = gps_data['GPSLatitudeRef'] # N/S
-        gps_lng_ref = gps_data['GPSLongitudeRef'] # E/W
-
-        lat = latlng_angles_to_dec(gps_lat_ref, gps_lat_angles)
-        lng = latlng_angles_to_dec(gps_lng_ref, gps_lng_angles)
-
-        logging.info('Converting "%s %s, %s %s" to "%s %s"' % (
-            gps_lat_ref, gps_lat_angles, gps_lng_ref, gps_lng_angles, lat, lng))
 
         return lat, lng
 
@@ -292,7 +295,7 @@ class AddPlaque(webapp2.RequestHandler):
                 err = SubmitError(
                     "The plaque location wasn't specified. Please click the "
                     "back button, select a location, and click 'Add your "
-                    "Plaque' again. Error (%s)" % err2)
+                    "Plaque' again. Error ({})".format(err2))
                 raise err
 
         return location
@@ -319,10 +322,8 @@ class AddPlaque(webapp2.RequestHandler):
     def _get_form_args(self):
         """Get the arguments from the form and return them."""
 
-        if users.get_current_user():
-            created_by = users.get_current_user()
-        else:
-            created_by = None
+        user = users.get_current_user()
+        created_by = users.get_current_user() if user else None
 
         title = self.request.get('title')
         if len(title) > 1500:
@@ -344,12 +345,12 @@ class AddPlaque(webapp2.RequestHandler):
         tags = [t for t in tags if t] # Remove empties
 
         return FormArgs(
-            location=location,
             created_by=created_by,
             title=title,
             description=description,
             img_name=img_name,
             img_fh=img_fh,
+            location=location,
             tags=tags,
         )
 
@@ -444,4 +445,78 @@ class EditPlaque(AddPlaque):
     def post(self):
         if users.is_current_user_admin():
             super(EditPlaque, self).post(is_edit=True)
+
+class SetFeatured(webapp2.RequestHandler):
+    def get(self, plaque_key):
+        if users.is_current_user_admin():
+            plaque = ndb.Key(urlsafe=plaque_key).get()
+            logging.info("setting plaque {0.title} to featured".format(plaque))
+            set_featured(plaque)
+            memcache.flush_all()
+            self.redirect('/')
+
+class SetUpdatedOn(webapp2.RequestHandler):
+    def get(self):
+        plaques = Plaque.query(
+                      ).filter(Plaque.updated_on == None
+                      ).order(-Plaque.created_on
+                      ).fetch()
+        for plaque in plaques:
+            plaque.updated_on = plaque.created_on
+            plaque.put()
+        self.response.write([p.title for p in plaques])
+
+# Disabled
+class ApproveAllPending(webapp2.RequestHandler):
+    """Approve all pending plaques"""
+    def get(self):
+        raise NotImplementedError("Turned off")
+
+        if not users.is_current_user_admin():
+            return "admin only, please log in"
+        plaques = Plaque.pending_list(num=67)
+
+        user = users.get_current_user()
+        name = "anon" if user is None else user.nickname()
+        msg = "%s ran ApproveAllPending on %s plaques" % (name, len(plaques))
+        email_admin(msg, msg)
+
+        logging.info("Approving %s plaques in ApproveAllPending" % len(plaques))
+        for plaque in plaques:
+            plaque.approved = True
+            plaque.put()
+        memcache.flush_all()
+        self.redirect('/')
+
+class ApprovePending(webapp2.RequestHandler):
+    """Approve a plaque"""
+    @classmethod
+    def set_approval(cls, plaque_key, approval=True):
+        plaque = ndb.Key(urlsafe=plaque_key).get()
+
+        plaque.approved = approval
+        if plaque.approved:
+            plaque.created_on = datetime.datetime.now()
+            plaque.updated_on = datetime.datetime.now()
+        plaque.put()
+
+    @ndb.transactional
+    def post(self):
+        if not users.is_current_user_admin():
+            return "admin only, please log in"
+
+        plaque_key = self.request.get('plaque_key')
+        ApprovePending.set_approval(plaque_key)
+        self.redirect('/nextpending')
+
+class DisapprovePlaque(ApprovePending):
+    """Disapprove a plaque"""
+    @ndb.transactional
+    def post(self):
+        if not users.is_current_user_admin():
+            return "admin only, please log in"
+
+        plaque_key = self.request.get('plaque_key')
+        self.set_approval(plaque_key, approval=False)
+        self.redirect('/')
 
