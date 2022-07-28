@@ -4,7 +4,6 @@
 #TODO: new class to lazyload the openbenches images
 #           * might need new column in Plaque to indicate if a given row has been loaded or not
 
-import datetime
 import jinja2
 import json
 import logging
@@ -22,7 +21,6 @@ import lib.cloudstorage as gcs
 
 from utils import (
     DEF_NUM_PENDING,
-    DELETE_PRIVS,
     PLAQUE_SEARCH_INDEX_NAME,
     SubmitError,
     email_admin,
@@ -150,37 +148,6 @@ class ViewPlaquesPage(webapp2.RequestHandler):
 
         return template_values
 
-class BigMap(ViewPlaquesPage):
-    @property
-    def template_file(self):
-        return "bigmap.html"
-
-    def get(self, lat=None, lng=None, zoom=None):
-
-        template_values = get_template_values(bigmap=True)
-        num_plaques = Plaque.query().filter(Plaque.approved == True).count()
-        template_values['counts'] = num_plaques
-
-        if lat is not None and lng is not None:
-            template_values['bigmap_center'] = True
-            template_values['bigmap_lat'] = lat
-            template_values['bigmap_lng'] = lng
-
-            if zoom is not None:
-                template_values['bigmap_zoom'] = zoom
-
-        text_ = _render_template(self.template_file, template_values)
-        self.response.write(text_)
-
-class ExifText(BigMap):
-    @property
-    def template_file(self):
-        return "exif.html"
-
-    def get(self):
-        text_ = _render_template(self.template_file, get_template_values())
-        self.response.write(text_)
-
 class ViewOnePlaqueParent(webapp2.RequestHandler):
     def get(self):
         raise NotImplementedError("Don't call ViewOnePlaqueParent.get directly")
@@ -246,6 +213,59 @@ class ViewOnePlaque(ViewOnePlaqueParent):
     def get(self, plaque_key=None, ignored_cruft=None):
         text_ = self._get_page_from_key(plaque_key=plaque_key)
         self.response.write(text_)
+
+class ViewNextPending(ViewOnePlaqueParent):
+    def get(self):
+        plaques = Plaque.pending_list(1)
+        if plaques:
+            plaque = plaques[0]
+            logging.info("redirecting to {}".format(plaque.title_page_url))
+            self.redirect(plaque.title_page_url)
+            return
+        else:
+            text_ =  self._get_page_from_key(plaque_key=None)
+            self.response.write(text_)
+
+class ViewPending(webapp2.RequestHandler):
+    def write_pending(self, plaques):
+
+        user = users.get_current_user()
+        name = "anon" if user is None else user.nickname()
+        logging.info("User %s is viewing pending plaques %s" % (name, plaques))
+
+        template_values = get_template_values(plaques=plaques, is_pending=True)
+        text_ = _render_template("all.html", template_values)
+        self.response.write(text_)
+
+    def get(self, num=DEF_NUM_PENDING):
+        try:
+            num = int(num)
+        except:
+            pass
+        plaques = Plaque.pending_list(num)
+        self.write_pending(plaques)
+
+class ViewOldPending(ViewPending):
+    def get(self, num=DEF_NUM_PENDING):
+        try:
+            num = int(num)
+        except:
+            pass
+        plaques = Plaque.pending_list(num=num, desc=False)
+        self.write_pending(plaques)
+
+class ViewPendingRandom(ViewPending):
+    def get(self, num=DEF_NUM_PENDING):
+        try:
+            num = int(num)
+        except:
+            pass
+
+        num_to_select_from = 500
+        plaques = Plaque.pending_list(num_to_select_from)
+        return_plaques = random.sample(plaques, num)
+
+        self.write_pending(return_plaques)
 
 class RandomPlaquesPage(ViewPlaquesPage):
     """
@@ -391,188 +411,36 @@ class About(webapp2.RequestHandler):
         """
         text = _render_template("about.html", get_template_values())
         self.response.write(text)
+class BigMap(ViewPlaquesPage):
+    @property
+    def template_file(self):
+        return "bigmap.html"
 
-class Counts(webapp2.RequestHandler):
-    def get(self):
-        verbose = self.request.get('verbose')
-        query = Plaque.query()
-        num_plaques = query.count()
-        num_pending = query.filter(Plaque.approved == False).count()
-        num_published = num_plaques - num_pending
+    def get(self, lat=None, lng=None, zoom=None):
 
+        template_values = get_template_values(bigmap=True)
+        num_plaques = Plaque.query().filter(Plaque.approved == True).count()
+        template_values['counts'] = num_plaques
 
-        if verbose:
-            tmpl = "<ul> <li>{} published</li> <li>{} pending</li> </ul>"
-        else:
-            tmpl = "{} published, {} pending\n"
+        if lat is not None and lng is not None:
+            template_values['bigmap_center'] = True
+            template_values['bigmap_lat'] = lat
+            template_values['bigmap_lng'] = lng
 
-        msg = tmpl.format(num_published, num_pending)
-        self.response.write(msg)
+            if zoom is not None:
+                template_values['bigmap_zoom'] = zoom
 
-class DeleteOnePlaque(webapp2.RequestHandler):
-    def get(self):
-        raise NotImplementedError("no get in DeleteOnePlaque")
-
-    @ndb.transactional
-    def post(self):
-        """Remove one plaque and its associated GCS image."""
-        user = users.get_current_user()
-        if not users.is_current_user_admin():
-            return "admin only, please log in"
-        name = "anon" if user is None else user.nickname()
-
-        plaque_key = self.request.get('plaque_key')
-        plaque = ndb.Key(urlsafe=plaque_key).get()
-
-        if name not in DELETE_PRIVS:
-            email_admin('Warning!', '{} tried to delete {}'.format(
-                name, plaque.title_url))
-            raise NotImplementedError("delete is turned off for now")
-
-        try:
-            gcs.delete(plaque.pic)
-
-            # Delete search index for this document
-            plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
-            results = plaque_search_index.search(search_term)
-            for result in results:
-                plaques = [ndb.Key(urlsafe=r.doc_id).get() for r in results]
-                plaque_search_index.delete(result.doc_id)
-        except:
-            pass
-
-        plaque.key.delete()
-        text_ = '{} Deleted plaque {}'.format(name, plaque.title_url)
-        email_admin(text_, text_)
-        self.redirect('/nextpending')
-
-class ViewNextPending(ViewOnePlaqueParent):
-    def get(self):
-        plaques = Plaque.pending_list(1)
-        if plaques:
-            plaque = plaques[0]
-            logging.info("redirecting to {}".format(plaque.title_page_url))
-            self.redirect(plaque.title_page_url)
-            return
-        else:
-            text_ =  self._get_page_from_key(plaque_key=None)
-            self.response.write(text_)
-
-class ViewPending(webapp2.RequestHandler):
-    def write_pending(self, plaques):
-
-        user = users.get_current_user()
-        name = "anon" if user is None else user.nickname()
-        logging.info("User %s is viewing pending plaques %s" % (name, plaques))
-
-        template_values = get_template_values(plaques=plaques, is_pending=True)
-        text_ = _render_template("all.html", template_values)
+        text_ = _render_template(self.template_file, template_values)
         self.response.write(text_)
 
-    def get(self, num=DEF_NUM_PENDING):
-        try:
-            num = int(num)
-        except:
-            pass
-        plaques = Plaque.pending_list(num)
-        self.write_pending(plaques)
+class ExifText(BigMap):
+    @property
+    def template_file(self):
+        return "exif.html"
 
-class ViewOldPending(ViewPending):
-    def get(self, num=DEF_NUM_PENDING):
-        try:
-            num = int(num)
-        except:
-            pass
-        plaques = Plaque.pending_list(num=num, desc=False)
-        self.write_pending(plaques)
-
-class ViewPendingRandom(ViewPending):
-    def get(self, num=DEF_NUM_PENDING):
-        try:
-            num = int(num)
-        except:
-            pass
-
-        num_to_select_from = 500
-        plaques = Plaque.pending_list(num_to_select_from)
-        return_plaques = random.sample(plaques, num)
-
-        self.write_pending(return_plaques)
-
-class DeleteOneSearchIndex(webapp2.RequestHandler):
-    def get(self, doc_id):
-        plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
-        try:
-            plaque_search_index.delete(doc_id)
-        except search.Error:
-            msg = "Error removing doc id %s" % doc_id
-            logging.exception(msg)
-            self.response.write(msg)
-
-class AddSearchIndexAll(webapp2.RequestHandler):
     def get(self):
-        plaques = Plaque.query().fetch()
-        plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
-        igood = 0
-        ibad = 0
-        for plaque in plaques:
-            try:
-                plaque_search_index.put(plaque.to_search_document())
-                igood += 1
-            except search.Error as err:
-                ibad += 1
-                logging.error(err)
-            logging.debug('SearchIndex: %s good docs, %s failed' % (igood, ibad))
-        self.response.write('wrote %s good docs, %s failed' % (igood, ibad))
-
-class RedoIndex(webapp2.RequestHandler):
-    def get(self):
-        plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
-        ideleted = 0
-        # Delete all the search documents
-        while True:
-            # Get a list of documents populating only the doc_id field and
-            # extract the ids.
-            document_ids = [
-                document.doc_id for document
-                    in plaque_search_index.get_range(ids_only=True)]
-            ideleted += len(document_ids)
-            if not document_ids:
-                break
-            # Delete the documents for the given ids from the Index.
-            plaque_search_index.delete(document_ids)
-        logging.debug('deleted %s search index docs' % ideleted)
-
-        # Write all new search docs and put them in the index
-        plaques = Plaque.query().fetch()
-        docs = []
-        igood = 0
-        ibad = 0
-        for plaque in plaques:
-            try:
-                docs.append(plaque.to_search_document())
-                igood += 1
-            except search.Error as err:
-                ibad += 1
-                logging.error(err)
-
-        iput = 0
-        for i in range(0, len(docs), 100):
-            iput += 100
-            plaque_search_index.put(docs[i:i+100])
-
-        self.response.write(
-            'deleted %s docs, created %s, failed to create %s, put %s' % (
-            ideleted, igood, ibad, iput))
-
-class AddTitleUrlAll(webapp2.RequestHandler):
-    def get(self):
-        plaques = Plaque.query().fetch()
-        for plaque in plaques:
-            plaque.set_title_url()
-            plaque.put()
-        memcache.flush_all()
-        self.redirect('/')
+        text_ = _render_template(self.template_file, get_template_values())
+        self.response.write(text_)
 
 class Ocr(webapp2.RequestHandler):
     def get(self, img_url=None):

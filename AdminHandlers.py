@@ -25,6 +25,7 @@ from Handlers import (
 )
 
 from utils import (
+    DELETE_PRIVS,
     PLAQUE_SEARCH_INDEX_NAME,
     SubmitError,
     email_admin,
@@ -76,19 +77,17 @@ class AdminLogin(webapp2.RequestHandler):
         self.response.write("<a href='{}'>Login</a>".format(url))
 
 class Counts(webapp2.RequestHandler):
+    """ Display the plaque counts """
     def get(self):
         verbose = self.request.get('verbose')
         query = Plaque.query()
         num_plaques = query.count()
         num_pending = query.filter(Plaque.approved == False).count()
         num_published = num_plaques - num_pending
-
-
         if verbose:
             tmpl = "<ul> <li>{} published</li> <li>{} pending</li> </ul>"
         else:
             tmpl = "{} published, {} pending\n"
-
         msg = tmpl.format(num_published, num_pending)
         self.response.write(msg)
 
@@ -518,5 +517,117 @@ class DisapprovePlaque(ApprovePending):
 
         plaque_key = self.request.get('plaque_key')
         self.set_approval(plaque_key, approval=False)
+        self.redirect('/')
+
+class DeleteOnePlaque(webapp2.RequestHandler):
+    def get(self):
+        raise NotImplementedError("no get in DeleteOnePlaque")
+
+    @ndb.transactional
+    def post(self):
+        """Remove one plaque and its associated GCS image."""
+        user = users.get_current_user()
+        if not users.is_current_user_admin():
+            return "admin only, please log in"
+        name = "anon" if user is None else user.nickname()
+
+        plaque_key = self.request.get('plaque_key')
+        plaque = ndb.Key(urlsafe=plaque_key).get()
+
+        if name not in DELETE_PRIVS:
+            email_admin('Warning!', '{} tried to delete {}'.format(
+                name, plaque.title_url))
+            raise NotImplementedError("delete is turned off for now")
+
+        try:
+            gcs.delete(plaque.pic)
+
+            # Delete search index for this document
+            plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
+            results = plaque_search_index.search(search_term)
+            for result in results:
+                plaques = [ndb.Key(urlsafe=r.doc_id).get() for r in results]
+                plaque_search_index.delete(result.doc_id)
+        except:
+            pass
+
+        plaque.key.delete()
+        text_ = '{} Deleted plaque {}'.format(name, plaque.title_url)
+        email_admin(text_, text_)
+        self.redirect('/nextpending')
+
+class DeleteOneSearchIndex(webapp2.RequestHandler):
+    def get(self, doc_id):
+        plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
+        try:
+            plaque_search_index.delete(doc_id)
+        except search.Error:
+            msg = "Error removing doc id %s" % doc_id
+            logging.exception(msg)
+            self.response.write(msg)
+
+class AddSearchIndexAll(webapp2.RequestHandler):
+    def get(self):
+        plaques = Plaque.query().fetch()
+        plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
+        igood = 0
+        ibad = 0
+        for plaque in plaques:
+            try:
+                plaque_search_index.put(plaque.to_search_document())
+                igood += 1
+            except search.Error as err:
+                ibad += 1
+                logging.error(err)
+            logging.debug('SearchIndex: %s good docs, %s failed' % (igood, ibad))
+        self.response.write('wrote %s good docs, %s failed' % (igood, ibad))
+
+class RedoIndex(webapp2.RequestHandler):
+    def get(self):
+        plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
+        ideleted = 0
+        # Delete all the search documents
+        while True:
+            # Get a list of documents populating only the doc_id field and
+            # extract the ids.
+            document_ids = [
+                document.doc_id for document
+                    in plaque_search_index.get_range(ids_only=True)]
+            ideleted += len(document_ids)
+            if not document_ids:
+                break
+            # Delete the documents for the given ids from the Index.
+            plaque_search_index.delete(document_ids)
+        logging.debug('deleted %s search index docs' % ideleted)
+
+        # Write all new search docs and put them in the index
+        plaques = Plaque.query().fetch()
+        docs = []
+        igood = 0
+        ibad = 0
+        for plaque in plaques:
+            try:
+                docs.append(plaque.to_search_document())
+                igood += 1
+            except search.Error as err:
+                ibad += 1
+                logging.error(err)
+
+        iput = 0
+        for i in range(0, len(docs), 100):
+            iput += 100
+            plaque_search_index.put(docs[i:i+100])
+
+        self.response.write(
+            'deleted %s docs, created %s, failed to create %s, put %s' % (
+            ideleted, igood, ibad, iput))
+
+class AddTitleUrlAll(webapp2.RequestHandler):
+    def get(self):
+        plaques = Plaque.query().fetch()
+        for plaque in plaques:
+            plaque.set_title_url()
+            plaque.put()
+        memcache.flush_all()
         self.redirect('/')
 

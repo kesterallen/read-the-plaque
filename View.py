@@ -1,6 +1,5 @@
 
 import jinja2
-import logging
 import os
 
 import webapp2
@@ -33,6 +32,11 @@ def main():
             ('/disapprove', ah.DisapprovePlaque),
             ('/approve', ah.ApprovePending),
             ('/approveall', ah.ApproveAllPending),
+            ('/delete', ah.DeleteOnePlaque),
+            ('/deletesearch/(.+?)', ah.DeleteOneSearchIndex),
+            #('/addsearchall', ah.AddSearchIndexAll),
+            ('/reindex', ah.RedoIndex),
+            #('/addtitleurlall', ah.AddTitleUrlAll),
 
             # Search routes
             ('/search/(.+?)', sh.SearchPlaques),
@@ -73,18 +77,13 @@ def main():
             #('/tags/?', h.ViewAllTags),
             ('/about', h.About),
             ('/rss', h.RssFeed),
-            ('/reindex', h.RedoIndex),
             #('/deleteall', h.DeleteEverything),
-            ('/delete', h.DeleteOnePlaque),
             ('/pending/?', h.ViewPending),
             ('/oldpending/?', h.ViewOldPending),
             ('/pending/(.*?)/?', h.ViewPending),
             ('/nextpending/?', h.ViewNextPending),
             ('/randpending/?', h.ViewPendingRandom),
             ('/randpending/(.*?)/?', h.ViewPendingRandom),
-            #('/addsearchall', h.AddSearchIndexAll),
-            ('/deletesearch/(.+?)', h.DeleteOneSearchIndex),
-            #('/addtitleurlall', h.AddTitleUrlAll),
             ('/map/(.*?)/(.*?)/(.*?)/?', h.BigMap), # lat, lng, zoom.
             ('/map/(.*?)/(.*?)/?', h.BigMap), # lat, lng
             ('/map/?', h.BigMap),
