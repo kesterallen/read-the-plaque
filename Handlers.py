@@ -154,10 +154,7 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
 
     def _get_plaque_from_title_url_or_key(self, url_or_key=None):
         """ 
-        TODO: bad name. 
-
         Get a plaque by its title_url, its key, or return None 
-
         """
         plaque = None
         if url_or_key is not None:
@@ -373,8 +370,10 @@ class GeoJson(ViewOnePlaqueParent):
     def get(self, plaque_key=None):
         """ Get one plaque's geoJSON """
         plaque = self._get_plaque_from_title_url_or_key(plaque_key)
-        # TODO: check for 'plaque is None'
-        self.response.write(plaque.geojson)
+        if plaque is None:
+            self.response.write("plaque {} not found".format(plaque_key))
+        else:
+            self.response.write(plaque.geojson)
 
     def post(self):
         """Returns the JSON for plaques with updated_on after the specified date."""
