@@ -347,14 +347,23 @@ class Plaque(ndb.Model):
 
     @property
     def tweet_text (self):
-        txt = "'{0.title}' Always #readtheplaque https://readtheplaque.com{0.title_page_url}".format(self)
-        return txt
+        return (
+            "'{0.title}' Always #readtheplaque "
+            "https://readtheplaque.com{0.title_page_url}".format(self)
+        )
 
     @property
     def json_for_tweet(self):
         plaque_dict = self.to_dict(summary=True)
         plaque_dict['tweet'] = self.tweet_text
         return json.dumps(plaque_dict)
+
+    @property
+    def gmaps_url(self):
+        return (
+            "http://maps.google.com/maps?&z=21&t=m&q="
+            "loc:{0.lat:.8f}+{0.lon:.8f}".format(self.location)
+        )
 
 class FeaturedPlaque(ndb.Model):
     created_on = ndb.DateTimeProperty(auto_now_add=True)
