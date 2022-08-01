@@ -3,8 +3,12 @@
 {% block content %}
 {% set plaque = plaques[0] %}
 <div class="container-fluid">
+
+  <!-- Top row: Title + optional buttons -->
   <div class="row">
     <div class="col-xs-12">
+
+      <!-- Edit/Approve/Feature buttons for admins -->
       {% if loginout.is_admin %}
         <a id="edit_button" class="btn btn-default pull-right" role="button" href="/edit/{{plaque.key.urlsafe()}}">Edit</a>
         <a class="btn btn-primary pull-right" role="button" href="/setfeatured/{{plaque.key.urlsafe()}}">Feature</a>
@@ -15,67 +19,73 @@
           </form>
         {% endif %}
       {% endif %}
-      <h1>{{plaque.title}}{% if not plaque.approved %} [Pending] {% endif %}
+
+      <h1>
+        {{plaque.title}}{% if not plaque.approved %} [Pending] {% endif %}
       </h1>
+
     </div>
   </div>
+
   {% if plaque.approved or loginout.is_admin %}
+
     <div class="row">
+      <!-- Image -->
       <div class="col-xs-12 col-md-6">
-        <a href="{{plaque.img_url_big}}"><img src="{{plaque.img_url_display}}" alt="{{plaque.description | striptags | truncate(200)}}" class="img-responsive center-block"/></a>
+        <a href="{{plaque.img_url_big}}">
+          <img src="{{plaque.img_url_display}}" alt="{{plaque.description | striptags | truncate(200)}}" class="img-responsive center-block"/>
+        </a>
       </div>
+
+      <!-- Description & tags-->
       <div class="col-xs-12 col-md-6">
         <div class="panel panel-default">
           <div class="panel-body">
             <p>{{plaque.description}}</p>
             <ul class="list-inline">
-{% for tag in plaque.tags %} <li><a href="/tag/{{tag}}" alt="{{tag}}">{{tag}}</a></li> {% endfor %}
+              {% for tag in plaque.tags %} <li><a href="/tag/{{tag}}" alt="{{tag}}">{{tag}}</a></li> {% endfor %}
             </ul>
           </div>
         </div>
         {% if loginout.is_admin %}
-          <!--<p id="whatthreewords"></p>-->
-          <!--<p id="ocr">scripts/ocr.sh {{plaque.img_url}}</p>-->
           <p>
             Originally added {{plaque.created_on.strftime('%Y-%m-%d')}}.
-            <a href="/ocr/{{plaque.img_url}}">OCR</a>
-            (edit page for OCR js)
+            <a href="/ocr/{{plaque.img_url}}">OCR</a> (edit page for OCR js)
           </p>
         {% endif %}
         <p>
           <a class="btn btn-primary" role="button" href="/nearby/{{plaque.location.lat}}/{{plaque.location.lon}}">Nearby Plaques</a>
-          <a class="btn btn-primary pull-right" role="button" href="http://maps.google.com/maps?&z=21&t=m&q=loc:{{"%.8f" % plaque.location.lat}}+{{"%.8f" % plaque.location.lon}}" target="_blank">On Google Maps</a>
+          <a class="btn btn-primary pull-right" role="button" href="{{plaque.gmaps_url}}" target="_blank">On Google Maps</a>
         </p>
 
         <div id="map"></div>
       </div>
     </div>
+  {% endif %}
 
-    <p></p>
+  <p></p>
 
+  <!-- Unpublish or Delete button for admins -->
+  {% if loginout.is_admin %}
     <div class="row">
       <div class="col-xs-11">
-        {% if loginout.is_admin %}
-          {% if plaque.approved %}
-            <div class="panel panel-default">
-              <div class="panel-body">
-                <form class="form-inline" action="/disapprove" method="POST">
-                  <input type="hidden" name="plaque_key" value="{{plaque.key.urlsafe()}}">
-                  <button type="submit" class="btn btn-default">Unpublish This Plaque</button>
-                </form>
-              </div>
-            </div>
-          {% else %}
-            <div class="panel panel-default">
-              <div class="panel-body">
-                <form class="form-inline" action="/delete" method="POST">
-                  <input type="hidden" name="plaque_key" value="{{plaque.key.urlsafe()}}">
-                  <button type="submit" class="btn btn-danger pull-right">Delete this Plaque</button>
-                </form>
-              </div>
-            </div>
-          {% endif %}
+        {% if plaque.approved %}
+          {% set form_action = "/disapprove" %}
+          {% set button_verb= "Unpublish" %}
+          {% set button_class = "btn-default" %}
+        {% else %}
+          {% set form_action = "/delete" %}
+          {% set button_verb = "Delete" %}
+          {% set button_class = "btn-danger pull-right" %}
         {% endif %}
+        <div class="panel panel-default">
+          <div class="panel-body">
+            <form class="form-inline" action="{{form_action}}" method="POST">
+              <input type="hidden" name="plaque_key" value="{{plaque.key.urlsafe()}}">
+              <button type="submit" class="btn {{button_class}}">{{button_verb}} this Plaque</button>
+            </form>
+          </div>
+        </div>
       </div>
     </div>
   {% endif %}
