@@ -25,7 +25,7 @@ class SearchPlaques(webapp2.RequestHandler):
 
     def _search_plaques(self, search_term):
         search_term = '"{}"'.format(search_term.replace('"', '')) #search_term.encode('unicode-escape')
-        search_term = str(search_term.decode("ascii", "ignore")) # TODO: this doesn't crash on e.g. 'Piñata'
+        search_term = str(search_term.decode("ascii", "ignore")) # prevent crashing on e.g. 'Piñata'
 
         plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
         results = plaque_search_index.search(search_term)
@@ -118,14 +118,12 @@ class SearchPlaquesGeo(webapp2.RequestHandler):
         # Serve the form if a search hasn't been specified, otherwise show the
         # results:
         #
-        search_not_specified = (lat is None or lat == '') or \
-                               (lng is None or lng == '') or \
-                               (search_radius_meters is None or \
-                                search_radius_meters == '')
+        params = [lat, lng, search_radius_meters]
+        search_not_specified = any([p is None or p == '' for p in params])
         if search_not_specified:
             self._serve_form(redir)
         else:
-            self._serve_response(lat, lng, search_radius_meters)
+            self._serve_response(*params)
 
     def post(self):
         try:

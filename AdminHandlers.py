@@ -79,16 +79,16 @@ class AdminLogin(webapp2.RequestHandler):
 class Counts(webapp2.RequestHandler):
     """ Display the plaque counts """
     def get(self):
-        verbose = self.request.get('verbose')
         query = Plaque.query()
         num_plaques = query.count()
         num_pending = query.filter(Plaque.approved == False).count()
-        num_published = num_plaques - num_pending
+
+        verbose = self.request.get('verbose')
         if verbose:
             tmpl = "<ul> <li>{} published</li> <li>{} pending</li> </ul>"
         else:
             tmpl = "{} published, {} pending\n"
-        msg = tmpl.format(num_published, num_pending)
+        msg = tmpl.format(num_plaques - num_pending, num_pending)
         self.response.write(msg)
 
 class FlushMemcache(webapp2.RequestHandler):
@@ -116,21 +116,24 @@ class AddPlaque(webapp2.RequestHandler):
                     title = message.split('/')[-1]
 
                     message = (
-                        """ Thanks, admin! <a id="thanks_admin" """
-                        """ style="float: right" href="{}">{}</a> """.format(
-                            url, title))
+                        'Thanks, admin! <a id="thanks_admin" style="float: right"'
+                        'href="{}">{}</a>'.format(url, title)
+                    )
                 else:
-                    message = """Hooray! And thank you. We'll review your
-                        plaque and you'll see it appear on the map shortly."""
-
+                    message = (
+                        "Hooray! And thank you. We'll review your plaque and "
+                        "you'll see it on the map soon."
+                    )
             elif state == ADD_STATE_ERROR:
-                message = """Sorry, your plaque submission had this error:
-                    <font color="red">"{}"</font> """.format(message)
+                message = (
+                    "Sorry, your plaque submission had this error: "
+                    '<font color="red">"{}"</font>'.format(message)
+                )
         return message
 
     def get(self, message=None):
         maptext = (
-            "Click the plaque's location on the map, or search " 
+            "Click the plaque's location on the map, or search "
             "for it, or enter its lat/lng location"
         )
         template_values = get_template_values(maptext=maptext, mapzoom=10, page_title="Add Plaque")
@@ -285,24 +288,27 @@ class AddPlaque(webapp2.RequestHandler):
             location = ndb.GeoPt(lat, lng)
         except BadValueError as bve:
             logging.error(bve)
-
             try:
                 lat, lng = self._get_latlng_exif(img_fh)
                 location = ndb.GeoPt(lat, lng)
-            except Exception as err2:
-                logging.error(err2)
+            except Exception as err:
+                logging.error(err)
                 err = SubmitError(
                     "The plaque location wasn't specified. Please click the "
                     "back button, select a location, and click 'Add your "
-                    "Plaque' again. Error ({})".format(err2))
+                    "Plaque' again. Error ({})".format(err))
                 raise err
 
         return location
 
-    def _get_img(self, img_file=None, img_url=None):
+    def _get_img(self):
         """
         Prefer the file to the URL, if both are given.
         """
+
+        img_file = self.request.POST.get('plaque_image_file')
+        img_url = self.request.POST.get('plaque_image_url')
+
         if img_file != '' and img_file is not None:
             img_name = img_file.filename
             img_fh = img_file.file
@@ -318,30 +324,22 @@ class AddPlaque(webapp2.RequestHandler):
 
         return img_name, img_fh
 
-    def _get_form_args(self):
-        """Get the arguments from the form and return them."""
-
-        user = users.get_current_user()
-        created_by = users.get_current_user() if user else None
-
-        title = self.request.get('title')
-        if len(title) > 1500:
-            title = title[:1499]
-        description = self.request.get('description')
-
-        img_file = self.request.POST.get('plaque_image_file')
-        img_url = self.request.POST.get('plaque_image_url')
-
-        # TODO openbenches: disable the image download here
-        img_name, img_fh = self._get_img(img_file, img_url)
-
-        location = self._get_location(img_fh)
-
+    def _get_tags(self):
         # Get and tokenize tags
         tags_str = self.request.get('tags')
         tags_split = tags_str.split(',')
         tags = [re.sub(r'\s+', ' ', t.strip().lower()) for t in tags_split]
         tags = [t for t in tags if t] # Remove empties
+        return tags
+
+    def _get_form_args(self):
+        """Get the arguments from the form and return them."""
+        created_by = users.get_current_user()
+        title = self.request.get('title')[:1499] # limit to 1500 char
+        description = self.request.get('description')
+        img_name, img_fh = self._get_img()
+        location = self._get_location(img_fh)
+        tags = self._get_tags()
 
         return FormArgs(
             created_by=created_by,
