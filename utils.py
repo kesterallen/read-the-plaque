@@ -171,7 +171,9 @@ def get_random_plaque_key(method='time'):
             lat = math.acos(2.0 * rand_v - 1) * 180.0 / math.pi - 90.0
             search_radius_meters = 100000 # 100 km
 
-            query_string = 'distance(location, geopoint({}, {})) < {}'.format(lat, lng, search_radius_meters)
+            query_string = "distance(location, geopoint({}, {})) < {}".format(
+                lat, lng, search_radius_meters
+            )
             query = search.Query(query_string)
             results = plaque_search_index.search(query)
             if results.number_found > 0:
