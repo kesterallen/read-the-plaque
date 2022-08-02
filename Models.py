@@ -353,9 +353,25 @@ class Plaque(ndb.Model):
         )
 
     @property
+    def tweet_to_plaque_submitter(self):
+        submitter_regex = r"Submitted by.*(twitter.com/\w+|@\w+)\b"
+        match = re.search(submitter_regex, self.description, re.DOTALL)
+        if match:
+            submitter = match.group(1).strip()
+            submitter_tweet = (
+                "{} Your plaque has been selected by the random "
+                "number generator! Thanks again! #readtheplaque "
+                "https://readtheplaque.com{0.title_page_url}".format(self)
+            )
+        else:
+            submitter_tweet = None
+        return submitter_tweet
+
+    @property
     def json_for_tweet(self):
         plaque_dict = self.to_dict(summary=True)
         plaque_dict['tweet'] = self.tweet_text
+        plaque_dict['submitter_tweet'] = self.tweet_to_plaque_submitter
         return json.dumps(plaque_dict)
 
     @property

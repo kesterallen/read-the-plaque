@@ -171,7 +171,7 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
                     pass
         return plaque
 
-    def _get_page_from_key(self, plaque_key=None):
+    def _get_page_from_url_or_key(self, search_term=None):
         """
         Put the single plaque into a list for rendering so that the common map
         functionality can be used unchanged. Attempt to serve a valid plaque,
@@ -180,13 +180,13 @@ class ViewOnePlaqueParent(webapp2.RequestHandler):
 
         # If it's memecached, use that:
         is_admin = users.is_current_user_admin()
-        memcache_name = make_memcache_name('plaque_', plaque_key, is_admin)
+        memcache_name = make_memcache_name('plaque_', search_term, is_admin)
         text_ = memcache.get(memcache_name)
         if text_ is not None:
             return text_
 
         # If page is not memcached, get the plaque from the db:
-        plaque = self._get_plaque_from_title_url_or_key(plaque_key)
+        plaque = self._get_plaque_from_title_url_or_key(search_term)
 
         # If that didn't find anything, serve the default couldn't-find-it
         # plaque (currently hacked in as the earliest plaque):
@@ -203,12 +203,18 @@ class ViewOnePlaque(ViewOnePlaqueParent):
     """
     Render the single-plaque page from a plaque key, or get a random plaque.
     """
-    def head(self, plaque_key=None, ignored_cruft=None):
-        self.get(plaque_key=None, ignored_cruft=None)
+    def head(self, search_term=None, ignored_cruft=None):
+        self.get(search_term=None, ignored_cruft=None)
         self.response.clear()
 
-    def get(self, plaque_key=None, ignored_cruft=None):
-        text_ = self._get_page_from_key(plaque_key=plaque_key)
+    def get(self, search_term=None, ignored_cruft=None):
+        text_ = self._get_page_from_url_or_key(search_term=search_term)
+        self.response.write(text_)
+
+class ViewFeatured(ViewOnePlaqueParent):
+    def get(self):
+        plaque = get_featured()
+        text_ = self._get_page_from_url_or_key(search_term=plaque.title_url)
         self.response.write(text_)
 
 class ViewNextPending(ViewOnePlaqueParent):
@@ -220,7 +226,7 @@ class ViewNextPending(ViewOnePlaqueParent):
             self.redirect(plaque.title_page_url)
             return
         else:
-            text_ =  self._get_page_from_key(plaque_key=None)
+            text_ =  self._get_page_from_url_or_key(search_term=None)
             self.response.write(text_)
 
 class ViewPending(webapp2.RequestHandler):
@@ -284,16 +290,12 @@ class TweetText(ViewOnePlaqueParent):
     """
     Get one plaque's JSON repr, and set it to be the featured plaque.
     """
-    def get(self, plaque_key=None, summary=True):
-        if plaque_key is None:
-            plaque_key = get_random_plaque_key()
-
+    def get(self, is_debug=False):
+        plaque_key = get_random_plaque_key()
         plaque = ndb.Key(urlsafe=plaque_key).get()
-        set_featured(plaque)
-        # TODO: If plaque.description matches r'Submitted by @(.*)', 
-        # tweet to that submitter
         memcache.flush_all()
         self.response.write(plaque.json_for_tweet)
+
 
 class JsonAllPlaques(webapp2.RequestHandler):
     """ Get the JSON representation for a group of plaques """
@@ -367,11 +369,11 @@ class JsonAllPlaquesFull(JsonAllPlaques):
         self.response.write(json_output)
 
 class GeoJson(ViewOnePlaqueParent):
-    def get(self, plaque_key=None):
+    def get(self, search_term=None):
         """ Get one plaque's geoJSON """
-        plaque = self._get_plaque_from_title_url_or_key(plaque_key)
+        plaque = self._get_plaque_from_title_url_or_key(search_term)
         if plaque is None:
-            self.response.write("plaque {} not found".format(plaque_key))
+            self.response.write("plaque {} not found".format(search_term))
         else:
             self.response.write(plaque.geojson)
 

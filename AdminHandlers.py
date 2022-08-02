@@ -22,6 +22,7 @@ from Handlers import (
     DEF_PLAQUESET_NAME,
     JINJA_ENVIRONMENT,
     _render_template,
+    set_featured,
 )
 
 from utils import (
@@ -447,7 +448,6 @@ class SetFeatured(webapp2.RequestHandler):
     def get(self, plaque_key):
         if users.is_current_user_admin():
             plaque = ndb.Key(urlsafe=plaque_key).get()
-            logging.info("setting plaque {0.title} to featured".format(plaque))
             set_featured(plaque)
             memcache.flush_all()
             self.redirect('/')

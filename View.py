@@ -27,7 +27,6 @@ def main():
             ('/edit/(.+?)/?', ah.EditPlaque),
             ('/edit/?', ah.EditPlaque),
             ('/setfeatured/(.*?)', ah.SetFeatured),
-            ('/featured', ah.SetFeatured),
             ('/setupdated', ah.SetUpdatedOn),
             ('/disapprove', ah.DisapprovePlaque),
             ('/approve', ah.ApprovePending),
@@ -52,6 +51,7 @@ def main():
             ('/s/?', sh.SearchPlaques),
 
             # Non-admin routes
+            ('/featured', h.ViewFeatured),
             ('/page/(.+?)/(.+?)/(.+?)/?', h.ViewPlaquesPage),
             ('/page/(.+?)/(.+?)/?', h.ViewPlaquesPage),
             ('/page/(.+?)/?', h.ViewPlaquesPage),
@@ -66,6 +66,7 @@ def main():
             ('/geojson/(.+?)/?', h.GeoJson),
             ('/geojson/?', h.GeoJson),
             ('/tweet/?', h.TweetText),
+            ('/tweet/(.+?)/?', h.TweetText), # debug
             ('/alljp/(.+?)/?', h.JsonAllPlaques),
             ('/alljp/?', h.JsonAllPlaques),
             ('/updatejp/?', h.JsonAllPlaques),
