@@ -93,7 +93,7 @@ class Plaque(ndb.Model):
         memcache_result=  memcache.get_multi(memcache_names)
         memcache_worked = len(memcache_result.keys()) == len(memcache_names)
         if memcache_worked:
-            # Return cached plaques, nextcur, more 
+            # Return cached plaques, nextcur, more
             plaques = memcache_result[memcache_names[0]]
             nextcur = memcache_result[memcache_names[1]]
             more = memcache_result[memcache_names[2]]
@@ -124,8 +124,7 @@ class Plaque(ndb.Model):
     def pending_list(cls, num=25, desc=True):
         """A separate method from approved() so that it will
         never be memcached."""
-        query = Plaque.query(
-            ).filter(Plaque.approved != True).order(Plaque.approved)
+        query = Plaque.query().filter(Plaque.approved != True).order(Plaque.approved)
         if desc:
             query = query.order(-Plaque.created_on)
         else:
@@ -207,6 +206,10 @@ class Plaque(ndb.Model):
         """This plaque's key-based page URL."""
         url = '/plaque/{}'.format(self.title_url)
         return url
+
+    @property
+    def fully_qualified_title_page_url(self):
+        return "https://readtheplaque.com{0.title_page_url}".format(self)
 
     def page_url(self):
         """This plaque's key-based page URL."""
@@ -349,19 +352,22 @@ class Plaque(ndb.Model):
     def tweet_text (self):
         return (
             "'{0.title}' Always #readtheplaque "
-            "https://readtheplaque.com{0.title_page_url}".format(self)
+            "{0.fully_qualified_title_page_url}".format(self)
         )
 
     @property
     def tweet_to_plaque_submitter(self):
-        submitter_regex = r"Submitted by.*(twitter.com/\w+|@\w+)\b"
+        #submitter_regex = r"Submitted by.*(twitter.com/\w+|@\w+)\b"
+        #submitter_match_index = 1
+        submitter_regex = r"Submitted by.*(twitter.com/|@)(\w+)\b"
+        submitter_match_index = 2
         match = re.search(submitter_regex, self.description, re.DOTALL)
         if match:
-            submitter = match.group(1).strip()
+            submitter = match.group(submitter_match_index).strip()
             submitter_tweet = (
-                "{} Your plaque has been selected by the random "
-                "number generator! Thanks again! #readtheplaque "
-                "https://readtheplaque.com{0.title_page_url}".format(self)
+                "@{0} Your plaque has been selected by the random plaque "
+                "generator! Thanks again! #readtheplaque {1}".format(
+                    submitter, self.fully_qualified_title_page_url)
             )
         else:
             submitter_tweet = None
@@ -370,8 +376,8 @@ class Plaque(ndb.Model):
     @property
     def json_for_tweet(self):
         plaque_dict = self.to_dict(summary=True)
-        plaque_dict['tweet'] = self.tweet_text
-        plaque_dict['submitter_tweet'] = self.tweet_to_plaque_submitter
+        plaque_dict["tweet"] = self.tweet_text
+        plaque_dict["submitter_tweet"] = self.tweet_to_plaque_submitter
         return json.dumps(plaque_dict)
 
     @property

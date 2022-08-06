@@ -217,6 +217,15 @@ class ViewFeatured(ViewOnePlaqueParent):
         text_ = self._get_page_from_url_or_key(search_term=plaque.title_url)
         self.response.write(text_)
 
+class GeoJsonFeatured(ViewFeatured):
+    def get(self):
+        """ Get featured plaque's geoJSON """
+        plaque = get_featured()
+        if plaque:
+            self.response.write(plaque.json_for_tweet)
+        else:
+            self.response.write("the featured plaque is not found")
+
 class ViewNextPending(ViewOnePlaqueParent):
     def get(self):
         plaques = Plaque.pending_list(1)
@@ -286,16 +295,16 @@ class RandomPlaque(ViewOnePlaqueParent):
         plaque = get_random_plaque()
         self.redirect(plaque.title_page_url)
 
-class TweetText(ViewOnePlaqueParent):
+class SetFeaturedRandom(ViewOnePlaqueParent):
     """
-    Get one plaque's JSON repr, and set it to be the featured plaque.
+    Get a random plaque and set it to be the featured plaque.
     """
-    def get(self, is_debug=False):
+    def get(self):
         plaque_key = get_random_plaque_key()
         plaque = ndb.Key(urlsafe=plaque_key).get()
+        set_featured(plaque)
         memcache.flush_all()
         self.response.write(plaque.json_for_tweet)
-
 
 class JsonAllPlaques(webapp2.RequestHandler):
     """ Get the JSON representation for a group of plaques """

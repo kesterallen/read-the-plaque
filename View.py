@@ -51,7 +51,9 @@ def main():
             ('/s/?', sh.SearchPlaques),
 
             # Non-admin routes
+            ('/featured/random', h.SetFeaturedRandom),
             ('/featured', h.ViewFeatured),
+            ('/featured/geojson', h.GeoJsonFeatured),
             ('/page/(.+?)/(.+?)/(.+?)/?', h.ViewPlaquesPage),
             ('/page/(.+?)/(.+?)/?', h.ViewPlaquesPage),
             ('/page/(.+?)/?', h.ViewPlaquesPage),
@@ -65,8 +67,7 @@ def main():
             #('/plaque_comment/(.+?)', h.ViewOnePlaqueFromComment),
             ('/geojson/(.+?)/?', h.GeoJson),
             ('/geojson/?', h.GeoJson),
-            ('/tweet/?', h.TweetText),
-            ('/tweet/(.+?)/?', h.TweetText), # debug
+            ('/tweet/?', h.GeoJsonFeatured),
             ('/alljp/(.+?)/?', h.JsonAllPlaques),
             ('/alljp/?', h.JsonAllPlaques),
             ('/updatejp/?', h.JsonAllPlaques),
