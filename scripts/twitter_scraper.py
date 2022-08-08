@@ -79,9 +79,9 @@ def get_image_url_and_description(tweet: dict) -> Tuple:
 
     desc = (
         f"{ascii(tweet.full_text)}"
-        f'<br/><br/><a target="_blank" href="{tweet.url}">Tweet</a>'
-        f"<br/>{img_extras_desc}"
-        f'<br/><br/>Submitted by <a href="{tweet.url}">@{tweet.user.screen_name}</a>.'
+        f'\n\n<br/><br/><a target="_blank" href="{tweet.url}">Tweet</a>'
+        f"\n\n<br/>{img_extras_desc}"
+        f'\n\n<br/><br/>Submitted by <a href="{tweet.url}">@{tweet.user.screen_name}</a>.'
     )
     return img_url, desc
 
