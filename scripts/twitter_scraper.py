@@ -77,15 +77,12 @@ def get_image_url_and_description(tweet: dict) -> Tuple:
 
     img_extras_desc = "\n".join(img_extras)
 
-    desc = f"""
-        {ascii(tweet.full_text)}
-
-        <a target="_blank" href="{tweet.url}">Tweet</a>
-
-        {img_extras_desc}
-
-        <br/><br/>Submitted by <a href="{tweet.url}">@{tweet.user.screen_name}</a>.
-    """
+    desc = (
+        f"{ascii(tweet.full_text)}"
+        f'<br/><br/><a target="_blank" href="{tweet.url}">Tweet</a>'
+        f"<br/>{img_extras_desc}"
+        f"<br/><br/>Submitted by <a href="{tweet.url}">@{tweet.user.screen_name}</a>."
+    )
     return img_url, desc
 
 def get_plaque(tweet_id: str) -> dict:
