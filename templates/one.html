@@ -11,13 +11,13 @@
       <!-- Edit/Approve/Feature buttons for admins -->
       {% if loginout.is_admin %}
         <a id="edit_button" class="btn btn-default pull-right" role="button" href="/edit/{{plaque.key.urlsafe()}}">Edit</a>
-        <a class="btn btn-primary pull-right" role="button" href="/setfeatured/{{plaque.key.urlsafe()}}">Feature</a>
         {% if not plaque.approved %}
           <form class="form-inline pull-right" action="/approve" method="POST">
             <input type="hidden" name="plaque_key" value="{{plaque.key.urlsafe()}}">
             <button type="submit" class="btn btn-success pull-right">Approve</button>
           </form>
         {% endif %}
+        <a class="btn btn-primary pull-right" role="button" href="/setfeatured/{{plaque.key.urlsafe()}}">Feature</a>
       {% endif %}
 
       <h1>
