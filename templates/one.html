@@ -21,7 +21,9 @@
       {% endif %}
 
       <h1>
-        {{plaque.title}}{% if not plaque.approved %} [Pending] {% endif %}
+        {{plaque.title}}
+        {% if not plaque.approved %} [Pending] {% endif %}
+        {% if plaque.title_url.endswith('2') %} [duplicate??] {% endif %}
       </h1>
 
     </div>
