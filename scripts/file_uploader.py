@@ -3,7 +3,6 @@
 import sys
 import time
 
-from attrdict import AttrDict
 from PIL import Image
 import requests
 

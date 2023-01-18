@@ -2,9 +2,9 @@
 
 import sys
 import time
-from attrdict import AttrDict
 import requests
 from typing import Tuple, Iterator#, Union
+
 from twython import Twython, TwythonError
 
 POST_URL = "https://readtheplaque.com/add"
@@ -37,9 +37,9 @@ def _keys(keyfile: str="key_twitter.txt") -> list:
 def get_img_urls(tweet: dict) -> list:
     """Extract the URL(s) of the image from the tweet."""
     if "extended_entities" in tweet:
-        entities = tweet.extended_entities
+        entities = tweet["extended_entities"]
     elif "entities" in tweet:
-        entities = tweet.entities
+        entities = tweet["entities"]
     else:
         raise NoImageError("No entities in tweet.")
 
@@ -52,13 +52,14 @@ def get_tweet(tweet_id: str, tweet_mode: str="extended") -> dict:
     """Get the tweet object from twitter"""
     twitter = Twython(*_keys())
     tweet = twitter.show_status(id=tweet_id, tweet_mode=tweet_mode)
-    tweet = AttrDict(tweet)
-    tweet.url = f"https://twitter.com/{tweet.user.screen_name}/status/{tweet_id}"
+    url = f"https://twitter.com/{tweet['user']['screen_name']}/status/{tweet_id}"
+    tweet["url"] = url
 
     try:
-        tweet.lat, tweet.lng = tweet.geo.coordinates
+        coordinates = tweet["geo"]["coordinates"]
     except (AttributeError, TypeError):
-        tweet.lat, tweet.lng = DEFAULT_LAT_LNG
+        coordinates = DEFAULT_LAT_LNG
+    tweet["lat"], tweet["lng"] = coordinates
 
     return tweet
 
@@ -78,10 +79,10 @@ def get_image_url_and_description(tweet: dict) -> Tuple:
     img_extras_desc = "\n".join(img_extras)
 
     desc = (
-        f"{ascii(tweet.full_text)}"
-        f'\n\n<br/><br/><a target="_blank" href="{tweet.url}">Tweet</a>'
+        f"{ascii(tweet['full_text'])}"
+        f"\n\n<br/><br/><a target=\"_blank\" href=\"{tweet['url']}\">Tweet</a>"
         f"\n\n<br/>{img_extras_desc}"
-        f'\n\n<br/><br/>Submitted by <a href="{tweet.url}">@{tweet.user.screen_name}</a>.'
+        f"\n\n<br/><br/>Submitted by <a href=\"{tweet['url']}\">@{tweet['user']['screen_name']}</a>."
     )
     return img_url, desc
 
@@ -91,14 +92,14 @@ def get_plaque(tweet_id: str) -> dict:
 
     img_url, description = get_image_url_and_description(tweet)
 
-    plaque = AttrDict({
-        "lat": tweet.lat,
-        "lng": tweet.lng,
+    plaque = {
+        "lat": tweet["lat"],
+        "lng": tweet["lng"],
         "plaque_image_url": img_url,
-        "title": tweet.url,
+        "title": tweet["url"],
         "description": description,
-        "url": tweet.url,
-    })
+        "url": tweet["url"],
+    }
     return plaque
 
 def _report(results: dict) -> None:
@@ -152,7 +153,7 @@ def main():
             resp = requests.post(POST_URL, data=plaque)
 
             is_good = not(resp.status_code != 200 or "resubmit." in resp.text)
-            results[is_good].append(plaque.url)
+            results[is_good].append(plaque["url"])
 
         except (TwythonError, NoImageError, KeyError) as err:
             print(f"{err} Skipping {tweet_id}")
