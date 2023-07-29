@@ -350,11 +350,7 @@ class Plaque(ndb.Model):
 
     @property
     def tweet_text (self):
-        return (
-            "'{0.title}' Always #readtheplaque "
-            "https://readtheplaque.com/featured".format(self)
-            #"{0.fully_qualified_title_page_url}".format(self)
-        )
+        return f"'{self.title}' Always #readtheplaque {self.fully_qualified_title_page_url}"
 
     @property
     def tweet_to_plaque_submitter(self):
