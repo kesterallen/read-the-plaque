@@ -1,19 +1,33 @@
 """Script to upload exif-tagged images as Read the Plaque plaques."""
 
+import datetime
 import sys
-import time
 
 from PIL import Image
 import requests
 
 DEBUG = False
+GPS_INFO_TAG = 34853 # "GPSInfo"
 
 # Values in these constants was extracted from:
 # from PIL.ExifTags import TAGS, GPSTAGS
-# img.getexif().get_ifd(GPS_INFO_TAG)
-# >>> {1: 'N', 2: (37.0, 47.0, 12.85), 3: 'W', 4: (122.0, 15.0, 19.94), 5: b'\x00', 6: 4.120659187112152, 12: 'K', 13: 0.0, 16: 'T', 17: 320.42755102040815, 23: 'T', 24: 320.42755102040815, 29: '2022:01:03', 31: 4.999077948790695}
+# pprint(img.getexif().get_ifd(GPS_INFO_TAG))
+# {
+#   1: 'N',
+#   2: (44.0, 2.0, 18.02),
+#   3: 'W',
+#   4: (123.0, 3.0, 23.11),
+#   5: b'\x00',
+#   6: 200.624308608708,
+#  12: 'K',
+#  13: 0.17858947470426592,
+#  16: 'M',
+#  17: 84.61828618286182,
+#  23: 'M',
+#  24: 84.61828618286182,
+#  31: 5.369866362451108
+# }
 
-GPS_INFO_TAG = 34853 # "GPSInfo"
 LAT_REF = 1 # e.g. "N"
 LAT = 2 # e.g.  (37.0, 47.0, 12.85)
 LNG_REF = 3 # e.g. W
@@ -50,7 +64,7 @@ class Plaque:
                 'description': self.description,
                 #'tags': 'bench',
             }
-            response = requests.post(Plaque.submit_url, files=files, data=data)
+            response = requests.post(Plaque.submit_url, files=files, data=data, timeout=60)
             response.raise_for_status()
 
     def _set_exif_lat_lng(self):
@@ -74,15 +88,14 @@ class Plaque:
             self.lng = self.DEFAULT_LNG
 
     def __repr__(self):
-        return "{0.fname} ({0.lat:.5f}, {0.lng:.5f})".format(self)
+        return f"{self.fname} ({self.lat:.5f}, {self.lng:.5f})"
 
 def main(img_fnames):
     """
-    For a given list of images, make plaque instances and submit them to Read
-    The Plaque.
+    For a list of images, make plaque instances and submit to Read The Plaque.
     """
     plaques = []
-    print("Loading {} images".format(len(img_fnames)))
+    print(f"Loading {len(img_fnames)} images")
     for fname in img_fnames:
         plaque = Plaque(fname)
         plaques.append(plaque)
@@ -92,13 +105,17 @@ def main(img_fnames):
     failed = []
 
     for i, plaque in enumerate(plaques):
-        print("posting {} / {} {}".format(i+1, len(plaques), plaque))
+        print(f"posting {i+1} / {len(plaques)} {plaque}", end="")
         try:
             if not DEBUG:
+                tstart = datetime.datetime.now()
                 plaque.submit()
+                tend = datetime.datetime.now()
+                print(" ", tend-tstart)
             succeeded.append(plaque.fname)
         except requests.exceptions.HTTPError:
             failed.append(plaque.fname)
+            print(", failed")
 
     if succeeded:
         print("\nUploaded successfully:\n\t{}".format("\n\t".join(succeeded)))
