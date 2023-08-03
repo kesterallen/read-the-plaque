@@ -4,10 +4,7 @@ import logging
 import math
 import random
 
-from google.appengine.api import mail
-from google.appengine.api import memcache
-from google.appengine.api import users
-from google.appengine.api import search
+from google.appengine.api import mail, memcache, users, search
 from google.appengine.ext import ndb
 
 from Models import Plaque
@@ -38,13 +35,11 @@ def latlng_angles_to_dec(ref, latlng_angles):
     latlng = float(latlng_angles[0]) + \
              float(latlng_angles[1]) / 60.0 + \
              float(latlng_angles[2]) / 3600.0
-    if ref in ['N', 'E']:
-        pass
-    elif ref in ['S', 'W']:
+    if ref not in ['N', 'E', 'S', 'W']:
+        raise SubmitError('reference "{}" needs to be either N, S, E, or W'.format(ref))
+
+    if ref in ['S', 'W']:
         latlng *= -1.0
-    else:
-        raise SubmitError(
-            'reference "{}" needs to be either N, S, E, or W'.format(ref))
 
     return latlng
 
@@ -70,16 +65,19 @@ def get_bounding_box(plaques):
 def get_template_values(**kwargs):
     memcache_name = 'template_values_{}'.format(users.is_current_user_admin())
     template_values = memcache.get(memcache_name)
-    #TODO: insert the google maps API key here?
     if template_values is None:
         #num_pending = Plaque.num_pending(num=DEF_NUM_PENDING)
         footer_items = get_footer_items()
         loginout_output = loginout()
 
+        with open('key_googlevision.txt') as key_fh:
+            google_maps_api_key = key_fh.read()
+
         template_values = {
             'footer_items': footer_items,
             'loginout': loginout_output,
             'dynamic_plaque_cutoff': DYNAMIC_PLAQUE_CUTOFF,
+            'google_maps_api_key': google_maps_api_key,
         }
         memcache_status = memcache.set(memcache_name, template_values)
         if not memcache_status:
