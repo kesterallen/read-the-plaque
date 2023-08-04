@@ -62,6 +62,12 @@ def get_bounding_box(plaques):
         bounding_box = None
     return bounding_box
 
+def get_key(key_filename="key_googlemaps.txt"):
+    """ Get the value of the key in the given file """
+    with open(key_filename) as key_fh:
+        key = key_fh.read().rstrip()
+    return key
+
 def get_template_values(**kwargs):
     memcache_name = 'template_values_{}'.format(users.is_current_user_admin())
     template_values = memcache.get(memcache_name)
@@ -70,14 +76,12 @@ def get_template_values(**kwargs):
         footer_items = get_footer_items()
         loginout_output = loginout()
 
-        with open('key_googlevision.txt') as key_fh:
-            google_maps_api_key = key_fh.read().rstrip()
 
         template_values = {
             'footer_items': footer_items,
             'loginout': loginout_output,
             'dynamic_plaque_cutoff': DYNAMIC_PLAQUE_CUTOFF,
-            'google_maps_api_key': google_maps_api_key,
+            'google_maps_api_key': get_key(),
         }
         memcache_status = memcache.set(memcache_name, template_values)
         if not memcache_status:

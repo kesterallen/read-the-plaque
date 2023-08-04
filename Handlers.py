@@ -24,6 +24,7 @@ from utils import (
     PLAQUE_SEARCH_INDEX_NAME,
     SubmitError,
     email_admin,
+    get_key,
     get_random_plaque,
     get_random_plaque_key,
     get_template_values,
@@ -454,8 +455,7 @@ class ExifText(BigMap):
 
 class Ocr(webapp2.RequestHandler):
     def get(self, img_url=None):
-        with open('key_googlevision.txt') as key_fh:
-            key = key_fh.read()
+        key = get_key("key_googlevision.txt")
         url = "https://vision.googleapis.com/v1/images:annotate?key=" + key
         data = json.dumps({
             "requests": [{
