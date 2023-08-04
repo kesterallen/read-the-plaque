@@ -71,7 +71,7 @@ def get_template_values(**kwargs):
         loginout_output = loginout()
 
         with open('key_googlevision.txt') as key_fh:
-            google_maps_api_key = key_fh.read()
+            google_maps_api_key = key_fh.read().rstrip()
 
         template_values = {
             'footer_items': footer_items,
