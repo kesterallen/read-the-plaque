@@ -83,7 +83,7 @@ class Plaque:
                 self.lat = _decimal_pos_from_exif(gps[LAT], gps[LAT_REF])
                 self.lng = _decimal_pos_from_exif(gps[LNG], gps[LNG_REF])
         except (TypeError, KeyError) as err:
-            print("Error in GPS read, using defaults,", err, type(err), self.fname)
+            print(f"Error in GPS read for {self.fname}, using defaults. {err} {type(err)}")
             self.lat = self.DEFAULT_LAT
             self.lng = self.DEFAULT_LNG
 
