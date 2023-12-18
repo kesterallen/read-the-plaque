@@ -7,12 +7,8 @@ import re
 import urllib
 
 import webapp2
-from google.appengine.api import memcache
-from google.appengine.api import users
-from google.appengine.ext import ndb
-from google.appengine.api import images
-from google.appengine.api import search
-from google.appengine.ext import blobstore
+from google.appengine.api import memcache, users, images, search
+from google.appengine.ext import blobstore, ndb
 from google.appengine.ext.db import BadValueError
 import lib.cloudstorage as gcs
 
@@ -430,10 +426,13 @@ class EditPlaque(AddPlaque):
                 message = "Editing Plaque"
 
         template = JINJA_ENVIRONMENT.get_template('add.html')
-        template_values = {
-            'plaque': plaque,
-            'loginout': loginout()
-        }
+        template_values = get_template_values(
+            maptext="",
+            mapzoom=9,
+            page_title="Edit Plaque",
+            plaque=plaque,
+            loginout=loginout(),
+        )
         if message is not None:
             template_values['message'] = message
 
