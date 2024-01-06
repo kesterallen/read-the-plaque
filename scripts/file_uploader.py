@@ -2,6 +2,7 @@
 
 import datetime
 import sys
+import time
 
 from PIL import Image
 import requests
@@ -112,6 +113,7 @@ def main(img_fnames):
                 plaque.submit()
                 tend = datetime.datetime.now()
                 print(" ", tend-tstart)
+                time.sleep(30)
             succeeded.append(plaque.fname)
         except requests.exceptions.HTTPError:
             failed.append(plaque.fname)
