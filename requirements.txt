@@ -1,0 +1,11 @@
+pillow
+requests
+python-dateutil
+jinja2
+Flask
+urllib3
+
+google-cloud-datastore<2.0.0dev
+google-cloud-ndb
+google-cloud-storage
+google-cloud-vision

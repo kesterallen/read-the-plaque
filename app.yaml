@@ -1,115 +1,103 @@
-runtime: python27
-api_version: 1
-threadsafe: true
+runtime: python312
 
 handlers:
-- url: /.*php
-  static_files: static/nophp.txt
-  upload: static/nophp.txt 
-
-- url: /wp-content.*
-  static_files: static/nophp.txt
-  upload: static/nophp.txt
-
-- url: /wp/wp-content.*
-  static_files: static/nophp.txt
-  upload: static/nophp.txt
-
-- url: /robots.txt
-  static_files: static/robots.txt
-  upload: static/robots.txt
-
-- url: /apple-touch-icon.*
-  static_files: static/images/apple-touch-icon.png
-  upload: static/images/apple-touch-icon.png
-
-- url: /favicon\.ico
-  static_files: static/images/favicon.ico
-  upload: static/images/favicon\.ico
-
-- url: /googlea9436158c9d937ee.html
-  static_files: googlea9436158c9d937ee.html
-  upload: googlea9436158c9d937ee.html
-
-- url: /static
-  static_dir: static
-  secure: always
-
-- url: /images
-  static_dir: static/images
-  secure: always
-
-- url: /mulberry
-  static_files: static/mulberry_map_demo.html
-  upload: static/mulberry_map_demo.html
-
-- url: /worms
-  static_files: static/mulberry_map_demo.html
-  upload: static/mulberry_map_demo.html
-
-- url: /pancakes
-  static_files: static/pancakes/map.html
-  upload: static/pancakes/map.html
-
-- url: /delete
-  script: View.app
-  login: admin
-  secure: always
-
-- url: /setfeatured
-  script: View.app
-  login: admin
-  secure: always
-
-- url: /pending
-  script: View.app
-  login: admin
-  secure: always
-
-- url: /approve
-  script: View.app
-  login: admin
-  secure: always
-
-- url: /disapprove
-  script: View.app
-  login: admin
-  secure: always
-
-- url: /approveall
-  script: View.app
-  login: admin
-  secure: always
-
-- url: /edit
-  script: View.app
-  login: admin
-  secure: always
-
-- url: /submit-your-own
-  script: View.app
-  secure: always
-
-- url: /add
-  script: View.app
-  secure: always
-
-- url: /nearby
-  script: View.app
-  secure: always
-
-- url: /.*
-  script: View.app
-  secure: always
-
-libraries:
-- name: webapp2
-  version: latest
-- name: jinja2
-  version: latest
-- name: PIL
-  version: latest
-
-#builtins:
-#- appstats: on
+  - url: /.*php
+    static_files: static/nophp.txt
+    upload: static/nophp.txt 
+  
+  - url: /wp-content.*
+    static_files: static/nophp.txt
+    upload: static/nophp.txt
+  
+  - url: /wp/wp-content.*
+    static_files: static/nophp.txt
+    upload: static/nophp.txt
+  
+  - url: /robots.txt
+    static_files: static/robots.txt
+    upload: static/robots.txt
+  
+  - url: /apple-touch-icon.*
+    static_files: static/images/apple-touch-icon.png
+    upload: static/images/apple-touch-icon.png
+  
+  - url: /favicon\.ico
+    static_files: static/images/favicon.ico
+    upload: static/images/favicon\.ico
+  
+  - url: /googlea9436158c9d937ee.html
+    static_files: googlea9436158c9d937ee.html
+    upload: googlea9436158c9d937ee.html
+  
+  - url: /static
+    static_dir: static
+    secure: always
+  
+  - url: /images
+    static_dir: static/images
+    secure: always
+  
+  - url: /mulberry
+    static_files: static/mulberry_map_demo.html
+    upload: static/mulberry_map_demo.html
+  
+  - url: /worms
+    static_files: static/mulberry_map_demo.html
+    upload: static/mulberry_map_demo.html
+  
+  - url: /pancakes
+    static_files: static/pancakes/map.html
+    upload: static/pancakes/map.html
+  
+  - url: /delete
+    script: View.app
+    login: admin
+    secure: always
+  
+  - url: /setfeatured
+    script: View.app
+    login: admin
+    secure: always
+  
+  - url: /pending
+    script: View.app
+    login: admin
+    secure: always
+  
+  - url: /approve
+    script: View.app
+    login: admin
+    secure: always
+  
+  - url: /disapprove
+    script: View.app
+    login: admin
+    secure: always
+  
+  - url: /approveall
+    script: View.app
+    login: admin
+    secure: always
+  
+  - url: /edit
+    script: View.app
+    login: admin
+    secure: always
+  
+  - url: /submit-your-own
+    script: View.app
+    secure: always
+  
+  - url: /add
+    script: View.app
+    secure: always
+  
+  - url: /nearby
+    script: View.app
+    secure: always
+  
+  - url: /.*
+    script: View.app
+    secure: always
+  
 
