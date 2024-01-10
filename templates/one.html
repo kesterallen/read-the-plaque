@@ -47,7 +47,7 @@
       <div class="col-xs-12 col-md-6">
         <div class="panel panel-default">
           <div class="panel-body">
-            <p>{{plaque.description}}</p>
+            <p>{{plaque.description | safe}}</p>
             <ul class="list-inline">
               {% for tag in plaque.tags %} <li><a href="/tag/{{tag}}" alt="{{tag}}">{{tag}}</a></li> {% endfor %}
             </ul>

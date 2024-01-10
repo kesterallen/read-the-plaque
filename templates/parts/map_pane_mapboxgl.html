@@ -9,7 +9,7 @@ function plaquesGeoJson() {
   var geoJson = {
     "type": "FeatureCollection", 
     "features": [
-      {% for plaque in plaques %}{{plaque.to_geojson()}},{% endfor %}
+      {% for plaque in plaques %}{{plaque.to_geojson() | safe}},{% endfor %}
     ]
   };
   return geoJson;
