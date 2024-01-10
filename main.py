@@ -22,12 +22,17 @@ def display():
 
 @app.route("/plaque")
 def plaque_get():
+
     client = ndb.Client()
     with client.context() as context:
         plaques = Plaque.query().fetch(1)
         for plaque in plaques:
             print(plaque)
-    return str(plaque)
+            print(plaque.location)
+            print(dir(plaque.location))
+
+        loginout = dict(isadmin=False, url=None, text=None)
+        return render_template("one.html", plaques=[plaque], loginout=loginout)
 
 @app.route("/counts")
 def counts():
