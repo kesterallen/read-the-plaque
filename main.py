@@ -30,7 +30,7 @@ def about_get():
     template_text = render_template("about.html")
     return template_text
 
-@app.route("/abc_add_plaque")
+@app.route("/plaque/add")
 def plaque_add():
     featured = FeaturedPlaque()
     print(featured)
@@ -40,22 +40,34 @@ def plaque_add():
     print(dir(featured))
     return("featured")
 
-@app.route("/abc_read_plaque")
+@app.route("/plaque")
 def plaque_get():
     print("a")
     client = ndb.Client()
     print("b")
     with client.context() as context:
         print("c")
-        featureds = FeaturedPlaque.query().fetch(5)
+        plaques = Plaque.query().fetch(5)
 
-        for featured in featureds:
-            print(featured)
+        for plaque in plaques:
+            print(plaque)
         #print("d")
         #plaque = Plaque.query().filter(Plaque.key == featured.plaque).get()
         print("e")
-        print(plaque)
+        #print(plaque)
     return "foo"
+
+@app.route("/counts")
+def counts():
+    print("a")
+    client = ndb.Client()
+    print("b")
+    with client.context() as context:
+        query = Plaque.query()
+        num_plaques = query.count()
+        num_pending = query.filter(Plaque.approved == False).count()
+        return f"{num_plaques} plaques, {num_pending} pending"
+
 
 if __name__ == '__main__':
     # This is used when running locally only. When deploying to Google App
