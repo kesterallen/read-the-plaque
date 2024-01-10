@@ -20,48 +20,18 @@ app = Flask(__name__)
 def display():
     return("hello")
 
-@app.route("/abc")
-def display_abc():
-    return("hello abc")
-
-@app.route("/abc_about")
-def about_get():
-    """ templates """
-    template_text = render_template("about.html")
-    return template_text
-
-@app.route("/plaque/add")
-def plaque_add():
-    featured = FeaturedPlaque()
-    print(featured)
-    client = ndb.Client()
-    with client.context() as context:
-        featured.put()
-    print(dir(featured))
-    return("featured")
-
 @app.route("/plaque")
 def plaque_get():
-    print("a")
     client = ndb.Client()
-    print("b")
     with client.context() as context:
-        print("c")
-        plaques = Plaque.query().fetch(5)
-
+        plaques = Plaque.query().fetch(1)
         for plaque in plaques:
             print(plaque)
-        #print("d")
-        #plaque = Plaque.query().filter(Plaque.key == featured.plaque).get()
-        print("e")
-        #print(plaque)
-    return "foo"
+    return str(plaque)
 
 @app.route("/counts")
 def counts():
-    print("a")
     client = ndb.Client()
-    print("b")
     with client.context() as context:
         query = Plaque.query()
         num_plaques = query.count()
