@@ -31,6 +31,7 @@ def plaque_get():
             print(plaque.location)
             print(dir(plaque.location))
 
+        #TODO: get users accounts working
         loginout = dict(isadmin=False, url=None, text=None)
         return render_template("one.html", plaques=[plaque], loginout=loginout)
 
