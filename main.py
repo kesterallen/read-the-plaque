@@ -2,10 +2,16 @@
 Main run script
 """
 
+import datetime as dt
 from google.cloud import ndb
 from flask import Flask, render_template
+import random
 
 from rtp.models import Plaque, FeaturedPlaque
+
+FIRST_YEAR = 2015
+FIRST_MONTH = 9
+FIRST_DAY = 9
 
 DEF_NUM_PER_PAGE = 25
 DEF_RAND_NUM_PER_PAGE = 5
@@ -26,10 +32,10 @@ def _loginout() -> dict:
 
 @app.route("/")
 def all_plaques():
-    # cursor = None
+    # cursor = None # TODO
     per_page = DEF_NUM_PER_PAGE
-    # is_random = False
-    # is_featured = True
+    # is_random = False # TODO
+    # is_featured = True # TODO
 
     client = ndb.Client()
     with client.context() as context:
@@ -43,7 +49,7 @@ def all_plaques():
         return render_template(
             "all.html",
             plaques=plaques,
-            next_cursor_urlsafe="foo", # TODO
+            next_cursor_urlsafe="foo",  # TODO
             loginout=_loginout(),
         )
 
@@ -51,19 +57,40 @@ def all_plaques():
 @app.route("/plaque/<string:search_term>/")
 def one_plaque(search_term: str) -> str:
     # TODO: add other search terms possibilities (key, old ID, etc)
-    print(search_term)
     client = ndb.Client()
     with client.context() as context:
-        one_plaque = Plaque.query().filter(Plaque.title_url == search_term).fetch(1)
-        return render_template("one.html", plaques=one_plaque, loginout=_loginout())
+        one_plaque = Plaque.query().filter(Plaque.title_url == search_term).get()
+        return render_template("one.html", plaques=[one_plaque], loginout=_loginout())
 
 
-@app.route("/plaque")
-def plaque_get() -> str:
+def _random_time(year=FIRST_YEAR, month=FIRST_MONTH, day=FIRST_DAY) -> dt.datetime:
+    """
+    Utilize the fact that the first plaque submission was 2015-09-09 to
+    generate a random time between then and now.
+    """
+    first = dt.datetime(year, month, day)
+    now = dt.datetime.now()
+    rand_seconds = random.randint(0, int((now - first).total_seconds()))
+    return first + dt.timedelta(seconds=rand_seconds)
+
+
+@app.route("/random")
+@app.route("/random/<int:num_plaques>")
+@app.route("/randompage")
+@app.route("/randompage/<int:num_plaques>")
+def random_plaques(num_plaques: int = 1) -> str:
+    plaques = []
     client = ndb.Client()
     with client.context() as context:
-        plaques = Plaque.query().fetch(1)
-        return render_template("one.html", plaques=[plaque], loginout=loginout())
+        for _ in range(num_plaques):
+            plaque = (
+                Plaque.query()
+                .filter(Plaque.approved == True)
+                .filter(Plaque.created_on > _random_time())
+                .get()
+            )
+            plaques.append(plaque)
+        return render_template("all.html", plaques=plaque, loginout=_loginout())
 
 
 @app.route("/counts")
