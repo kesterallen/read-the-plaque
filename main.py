@@ -25,7 +25,8 @@ def plaque(search_term):
     print(search_term)
     client = ndb.Client()
     with client.context() as context:
-        plaque = Plaque.query().filter(Plaque.title_url == search_term).fetch(1)
+        plaques = Plaque.query().filter(Plaque.title_url == search_term).fetch(1)
+        plaque = plaques[0]
         print(plaque)
         #TODO: get users accounts working
         loginout = dict(isadmin=False, url=None, text=None)
