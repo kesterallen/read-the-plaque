@@ -20,6 +20,17 @@ app = Flask(__name__)
 def display():
     return("hello")
 
+@app.route('/plaque/<string:search_term>/')
+def plaque(search_term):
+    print(search_term)
+    client = ndb.Client()
+    with client.context() as context:
+        plaque = Plaque.query().filter(Plaque.title_url == search_term).fetch(1)
+        print(plaque)
+        #TODO: get users accounts working
+        loginout = dict(isadmin=False, url=None, text=None)
+        return render_template("one.html", plaques=[plaque], loginout=loginout)
+
 @app.route("/plaque")
 def plaque_get():
 
