@@ -39,8 +39,13 @@ def all_plaques():
             .order(-Plaque.created_on)
             .fetch(limit=per_page)
         )
-        for plaque in plaques:
-            print(plaques)
+
+        return render_template(
+            "all.html",
+            plaques=plaques,
+            next_cursor_urlsafe="foo", # TODO
+            loginout=_loginout(),
+        )
 
 
 @app.route("/plaque/<string:search_term>/")
@@ -58,11 +63,6 @@ def plaque_get() -> str:
     client = ndb.Client()
     with client.context() as context:
         plaques = Plaque.query().fetch(1)
-        for plaque in plaques:
-            print(plaque)
-            print(plaque.location)
-            print(dir(plaque.location))
-
         return render_template("one.html", plaques=[plaque], loginout=loginout())
 
 
