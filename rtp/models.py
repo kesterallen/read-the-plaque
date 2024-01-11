@@ -294,7 +294,6 @@ class Plaque(ndb.Model):
             data["properties"]["img_url"] = self.img_url
             data["properties"]["tags"] = self.tags
 
-        print(data)
         return json.dumps(data) if jsonify else data
 
     def to_dict(self, summary=False):

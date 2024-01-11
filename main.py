@@ -78,7 +78,7 @@ def _random_time(year=FIRST_YEAR, month=FIRST_MONTH, day=FIRST_DAY) -> dt.dateti
 @app.route("/random/<int:num_plaques>")
 @app.route("/randompage")
 @app.route("/randompage/<int:num_plaques>")
-def random_plaques(num_plaques: int = 1) -> str:
+def random_plaques(num_plaques: int = 5) -> str:
     plaques = []
     client = ndb.Client()
     with client.context() as context:
@@ -90,7 +90,7 @@ def random_plaques(num_plaques: int = 1) -> str:
                 .get()
             )
             plaques.append(plaque)
-        return render_template("all.html", plaques=plaque, loginout=_loginout())
+        return render_template("all.html", plaques=plaques, loginout=_loginout())
 
 
 @app.route("/counts")
