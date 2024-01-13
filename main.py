@@ -3,9 +3,10 @@ Main run script
 """
 
 import datetime as dt
-from google.cloud import ndb
-from flask import Flask, render_template, request
 import random
+
+from google.cloud import ndb
+from flask import Flask, render_template, request, redirect
 
 from rtp.models import Plaque, FeaturedPlaque
 
@@ -36,6 +37,25 @@ def get_key(key_filename="key_googlemaps.txt"):
     return key
 
 
+def _render_template(template_file, plaques=None, args_dict=None) -> str:
+    """A wrapper for flask.render_template that injects some defaults"""
+    if args_dict is None:
+        return render_template(
+            template_file,
+            plaques=plaques,
+            next_cursor_urlsafe="foo",  # TODO
+            loginout=_loginout(),
+        )
+    else:
+        return render_template(
+            template_file,
+            plaques=plaques,
+            next_cursor_urlsafe="foo",  # TODO
+            loginout=_loginout(),
+            **args_dict,
+        )
+
+
 # TODO: get users accounts working
 def _loginout() -> dict:
     return dict(isadmin=False, url=None, text=None)
@@ -43,10 +63,10 @@ def _loginout() -> dict:
 
 @app.route("/", methods=["GET", "HEAD"])
 def many_plaques():
-    """View a page of multiple plauqes"""
+    """View a page of multiple plaques"""
     # Return a lightweight response for a HEAD request
     if request.method == "HEAD":
-        return render_template("head.html")
+        return _render_template("head.html")
 
     # cursor = None # TODO
     per_page = DEF_NUM_PER_PAGE
@@ -55,12 +75,7 @@ def many_plaques():
 
     with ndb.Client().context() as context:
         plaques, next_cur, more = Plaque.fetch_page(DEF_NUM_PER_PAGE)
-        return render_template(
-            "all.html",
-            plaques=plaques,
-            next_cursor_urlsafe="foo",  # TODO
-            loginout=_loginout(),
-        )
+        return _render_template("all.html", plaques=plaques)
 
 
 @app.route("/pending")
@@ -69,25 +84,39 @@ def pending_plaques(num: int = DEF_NUM_PENDING) -> str:
     """View the most recent pending plaques."""
     with ndb.Client().context() as context:
         plaques = Plaque.pending_list(num)
-        return render_template(
-            "all.html",
-            plaques=plaques,
-            next_cursor_urlsafe="foo",  # TODO
-            loginout=_loginout(),
-        )
+        return _render_template("all.html", plaques=plaques)
 
 
-@app.route("/plaque/<string:search_term>/", methods=["GET", "HEAD"])
+@app.route("/plaque/<string:search_term>", methods=["GET", "HEAD"])
 def one_plaque(search_term: str) -> str:
     """View one plaque."""
     # Return a lightweight response for a HEAD request
     if request.method == "HEAD":
-        return render_template("head.html")
+        return _render_template("head.html")
 
+    # TODO: map center/zoom needs to be set
     # TODO: add other search terms possibilities (key, old ID, etc)
     with ndb.Client().context() as context:
         plaque = Plaque.query().filter(Plaque.title_url == search_term).get()
-        return render_template("one.html", plaques=[plaque], loginout=_loginout())
+        return _render_template("one.html", plaques=[plaque])
+
+
+@app.route("/edit/<string:plaque_key>", methods=["GET", "POST"])
+def edit_plaque(plaque_key: str) -> str:
+    if plaque_key is None:
+        return redirect("/")
+
+    if request.method == "POST":
+        return render_template(
+            "edit_p3_tmp.html",
+            plaque_key=plaque_key,
+            title=request.form["title"],
+            tags=request.form["tags"],
+        )
+    elif request.method == "GET":
+        return render_template("edit_p3_tmp.html", plaque_key=plaque_key)
+    else:
+        return redirect("/")
 
 
 @app.route("/random")
@@ -117,7 +146,7 @@ def random_plaques(num_plaques: int = 5) -> str:
                 .get()
             )
             plaques.append(plaque)
-        return render_template("all.html", plaques=plaques, loginout=_loginout())
+        return _render_template("all.html", plaques=plaques)
 
 
 # TODO: add argument for number of plaques
@@ -133,7 +162,7 @@ def tagged_plaques(tag: str, only_approved: bool = True) -> str:
             .order(-Plaque.created_on)
             .fetch(limit=DEF_NUM_PER_PAGE)
         )
-        return render_template("all.html", plaques=plaques, loginout=_loginout())
+        return _render_template("all.html", plaques=plaques)
 
 
 @app.route("/map")
@@ -156,7 +185,7 @@ def map(lat: str = None, lng: str = None, zoom: str = None) -> str:
             if zoom is not None:
                 template_values["bigmap_zoom"] = float(zoom)
 
-        return render_template("bigmap.html", **template_values)
+        return _render_template("bigmap.html", **template_values)
 
 
 @app.route("/counts")
@@ -175,13 +204,13 @@ def rss_feed() -> str:
     """RSS feed for newly-added plaques"""
     with ndb.Client().context() as context:
         plaques, next_cur, more = Plaque.fetch_page(DEF_NUM_RSS)
-        return render_template("feed.xml", plaques=plaques)
+        return _render_template("feed.xml", plaques=plaques)
 
 
 @app.route("/about")
 def about() -> str:
     """Read the about page. This could be a static page"""
-    return render_template("about.html")
+    return _render_template("about.html")
 
 
 # TODO
