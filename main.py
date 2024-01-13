@@ -191,12 +191,19 @@ def map(lat: str = None, lng: str = None, zoom: str = None) -> str:
 @app.route("/counts")
 def counts() -> str:
     """View the counts"""
-    # TODO: add verbose flag
+
+    verbose = request.args.get("verbose", default=False, type=bool)
+
     with ndb.Client().context() as context:
         query = Plaque.query()
         num_plaques = query.count()
         num_pending = query.filter(Plaque.approved == False).count()
-        return f"{num_plaques} plaques, {num_pending} pending"
+
+        return (
+            f"<ul><li>{num_plaques} plaques</li><li>{num_pending} pending</li></ul>"
+            if verbose
+            else f"{num_plaques} plaques, {num_pending} pending"
+        )
 
 
 @app.route("/rss")
