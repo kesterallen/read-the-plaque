@@ -84,7 +84,9 @@ def pending_plaques(num: int = DEF_NUM_PENDING) -> str:
     """View the most recent pending plaques."""
     with ndb.Client().context() as context:
         plaques = Plaque.pending_list(num)
-        return _render_template("all.html", plaques=plaques)
+        return _render_template(
+            "all.html", title="View Pending Plaques", plaques=plaques
+        )
 
 
 @app.route("/plaque/<string:search_term>", methods=["GET", "HEAD"])
@@ -101,20 +103,100 @@ def one_plaque(search_term: str) -> str:
         return _render_template("one.html", plaques=[plaque])
 
 
+def _get_img_from_request(request):
+    """
+    Get an image, either an uploaded file (prefered if both are specified), or
+    from a URL pointing to a file .
+    """
+
+    if img_file != "" and img_file is not None:
+        img_file = self.request.POST.get("plaque_image_file")
+        img_name = img_file.filename
+        img_fh = img_file.file
+    elif img_url != "":
+        img_url = request.form.get("plaque_image_url")
+        img_name = os.path.basename(img_url)
+        img_fh = urllib.urlopen(img_url)
+    else:
+        img_name = None
+        img_fh = None
+
+    return img_name, img_fh
+
+
+def _plaque_for_insert(args) -> Plaque:
+    """
+    Make a new Plaque object for insert
+    """
+    title = self.request.get("title")[:1499]  # limit to 1500 char
+    description = self.request.get("description")
+    img_name, img_fh = _get_img_from_request(request)
+    # verbose = request.args.get("verbose", default=False, type=bool)
+
+    plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
+    plaque_search_index.put(plaque.to_search_document())
+
+    plaque = Plaque(parent=plaqueset_key)
+    if args.title != plaque.title:
+        plaque.title = args.title
+        plaque.set_title_url(plaqueset_key)
+
+    plaque.description = args.description
+    plaque.location = args.location
+    plaque.tags = args.tags
+    plaque.approved = False
+    plaque.created_on = datetime.datetime.now()
+    plaque.created_by = args.created_by  # ? created_by = users.get_current_user()
+    plaque.updated_on = datetime.datetime.now()
+    plaque.updated_by = None
+
+    # Upload the image for a new plaque, or update the an editted plaque's image
+    self._upload_image(img_name, img_fh, plaque)
+
+
+@app.route("/add", methods=["GET", "POST"])
+@app.route("/submit", methods=["GET", "POST"])
+@app.route("/submit-your-own", methods=["GET", "POST"])
+def add_plaque() -> str:
+    if request.method == "POST":
+        return _render_template("add.html")
+    elif request.method == "GET":
+        maptext = (
+            "Click the plaque's location on the map, or search "
+            "for it, or enter its lat/lng location"
+        )
+        return (
+            _render_template(
+                "add.html",
+                args_dict=dict(
+                    maptext=maptext,
+                    mapzoom=10,
+                    google_maps_api_key=get_key(),
+                    page_title="Add Plaque",
+                ),
+            ),
+        )
+    else:
+        print("add not GET or POST")
+        return redirect("/")
+
+
 @app.route("/edit/<string:plaque_key>", methods=["GET", "POST"])
 def edit_plaque(plaque_key: str) -> str:
     if plaque_key is None:
         return redirect("/")
 
     if request.method == "POST":
-        return render_template(
+        return _render_template(
             "edit_p3_tmp.html",
-            plaque_key=plaque_key,
-            title=request.form["title"],
-            tags=request.form["tags"],
+            args_dict=dict(
+                plaque_key=plaque_key,
+                title=request.form["title"],
+                tags=request.form["tags"],
+            ),
         )
     elif request.method == "GET":
-        return render_template("edit_p3_tmp.html", plaque_key=plaque_key)
+        return _render_template("edit_p3_tmp.html", plaque_key=plaque_key)
     else:
         return redirect("/")
 
