@@ -71,8 +71,8 @@ class Plaque(ndb.Model):
     @classmethod
     def tokenize_title(cls, title):
         title = title.strip().lower()
-        title = re.sub('[^\w]+', '-', title) # replace one or more non-word chars with a single dash
-        title = re.sub('^-+|-+$', '', title) # remove leading or trailing dashes
+        title = re.sub(r'[^\w]+', '-', title) # replace one or more non-word chars with a single dash
+        title = re.sub(r'^-+|-+$', '', title) # remove leading or trailing dashes
         return title
 
     @classmethod
