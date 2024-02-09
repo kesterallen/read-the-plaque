@@ -59,7 +59,7 @@ def get_key(key_filename="key_googlemaps.txt"):
 # same entity group. Queries across the single entity group will be consistent.
 # However, the write rate should be limited to ~1/second.
 #
-def get_plaqueset_key(plaqueset_name=DEF_PLAQUESET_NAME):
+def plaqueset_key(plaqueset_name=DEF_PLAQUESET_NAME):
     """
     Constructs a Datastore key for a Plaque entity. Use plaqueset_name as
     the key.
@@ -133,12 +133,17 @@ def one_plaque(search_term: str) -> str:
         return _render_template("head.html")
 
     # TODO: add other search terms possibilities (key, old ID, etc)
+
     with ndb.Client().context() as context:
-        plaques = Plaque.query().filter(Plaque.title_url == search_term).fetch(1)
+        # Get plaque if exists, otherwise get earliest
+        plaque = Plaque.query().filter(Plaque.title_url == search_term).get()
+        if plaque is None:
+            plaque = Plaque.query().order(Plaque.created_on).get()
+
         return _render_template(
             "one.html",
-            plaques=plaques,
-            bounding_box=_get_bounding_box(plaques),
+            plaques=[plaque],
+            bounding_box=_get_bounding_box([plaque]),
             mapzoom=10,
             maptext="",
             google_maps_api_key=get_key(),
@@ -161,16 +166,21 @@ def _get_img_from_request():
     Get an image, either an uploaded file (prefered if both are specified), or
     from a URL pointing to a file .
     """
+    # If there is a valid file, use it:
+    img_fh = request.files["plaque_image_file"]
+    img_name = img_fh.filename
+    if img_name:
+        return img_name, img_fh
 
-    if "plaque_image_file" in request.files:
-        img_fh = request.files["plaque_image_file"]
-        img_name = img_fh.filename
-    else:
+    # No? Check the plaque_img_url field and use that if it has a URL:
+    if request.form["plaque_image_url"]:
         img_url = request.form["plaque_image_url"]
         img_name = os.path.basename(img_url)
         img_fh = urllib.request.urlopen(img_url)
+        return img_name, img_fh
 
-    return img_name, img_fh
+    # Otherwise return None, None
+    return None, None
 
 
 def _latlng_get_angles(coords_tags):
@@ -201,7 +211,6 @@ def _latlng_angles_to_dec(ref, latlng_angles):
 
 def _get_location():
     """Convert form input into a GeoPt location"""
-    # TODO: verify lat / lng exist and are castable to float
     lat = float(request.form["lat"])
     lng = float(request.form["lng"])
     return ndb.GeoPt(lat, lng)
@@ -216,6 +225,7 @@ def _get_tags():
     return tags
 
 
+# TODO: remove img_name from signature?
 def _upload_image(img_name, img_fh, plaque):
     """
     Upload pic into GCS
@@ -239,11 +249,10 @@ def _upload_image(img_name, img_fh, plaque):
     img_fh.seek(0) # reset file handle
     base64_img_bytes = img_fh.read()
     blob.upload_from_string(base64_img_bytes)
-    #blob.create()
-    blob.make_public()
+    make_public_url = blob.make_public()
 
 
-#    # Kill old image and URL, if they exist. If they don't, eat the error:
+#    # Kill old image and URL, if they exist. If they don't, ignore any errors:
 #    #
 #    if plaque.pic is not None:
 #        try:
@@ -256,27 +265,23 @@ def _upload_image(img_name, img_fh, plaque):
 #        except:
 #            pass
 
-    #blob.upload_from_string(img_string)
-    print(blob.public_url)
-    print(blob.media_link)
-    plaque.img_url = blob.public_url
+    #print("make public URL", make_public_url)
+    #print("public URL", blob.public_url)
+    #print("media link", blob.media_link)
+    plaque.img_url = blob.media_link
 
 
 def _plaque_for_insert() -> Plaque:
     """
     Make a new Plaque object for insert
     """
-    img_name, img_fh = _get_img_from_request()
 
     ### plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME) # TODO figure out search in new GCP
     ### plaque_search_index.put(plaque.to_search_document()) # TODO figure out search in new GCP
 
-    plaqueset_key = get_plaqueset_key()
-    plaque = Plaque(parent=plaqueset_key)
+    plaque = Plaque(parent=plaqueset_key())
 
-    plaque.title = request.form["title"][:1499]  # limit to 1500 char
-    plaque.set_title_url(plaqueset_key)
-
+    plaque.set_title_and_title_url(request.form["title"], plaqueset_key())
     plaque.description = request.form["description"]
     plaque.location = _get_location()
     plaque.tags = _get_tags()
@@ -287,7 +292,8 @@ def _plaque_for_insert() -> Plaque:
     plaque.updated_on = dt.datetime.now()
     plaque.updated_by = None
 
-    # Upload the image for a new plaque, or update the an editted plaque's image
+    # Upload the image for a new plaque
+    img_name, img_fh = _get_img_from_request()
     _upload_image(img_name, img_fh, plaque)
     return plaque
 
@@ -332,33 +338,63 @@ def add_plaque() -> str:
     else:
         return redirect("/")
 
+def _plaque_for_edit(plaque:Plaque) -> Plaque:
+    """
+    Update the plaque with edits
+    """
 
-@app.route("/edit/<string:plaque_key>", methods=["GET", "POST"])
-def edit_plaque(plaque_key: str) -> str:
-    """Add an existing plaque"""
-    if plaque_key is None:
-        return redirect("/")
+    ### plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME) # TODO figure out search in new GCP
+    ### plaque_search_index.put(plaque.to_search_document()) # TODO figure out search in new GCP
+
+    plaque.set_title_and_title_url(request.form["title"], plaqueset_key())
+    
+    plaque.description = request.form["description"]
+    plaque.location = _get_location()
+    plaque.tags = _get_tags()
+    # skip approval for edit pages
+    plaque.updated_on = dt.datetime.now()
+    plaque.updated_by = None
+    # image if included:
+    img_name, img_fh = _get_img_from_request()
+    if img_name is not None and img_fh is not None:
+        _upload_image(img_name, img_fh, plaque)
+    plaque.img_rot = int(request.form["img_rot"])
+    print(plaque)
+    plaque.put()
+    return plaque
+
+
+@app.route("/edit", methods=["POST"])
+@app.route("/edit/<string:plaque_key>", methods=["GET"])
+def edit_plaque(plaque_key: str=None) -> str:
+    """Edit an existing plaque"""
 
     if request.method == "POST":
-        return _render_template(
-            "edit_p3_tmp.html",
-            plaques=None,
-            plaque_key=plaque_key,
-            title=request.form["title"],
-            tags=request.form["tags"],
-        )
-    elif request.method == "GET":
-        return _render_template(
-            "edit_p3_tmp.html",
-            plaques=None,
-            plaque_key=plaque_key,
-            maptext="",
-            mapzoom=9,
-            page_title="Edit Plaque",
-            message="Editing Plaque",
-        )
-    else:
-        return redirect("/")
+        plaque_key = request.form["plaque_key"]
+        if plaque_key is None:
+            return redirect("/")
+
+        with ndb.Client().context() as context:
+            plaque = ndb.Key(urlsafe=plaque_key).get()
+            plaque = _plaque_for_edit(plaque)
+            return redirect(plaque.title_page_url)
+
+    if request.method == "GET":
+        with ndb.Client().context() as context:
+            plaque = ndb.Key(urlsafe=plaque_key).get()
+            return _render_template(
+                "edit.html",
+                plaque=plaque,
+                bounding_box=_get_bounding_box([plaque]),
+                google_maps_api_key=get_key(),
+                maptext="",
+                mapzoom=9,
+                page_title="Edit Plaque",
+                message="Editing Plaque",
+            )
+
+    print("request method not valid", request.method)
+    return redirect("/")
 
 
 @app.route("/random")
@@ -427,7 +463,7 @@ def map(lat: str = None, lng: str = None, zoom: str = None) -> str:
             if zoom is not None:
                 template_values["bigmap_zoom"] = float(zoom)
 
-        return _render_template("bigmap.html", plaques=None, **template_values)
+        return _render_template("bigmap.html", plaques=[], **template_values)
 
 
 @app.route("/counts")
@@ -463,8 +499,6 @@ def about() -> str:
 
 
 # TODO
-# /add /submit /submit-your-own
-# /edit
 # /randpending
 # /flush
 # /nearby # TODO new API for search?
