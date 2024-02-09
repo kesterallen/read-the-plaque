@@ -7,13 +7,15 @@ import re
 
 from google.cloud import ndb
 
-#from google.appengine.api import memcache
-#from google.appengine.api import search
-#from google.appengine.datastore.datastore_query import Cursor
-#from google.appengine.ext.db import BadValueError
+#from google.appengine.api import memcache # TODO
+#from google.appengine.api import search # TODO
+#from google.appengine.datastore.datastore_query import Cursor # TODO
+#from google.appengine.ext.db import BadValueError # TODO
 
 class Comment(ndb.Model):
     """
+    DEPRECATED, TO BE REMOVED
+
     A class to model a user comment about a particular plaque.
 
     Linked to a single Plaque object via the .plaque KeyProperty/FK.
@@ -146,13 +148,16 @@ class Plaque(ndb.Model):
 
         return tag_counts
 
+    # Trying this with media_link for img_url in blob creation (in main.py)
+    # TODO: evaluate if this is the right way to do things and delete the other coode for img_url_* if so
     def img_url_base(self, size, crop=False):
         """Base method for  image URLs"""
-        url = '{}=s{}'.format(self.img_url, size)
-        if crop:
-            url += '-c'
-        if self.img_rot in Plaque.ALLOWED_ROTATIONS:
-            url = "{}-r{}".format(url, self.img_rot)
+        url = self.img_url
+        #url = '{}=s{}'.format(self.img_url, size)
+        #if crop:
+        #    url += '-c'
+        #if self.img_rot in Plaque.ALLOWED_ROTATIONS:
+        #    url = "{}-r{}".format(url, self.img_rot)
         return url
 
     @property
@@ -189,6 +194,13 @@ class Plaque(ndb.Model):
         """This plaque's key-based page URL."""
         url = '/plaque/{}'.format(self.key.urlsafe())
         return url
+
+    def set_title_and_title_url(self, title, ancestor_key):
+        """Update title if necessary and set the URL"""
+        title = title[:1499] # limit to 1500 char
+        if title != self.title:
+            self.title = title
+            self.set_title_url(plaqueset_key)
 
     def set_title_url(self, ancestor_key):
         """
@@ -307,7 +319,7 @@ class Plaque(ndb.Model):
             }
         else:
             plaque_dict = {
-                'plaque_key': self.key.urlsafe(),
+                'plaque_key': self.key.urlsafe().decode(),
                 'title': self.title,
                 'title_url': self.title_url,
                 'description': self.description,
