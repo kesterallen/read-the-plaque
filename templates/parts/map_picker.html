@@ -1,13 +1,13 @@
 <div class="map_picker_form form-group">
 
-    <input type="text" class="gllpSearchField" id="searchfield" name="searchfield" {% if maptext %} placeholder="{{maptext}}" {% else %} value="{{plaque.location.lat}}, {{plaque.location.lon}}" {% endif %} style="width: 60%;">
+    <input type="text" class="gllpSearchField" id="searchfield" name="searchfield" {% if maptext %} placeholder="{{maptext}}" {% else %} value="{{plaque.location.latitude}}, {{plaque.location.longitude}}" {% endif %} style="width: 60%;">
     <input type="button" class="gllpSearchButton btn btn-primary" value="Search Google Maps"/>
     <input type="button" id="herebutton" class="gllpHereButton btn btn-primary" value="Near You">
 
     <br/>
     <div id="map_picker" class="map_picker" style="width: 100%">Google Maps</div>
-    <input readonly="readonly" type="text" id="lat" name="lat" class="gllpLatitude" {% if plaque %}value="{{plaque.location.lat}}"{% endif %}/>
-    <input readonly="readonly" type="text" id="lng" name="lng" class="gllpLongitude" {% if plaque %}value="{{plaque.location.lon}}"{% endif %}/>
+    <input readonly="readonly" type="text" id="lat" name="lat" class="gllpLatitude" {% if plaque %}value="{{plaque.location.latitude}}"{% endif %}/>
+    <input readonly="readonly" type="text" id="lng" name="lng" class="gllpLongitude" {% if plaque %}value="{{plaque.location.longitude}}"{% endif %}/>
     <input hidden type="text" class="gllpZoom" value="{{mapzoom}}"/>
     <input hidden type="button" class="gllpUpdateButton" value="Go to lat/long">
     <br/>
