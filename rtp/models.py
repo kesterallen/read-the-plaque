@@ -149,7 +149,7 @@ class Plaque(ndb.Model):
         return tag_counts
 
     # Trying this with media_link for img_url in blob creation (in main.py)
-    # TODO: evaluate if this is the right way to do things and delete the other coode for img_url_* if so
+    # TODO: evaluate if this is the right way to do things and delete the other code for img_url_* if so
     def img_url_base(self, size, crop=False):
         """Base method for  image URLs"""
         url = self.img_url
