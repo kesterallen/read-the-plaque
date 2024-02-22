@@ -9,3 +9,6 @@ google-cloud-datastore<2.0.0dev
 google-cloud-ndb
 google-cloud-storage
 google-cloud-vision
+
+appengine-python-standard>=1.0.0
+
