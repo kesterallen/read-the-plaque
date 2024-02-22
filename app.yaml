@@ -1,5 +1,7 @@
 runtime: python312
 
+app_engine_apis: true
+
 handlers:
   - url: /.*php
     static_files: static/nophp.txt
