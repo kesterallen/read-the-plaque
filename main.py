@@ -11,14 +11,18 @@ import urllib
 
 from google.cloud import ndb
 from google.cloud import storage
+
 from flask import Flask, render_template, request, redirect
 
 from rtp.models import Plaque, FeaturedPlaque
 
+from google.appengine.api import wrap_wsgi_app, users
+
+
 # GCS_BUCKET configuration: This appears to work for the bucket named
 # 'read-the-plaque.appspot.com', Don't change this to, say, readtheplaque.com.
 #
-#GCS_BUCKET = "/read-the-plaque.appspot.com"
+# GCS_BUCKET = "/read-the-plaque.appspot.com"
 GCS_BUCKET = "read-the-plaque.appspot.com"
 
 FIRST_YEAR = 2015
@@ -44,6 +48,7 @@ class SubmitError(Exception):
 # [START gae_python38_app]
 
 app = Flask(__name__)
+app.wsgi_app = wrap_wsgi_app(app.wsgi_app)
 
 # TODO: get cursor or next button working
 
@@ -67,28 +72,66 @@ def plaqueset_key(plaqueset_name=DEF_PLAQUESET_NAME):
     return ndb.Key("Plaque", plaqueset_name)
 
 
-def _render_template(template_file, plaques=None, **kwargs) -> str:
+def _render_template(template_file: str, plaques: list = None, **kwargs) -> str:
     """A wrapper for flask.render_template that injects some defaults"""
-    if kwargs is None:
-        return render_template(
-            template_file,
-            plaques=plaques,
-            next_cursor_urlsafe="foo",  # TODO
-            loginout=_loginout(),
-        )
-    else:
-        return render_template(
-            template_file,
-            plaques=plaques,
-            next_cursor_urlsafe="foo",  # TODO
-            loginout=_loginout(),
-            **kwargs,
-        )
+    return render_template(
+        template_file,
+        plaques=plaques,
+        next_cursor_urlsafe="foo",  # TODO
+        loginout=_loginout(),
+        footer_items=_get_footer_items(),
+        **kwargs,
+    )
 
 
-# TODO: get users accounts working
+def _render_template_map(
+    template_file: str = "all.html",
+    plaques: list = None,
+    page_title: str = "View Pending Plaques",
+    **kwargs,
+) -> str:
+    return _render_template(
+        template_file,
+        plaques,
+        bounding_box=_get_bounding_box(plaques),
+        mapzoom=10,
+        maptext="",
+        google_maps_api_key=get_key(),
+        page_title=page_title,
+        **kwargs,
+    )
+
+
+def _get_footer_items():
+    """
+    Just 5 tags for the footer.
+    """
+    # TODO: turn this back on when you figure out memcaching
+    # random_plaques = [get_random_plaque() for _ in range(5)]
+    # tags = get_random_tags()
+    random_plaques = []
+    tags = []
+    footer_items = {
+        "tags": tags,
+        "new_plaques": random_plaques,
+    }
+    return footer_items
+
+
 def _loginout() -> dict:
-    return dict(isadmin=False, url=None, text=None)
+    is_admin = users.is_current_user_admin()
+    if user := users.get_current_user():
+        text = f"Log out {user.nickname()}"
+        url = users.create_logout_url("/")
+    else:
+        text = "Admin login"
+        url = users.create_login_url("/")
+
+    return dict(
+        is_admin=is_admin,
+        text=text,
+        url=url,
+    )
 
 
 @app.route("/", methods=["GET", "HEAD"])
@@ -101,32 +144,46 @@ def many_plaques():
     # cursor = None # TODO
     per_page = DEF_NUM_PER_PAGE
     # is_random = False # TODO
-    # is_featured = True # TODO
 
     with ndb.Client().context() as context:
         plaques, next_cur, more = Plaque.fetch_page(DEF_NUM_PER_PAGE)
-        return _render_template("all.html", plaques=plaques)
+        featured_plaque = _get_featured()
+        return _render_template("all.html", plaques, featured_plaque=featured_plaque)
 
 
 @app.route("/pending")
 @app.route("/pending/<int:num>")
 def pending_plaques(num: int = DEF_NUM_PENDING) -> str:
-    """View the most recent pending plaques."""
+    """View the most recent pending plaques. Note: admin only"""
+
+    if not users.is_current_user_admin():
+        print("redirecting to homepage because user is not admin")
+        return redirect("/")
+
     with ndb.Client().context() as context:
         plaques = Plaque.pending_list(num)
-        return _render_template(
-            "all.html",
-            plaques=plaques,
-            bounding_box=_get_bounding_box(plaques),
-            mapzoom=10,
-            maptext="",
-            google_maps_api_key=get_key(),
-            page_title="View Pending Plaques",
-        )
+        return _render_template_map(plaques=plaques)
 
 
-@app.route("/plaque/<string:search_term>", methods=["GET", "HEAD"])
-def one_plaque(search_term: str) -> str:
+@app.route("/randpending")
+@app.route("/randpending/<int:num>")
+def rand_pending_plaques(
+    num: int = DEF_NUM_PENDING, num_to_select_from: int = 500
+) -> str:
+    """View a random list of pending plaques. Note: admin only"""
+
+    if not users.is_current_user_admin():
+        print("redirecting to homepage because user is not admin")
+        return redirect("/")
+
+    with ndb.Client().context() as context:
+        plaques = Plaque.pending_list(num_to_select_from)
+        rand_plaques = random.sample(plaques, num)
+        return _render_template_map(plaques=rand_plaques)
+
+
+@app.route("/plaque/<string:title_url>", methods=["GET", "HEAD"])
+def one_plaque(title_url: str) -> str:
     """View one plaque."""
     # Return a lightweight response for a HEAD request
     if request.method == "HEAD":
@@ -136,18 +193,11 @@ def one_plaque(search_term: str) -> str:
 
     with ndb.Client().context() as context:
         # Get plaque if exists, otherwise get earliest
-        plaque = Plaque.query().filter(Plaque.title_url == search_term).get()
+        plaque = Plaque.query().filter(Plaque.title_url == title_url).get()
         if plaque is None:
             plaque = Plaque.query().order(Plaque.created_on).get()
 
-        return _render_template(
-            "one.html",
-            plaques=[plaque],
-            bounding_box=_get_bounding_box([plaque]),
-            mapzoom=10,
-            maptext="",
-            google_maps_api_key=get_key(),
-        )
+        return _render_template_map("one.html", [plaque], plaque.title)
 
 
 def _get_bounding_box(plaques: list[Plaque]) -> list[float]:
@@ -172,7 +222,7 @@ def _get_img_from_request():
     if img_name:
         return img_name, img_fh
 
-    # No? Check the plaque_img_url field and use that if it has a URL:
+    # If no file was uploaded, use plaque_img_url if it has a value:
     if request.form["plaque_image_url"]:
         img_url = request.form["plaque_image_url"]
         img_name = os.path.basename(img_url)
@@ -238,36 +288,35 @@ def _upload_image(img_name, img_fh, plaque):
     If gcs_fn is specified, overwrite that gcs filename. This is used
     for updating the picture.
     """
-    
+
     storage_client = storage.Client()
     bucket = storage_client.bucket(GCS_BUCKET)
-    gcs_filename = dt.datetime.now().strftime('%Y%m%d/%H%M%S')
+    gcs_filename = dt.datetime.now().strftime("%Y%m%d/%H%M%S")
     blob = bucket.blob(gcs_filename)
 
     plaque.pic = gcs_filename
 
-    img_fh.seek(0) # reset file handle
+    img_fh.seek(0)  # reset file handle
     base64_img_bytes = img_fh.read()
     blob.upload_from_string(base64_img_bytes)
     make_public_url = blob.make_public()
 
+    #    # Kill old image and URL, if they exist. If they don't, ignore any errors:
+    #    #
+    #    if plaque.pic is not None:
+    #        try:
+    #            storage.delete(plaque.pic)
+    #        except:
+    #            pass
+    #    if plaque.img_url is not None:
+    #        try:
+    #            images.delete_serving_url(plaque.img_url)
+    #        except:
+    #            pass
 
-#    # Kill old image and URL, if they exist. If they don't, ignore any errors:
-#    #
-#    if plaque.pic is not None:
-#        try:
-#            storage.delete(plaque.pic)
-#        except:
-#            pass
-#    if plaque.img_url is not None:
-#        try:
-#            images.delete_serving_url(plaque.img_url)
-#        except:
-#            pass
-
-    #print("make public URL", make_public_url)
-    #print("public URL", blob.public_url)
-    #print("media link", blob.media_link)
+    # print("make public URL", make_public_url)
+    # print("public URL", blob.public_url)
+    # print("media link", blob.media_link)
     plaque.img_url = blob.media_link
 
 
@@ -287,8 +336,10 @@ def _plaque_for_insert() -> Plaque:
     plaque.tags = _get_tags()
     plaque.approved = False
     plaque.created_on = dt.datetime.now()
-    #        created_by = users.get_current_user() # TODO: figure out the users situation
-    # plaque.created_by = args.created_by  # ? created_by = users.get_current_user()
+    if user := users.get_current_user():
+        plaque.created_by = user
+    else:
+        plaque.created_by = None
     plaque.updated_on = dt.datetime.now()
     plaque.updated_by = None
 
@@ -303,11 +354,12 @@ def _add_plaque_post() -> str:
     with ndb.Client().context() as context:
         plaque = _plaque_for_insert()
         plaque.put()  # ? TODO
-        return _render_template(
-            "add.html",
-            plaques=[plaque],
-            bounding_box=_get_bounding_box([plaque]),
-        )
+        return _render_template_map("add.html", [plaque])
+        #return _render_template(
+            #"add.html",
+            #[plaque],
+            #bounding_box=_get_bounding_box([plaque]),
+        #)
 
 
 def _add_plaque_get() -> str:
@@ -316,14 +368,7 @@ def _add_plaque_get() -> str:
         "Click the plaque's location on the map, or search "
         "for it, or enter its lat/lng location"
     )
-    return _render_template(
-        "add.html",
-        plaques=None,
-        maptext=maptext,
-        mapzoom=10,
-        google_maps_api_key=get_key(),
-        page_title="Add Plaque",
-    )
+    return _render_template_map("add.html", None, maptext=maptext, page_title="Add Plaque")
 
 
 @app.route("/add", methods=["GET", "POST"])
@@ -338,7 +383,8 @@ def add_plaque() -> str:
     else:
         return redirect("/")
 
-def _plaque_for_edit(plaque:Plaque) -> Plaque:
+
+def _plaque_for_edit(plaque: Plaque) -> Plaque:
     """
     Update the plaque with edits
     """
@@ -347,7 +393,7 @@ def _plaque_for_edit(plaque:Plaque) -> Plaque:
     ### plaque_search_index.put(plaque.to_search_document()) # TODO figure out search in new GCP
 
     plaque.set_title_and_title_url(request.form["title"], plaqueset_key())
-    
+
     plaque.description = request.form["description"]
     plaque.location = _get_location()
     plaque.tags = _get_tags()
@@ -359,15 +405,18 @@ def _plaque_for_edit(plaque:Plaque) -> Plaque:
     if img_name is not None and img_fh is not None:
         _upload_image(img_name, img_fh, plaque)
     plaque.img_rot = int(request.form["img_rot"])
-    print(plaque)
     plaque.put()
     return plaque
 
 
 @app.route("/edit", methods=["POST"])
 @app.route("/edit/<string:plaque_key>", methods=["GET"])
-def edit_plaque(plaque_key: str=None) -> str:
-    """Edit an existing plaque"""
+def edit_plaque(plaque_key: str = None) -> str:
+    """Edit an existing plaque. Note: admin only"""
+
+    if not users.is_current_user_admin():
+        print("redirecting to homepage because user is not admin")
+        return redirect("/")
 
     if request.method == "POST":
         plaque_key = request.form["plaque_key"]
@@ -383,18 +432,40 @@ def edit_plaque(plaque_key: str=None) -> str:
         with ndb.Client().context() as context:
             plaque = ndb.Key(urlsafe=plaque_key).get()
             return _render_template(
-                "edit.html",
-                plaque=plaque,
-                bounding_box=_get_bounding_box([plaque]),
-                google_maps_api_key=get_key(),
-                maptext="",
-                mapzoom=9,
-                page_title="Edit Plaque",
-                message="Editing Plaque",
+                "edit.html", [plaque], page_title="Edit Plaque", message="Editing Plaque"
             )
 
     print("request method not valid", request.method)
     return redirect("/")
+
+
+def _set_approval(plaque_key, approval=True):
+    """Set the approval of a plaque"""
+    with ndb.Client().context() as context:
+        plaque = ndb.Key(urlsafe=plaque_key).get()
+        plaque.approved = approval
+        if plaque.approved:
+            plaque.created_on = datetime.datetime.now()
+            plaque.updated_on = datetime.datetime.now()
+        plaque.put()
+
+
+@app.route("/approve/<string:plaque_key>", methods=["POST"])
+def approve_plaque(plaque_key: str, approval: bool = True) -> str:
+    """Turn on the approval of an existing plaque. Note: admin only"""
+
+    if not users.is_current_user_admin():
+        print("redirecting to homepage because user is not admin")
+        return redirect("/")
+
+    _set_approval(plaque_key, approval)
+    return redirect("/")
+
+
+@app.route("/disapprove/<string:plaque_key>", methods=["POST"])
+def disapprove_plaque(plaque_key: str = None) -> str:
+    """Turn off the approval of an existing plaque. Note: admin only"""
+    return approve_plaque(plaque_key, False)
 
 
 @app.route("/random")
@@ -424,8 +495,63 @@ def random_plaques(num_plaques: int = 5) -> str:
                 .get()
             )
             plaques.append(plaque)
-        return _render_template("all.html", plaques=plaques)
+        return _render_template("all.html", plaques)
 
+# TODO: def _get_rand_featured():
+
+def _get_featured():
+    """Get the most recent FeaturedPlaque"""
+    featured = FeaturedPlaque.query().order(-Plaque.created_on).get()
+    if featured is not None:
+        plaque = Plaque.query().filter(Plaque.key == featured.plaque).get()
+    else:
+        plaque = None
+    return plaque
+
+def _set_featured(plaque):
+    """Set a given plaque to be a FeaturedPlaque"""
+    featured = FeaturedPlaque()
+    featured.plaque = plaque.key
+    featured.put()
+
+@app.route("/setfeatured/<string:plaque_key>", methods=["GET"])
+def set_featured(plaque_key : str) -> str:
+    """Set a given plaque to be the featured one. Note: admin only"""
+
+    if not users.is_current_user_admin():
+        print("redirecting to homepage because user is not admin")
+        return redirect("/")
+
+    with ndb.Client().context() as context:
+        plaque = ndb.Key(urlsafe=plaque_key).get()
+        _set_featured(plaque)
+        redirect('/')
+
+@app.route("/featured", methods=["GET"])
+def get_featured() -> str:
+    """Show the featured plaque"""
+    with ndb.Client().context() as context:
+        plaque = _get_featured()
+        return _render_template("one.html", [plaque])
+
+@app.route("/featured/geojson", methods=["GET"])
+@app.route("/tweet", methods=["GET"])
+def get_featured_geojson():
+    """Display the GeoJSON for the featured plaque"""
+    with ndb.Client().context() as context:
+        plaque = _get_featured()
+        return plaque.json_for_tweet if plaque else "No featured plaque"
+
+@app.route("/geojson/<string:title_url>", methods=["GET"])
+def get_geojson(title_url: str) -> str:
+    """Display the GeoJSON for the given plaque"""
+    with ndb.Client().context() as context:
+        plaque = Plaque.query().filter(Plaque.title_url == title_url).get()
+        return plaque.json_for_tweet if plaque else f"No plaque for {title_url}"
+        
+# TODO when get_random_plaque is done
+#@app.route('/featured/random',methods=["GET"])
+#    with ndb.Client().context() as context:
 
 # TODO: add argument for number of plaques
 @app.route("/tag/<string:tag>")
@@ -440,7 +566,7 @@ def tagged_plaques(tag: str, only_approved: bool = True) -> str:
             .order(-Plaque.created_on)
             .fetch(limit=DEF_NUM_PER_PAGE)
         )
-        return _render_template("all.html", plaques=plaques)
+        return _render_template("all.html", plaques)
 
 
 @app.route("/map")
@@ -463,7 +589,8 @@ def map(lat: str = None, lng: str = None, zoom: str = None) -> str:
             if zoom is not None:
                 template_values["bigmap_zoom"] = float(zoom)
 
-        return _render_template("bigmap.html", plaques=[], **template_values)
+        # TODO: switch this to _render_template_map? unclear if that's useful
+        return _render_template("bigmap.html", [], **template_values)
 
 
 @app.route("/counts")
@@ -499,14 +626,13 @@ def about() -> str:
 
 
 # TODO
-# /randpending
 # /flush
 # /nearby # TODO new API for search?
 # /geo
-# /featured /setfeatured /featured/random /featured/geojson
-# /geojson
-# /tweet
 # /alljp /updatejp /fulljp
+
+# Clean up app.yaml
+# Point app.yaml stuff to static pages where appropriate
 
 
 if __name__ == "__main__":
