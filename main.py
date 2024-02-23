@@ -16,7 +16,7 @@ from flask import Flask, render_template, request, redirect
 
 from rtp.models import Plaque, FeaturedPlaque
 
-from google.appengine.api import wrap_wsgi_app, users
+from google.appengine.api import wrap_wsgi_app, users, search
 
 
 # GCS_BUCKET configuration: This appears to work for the bucket named
@@ -36,6 +36,7 @@ DEF_NUM_RSS = 10
 DEF_NUM_PER_PAGE = 25
 DEF_RAND_NUM_PER_PAGE = 5
 
+PLAQUE_SEARCH_INDEX_NAME = 'plaque_index'
 
 class SubmitError(Exception):
     pass
@@ -73,7 +74,9 @@ def plaqueset_key(plaqueset_name=DEF_PLAQUESET_NAME):
 
 
 def _render_template(template_file: str, plaques: list = None, **kwargs) -> str:
-    """A wrapper for flask.render_template that injects some defaults"""
+    """A wrapper for flask.render_template that injects some defaults, filter out None plaques"""
+    if plaques is not None:
+        plaques = [p for p in plaques if p is not None]
     return render_template(
         template_file,
         plaques=plaques,
@@ -90,6 +93,7 @@ def _render_template_map(
     page_title: str = "View Pending Plaques",
     **kwargs,
 ) -> str:
+    plaques = [p for p in plaques if p is not None]
     return _render_template(
         template_file,
         plaques,
@@ -324,9 +328,8 @@ def _plaque_for_insert() -> Plaque:
     """
     Make a new Plaque object for insert
     """
-
-    ### plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME) # TODO figure out search in new GCP
-    ### plaque_search_index.put(plaque.to_search_document()) # TODO figure out search in new GCP
+    plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
+    plaque_search_index.put(plaque.to_search_document())
 
     plaque = Plaque(parent=plaqueset_key())
 
@@ -388,9 +391,8 @@ def _plaque_for_edit(plaque: Plaque) -> Plaque:
     """
     Update the plaque with edits
     """
-
-    ### plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME) # TODO figure out search in new GCP
-    ### plaque_search_index.put(plaque.to_search_document()) # TODO figure out search in new GCP
+    plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
+    plaque_search_index.put(plaque.to_search_document())
 
     plaque.set_title_and_title_url(request.form["title"], plaqueset_key())
 
@@ -548,7 +550,7 @@ def get_geojson(title_url: str) -> str:
     with ndb.Client().context() as context:
         plaque = Plaque.query().filter(Plaque.title_url == title_url).get()
         return plaque.json_for_tweet if plaque else f"No plaque for {title_url}"
-        
+
 # TODO when get_random_plaque is done
 #@app.route('/featured/random',methods=["GET"])
 #    with ndb.Client().context() as context:
@@ -619,16 +621,57 @@ def rss_feed() -> str:
         return _render_template("feed.xml", plaques=plaques)
 
 
+# TODO: could be static
 @app.route("/about")
 def about() -> str:
-    """Read the about page. This could be a static page"""
+    """The "about" page"""
     return _render_template("about.html")
 
+@app.route("/geo/<float(signed=True):lat>/<float(signed=True):lng>/<float(signed=True):search_radius_meters>")
+def geo_plaques(lat: float = None, lng: float = None, search_radius_meters: float = None) -> str:
+    """
+    Return plaques within search_radius_meters of lat/lng, sorted by distance
+    from lat/lng.
+    """
+    search_radius_meters = int(search_radius_meters)
+    loc_expr = f"distance(location, geopoint({lat}, {lng}))"
+    query = f"{loc_expr} < {search_radius_meters}"
+
+    sortexpr = search.SortExpression(
+        expression=loc_expr,
+        direction=search.SortExpression.ASCENDING,
+        default_value=search_radius_meters)
+
+    search_query = search.Query(
+        query_string=query,
+        options=search.QueryOptions(
+            sort_options=search.SortOptions(expressions=[sortexpr])
+    ))
+
+    with ndb.Client().context() as context:
+        plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
+        results = plaque_search_index.search(search_query)
+
+        keys = [ndb.Key(urlsafe=r.doc_id) for r in results]
+        plaques = ndb.get_multi(keys)
+
+    return _render_template_map(plaques=plaques, page_title="Geo Search")
+
+@app.route("/search/<string:search_term>", methods=["GET"])
+def search_plaques(search_term: str) -> str:
+    search_term = search_term.replace('"', '')
+    search_term = search_term.encode("ascii", "ignore").decode() # prevent crashing on e.g. 'Piñata'
+
+    with ndb.Client().context() as context:
+        plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
+        results = plaque_search_index.search(search_term)
+        plaques = [ndb.Key(urlsafe=r.doc_id).get() for r in results]
+
+    return _render_template_map(plaques=plaques, page_title="Search")
 
 # TODO
 # /flush
 # /nearby # TODO new API for search?
-# /geo
 # /alljp /updatejp /fulljp
 
 # Clean up app.yaml
