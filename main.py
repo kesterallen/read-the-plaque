@@ -621,7 +621,6 @@ def rss_feed() -> str:
         return _render_template("feed.xml", plaques=plaques)
 
 
-# TODO: could be static
 @app.route("/about")
 def about() -> str:
     """The "about" page"""
@@ -674,8 +673,6 @@ def search_plaques(search_term: str) -> str:
 # /nearby # TODO new API for search?
 # /alljp /updatejp /fulljp
 
-# Clean up app.yaml
-# Point app.yaml stuff to static pages where appropriate
 
 
 if __name__ == "__main__":
