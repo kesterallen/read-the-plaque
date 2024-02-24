@@ -2,7 +2,6 @@
 Main run script
 """
 
-import base64
 import datetime as dt
 import json
 import os
@@ -12,12 +11,12 @@ import urllib
 
 from google.cloud import ndb
 from google.cloud import storage
+from google.appengine.api import wrap_wsgi_app, users, search
 
 from flask import Flask, render_template, request, redirect
 
 from rtp.models import Plaque, FeaturedPlaque
 
-from google.appengine.api import wrap_wsgi_app, users, search
 
 
 # GCS_BUCKET configuration: This appears to work for the bucket named
@@ -42,6 +41,7 @@ PLAQUE_SEARCH_INDEX_NAME = "plaque_index"
 
 
 class SubmitError(Exception):
+    """ Catchall error for submitting plaques"""
     pass
 
 
@@ -114,13 +114,13 @@ def _get_footer_items():
     Just 5 tags for the footer.
     """
     # TODO: turn this back on when you figure out memcaching
-    # random_plaques = [get_random_plaque() for _ in range(5)]
+    # rand_plaques = [get_random_plaque() for _ in range(5)]
     # tags = get_random_tags()
-    random_plaques = []
+    rand_plaques = []
     tags = []
     footer_items = {
         "tags": tags,
-        "new_plaques": random_plaques,
+        "new_plaques": rand_plaques,
     }
     return footer_items
 
@@ -282,8 +282,7 @@ def _get_tags():
     return tags
 
 
-# TODO: remove img_name from signature?
-def _upload_image(img_name, img_fh, plaque):
+def _upload_image(img_fh, plaque):
     """
     Upload pic into GCS
 
@@ -306,7 +305,7 @@ def _upload_image(img_name, img_fh, plaque):
     img_fh.seek(0)  # reset file handle
     base64_img_bytes = img_fh.read()
     blob.upload_from_string(base64_img_bytes)
-    make_public_url = blob.make_public()
+    make_public_url = blob.make_public() # TODO might be a better img url for this
 
     #    # Kill old image and URL, if they exist. If they don't, ignore any errors:
     #    #
@@ -331,8 +330,6 @@ def _plaque_for_insert() -> Plaque:
     """
     Make a new Plaque object for insert
     """
-    plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
-    plaque_search_index.put(plaque.to_search_document())
 
     plaque = Plaque(parent=plaqueset_key())
 
@@ -350,8 +347,12 @@ def _plaque_for_insert() -> Plaque:
     plaque.updated_by = None
 
     # Upload the image for a new plaque
-    img_name, img_fh = _get_img_from_request()
-    _upload_image(img_name, img_fh, plaque)
+    img_name, img_fh = _get_img_from_request() # TODO: do we need need to add img_name back to _upload_image?
+    _upload_image(img_fh, plaque)
+
+    # Search index the plaque text
+    plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
+    plaque_search_index.put(plaque.to_search_document())
     return plaque
 
 
@@ -386,10 +387,9 @@ def add_plaque() -> str:
     """Add a new plaque"""
     if request.method == "POST":
         return _add_plaque_post()
-    elif request.method == "GET":
+    if request.method == "GET":
         return _add_plaque_get()
-    else:
-        return redirect("/")
+    return redirect("/")
 
 
 def _plaque_for_edit(plaque: Plaque) -> Plaque:
@@ -410,7 +410,7 @@ def _plaque_for_edit(plaque: Plaque) -> Plaque:
     # image if included:
     img_name, img_fh = _get_img_from_request()
     if img_name is not None and img_fh is not None:
-        _upload_image(img_name, img_fh, plaque)
+        _upload_image(img_fh, plaque)
     plaque.img_rot = int(request.form["img_rot"])
     plaque.put()
     return plaque
@@ -455,8 +455,8 @@ def _set_approval(plaque_key, approval=True):
         plaque = ndb.Key(urlsafe=plaque_key).get()
         plaque.approved = approval
         if plaque.approved:
-            plaque.created_on = datetime.datetime.now()
-            plaque.updated_on = datetime.datetime.now()
+            plaque.created_on = dt.datetime.now()
+            plaque.updated_on = dt.datetime.now()
         plaque.put()
 
 
@@ -539,7 +539,7 @@ def set_featured(plaque_key: str) -> str:
     with ndb.Client().context() as context:
         plaque = ndb.Key(urlsafe=plaque_key).get()
         _set_featured(plaque)
-        redirect("/")
+        return redirect("/")
 
 
 @app.route("/featured", methods=["GET"])
@@ -591,7 +591,7 @@ def tagged_plaques(tag: str, only_approved: bool = True) -> str:
 @app.route("/map")
 @app.route("/map/<string:lat>/<string:lng>")
 @app.route("/map/<string:lat>/<string:lng>/<string:zoom>")
-def map(lat: str = None, lng: str = None, zoom: str = None) -> str:
+def map_plaques(lat: str = None, lng: str = None, zoom: str = None) -> str:
     """View the big map page with optional center/zoom"""
     with ndb.Client().context() as context:
         num_plaques = Plaque.query().filter(Plaque.approved == True).count()
@@ -683,8 +683,19 @@ def geo_plaques(lat: float, lng: float, search_radius_meters: float) -> str:
     return _render_template_map(plaques=plaques, page_title="Geo Search")
 
 
+# @app.route("/search/pending/<string:search_term>", methods=["GET"]) # TODO
+
+
+@app.route("/search", methods=["POST"])
+def search_plaques_form() -> str:
+    if search_term := request.form.get("search_term", None):
+        return redirect(f"/search/{search_term}")
+    return redirect("/")
+
 @app.route("/search/<string:search_term>", methods=["GET"])
 def search_plaques(search_term: str) -> str:
+    """Display a search results page"""
+
     search_term = search_term.replace('"', "")
     # prevent crashing on e.g. 'Piñata'
     search_term = search_term.encode("ascii", "ignore").decode()
@@ -701,13 +712,14 @@ def search_plaques(search_term: str) -> str:
     return _render_template_map(plaques=plaques, page_title="Search")
 
 
+@app.route("/nearby/<float(signed=True):lat>/<float(signed=True):lng>", methods=["GET"])
 @app.route(
     "/nearby/<float(signed=True):lat>/<float(signed=True):lng>/<int:num>",
     methods=["GET"],
 )
 def nearby_plaques(lat: float, lng: float, num: int = DEF_NUM_NEARBY) -> str:
-    if num > 20:
-        num = 20
+    """ Get a page of nearby plaques """
+    num = min(num, 20)
 
     # Reduce search billing cost by making nearby search less granular:
     # 500 m, 50 km, 500 km
@@ -742,7 +754,7 @@ def _json_for_keys(plaque_keys_str, summary=True):
                 plaque = ndb.Key(urlsafe=plaque_key).get()
                 if plaque:
                     plaques.append(plaque)
-            except ProtocolBuffer.ProtocolBufferDecodeError:
+            except Exception:
                 pass
 
     if not plaques:
@@ -752,6 +764,8 @@ def _json_for_keys(plaque_keys_str, summary=True):
     return json.dumps(plaque_dicts)
 
 
+@app.route("/updatejp", methods=["GET"])  # delete?
+@app.route("/fulljp", methods=["GET"])  # delete?
 @app.route("/alljp", methods=["GET"])
 @app.route("/alljp/<string:plaque_keys_str>", methods=["GET"])
 def json_plaques(plaque_keys_str: str = None, summary: bool = True):
@@ -768,12 +782,6 @@ def json_plaques(plaque_keys_str: str = None, summary: bool = True):
 
 # TODO
 # /flush
-# /updatejp /fulljp
-# /featured/geojson', h.GeoJsonFeatured),
-# /geojson/(.+?)/?', h.GeoJson),
-# /geojson/?', h.GeoJson),
-# /tweet/?', h.GeoJsonFeatured),
-
 
 if __name__ == "__main__":
     # This is used when running locally only. When deploying to Google App
