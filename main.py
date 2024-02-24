@@ -4,6 +4,7 @@ Main run script
 
 import base64
 import datetime as dt
+import json
 import os
 import re
 import random
@@ -34,9 +35,11 @@ DEF_PLAQUESET_NAME = "public"
 DEF_NUM_PENDING = 5
 DEF_NUM_RSS = 10
 DEF_NUM_PER_PAGE = 25
+DEF_NUM_NEARBY = 5
 DEF_RAND_NUM_PER_PAGE = 5
 
-PLAQUE_SEARCH_INDEX_NAME = 'plaque_index'
+PLAQUE_SEARCH_INDEX_NAME = "plaque_index"
+
 
 class SubmitError(Exception):
     pass
@@ -358,11 +361,11 @@ def _add_plaque_post() -> str:
         plaque = _plaque_for_insert()
         plaque.put()  # ? TODO
         return _render_template_map("add.html", [plaque])
-        #return _render_template(
-            #"add.html",
-            #[plaque],
-            #bounding_box=_get_bounding_box([plaque]),
-        #)
+        # return _render_template(
+        # "add.html",
+        # [plaque],
+        # bounding_box=_get_bounding_box([plaque]),
+        # )
 
 
 def _add_plaque_get() -> str:
@@ -371,7 +374,9 @@ def _add_plaque_get() -> str:
         "Click the plaque's location on the map, or search "
         "for it, or enter its lat/lng location"
     )
-    return _render_template_map("add.html", None, maptext=maptext, page_title="Add Plaque")
+    return _render_template_map(
+        "add.html", None, maptext=maptext, page_title="Add Plaque"
+    )
 
 
 @app.route("/add", methods=["GET", "POST"])
@@ -434,7 +439,10 @@ def edit_plaque(plaque_key: str = None) -> str:
         with ndb.Client().context() as context:
             plaque = ndb.Key(urlsafe=plaque_key).get()
             return _render_template(
-                "edit.html", [plaque], page_title="Edit Plaque", message="Editing Plaque"
+                "edit.html",
+                [plaque],
+                page_title="Edit Plaque",
+                message="Editing Plaque",
             )
 
     print("request method not valid", request.method)
@@ -499,7 +507,9 @@ def random_plaques(num_plaques: int = 5) -> str:
             plaques.append(plaque)
         return _render_template("all.html", plaques)
 
+
 # TODO: def _get_rand_featured():
+
 
 def _get_featured():
     """Get the most recent FeaturedPlaque"""
@@ -510,14 +520,16 @@ def _get_featured():
         plaque = None
     return plaque
 
+
 def _set_featured(plaque):
     """Set a given plaque to be a FeaturedPlaque"""
     featured = FeaturedPlaque()
     featured.plaque = plaque.key
     featured.put()
 
+
 @app.route("/setfeatured/<string:plaque_key>", methods=["GET"])
-def set_featured(plaque_key : str) -> str:
+def set_featured(plaque_key: str) -> str:
     """Set a given plaque to be the featured one. Note: admin only"""
 
     if not users.is_current_user_admin():
@@ -527,7 +539,8 @@ def set_featured(plaque_key : str) -> str:
     with ndb.Client().context() as context:
         plaque = ndb.Key(urlsafe=plaque_key).get()
         _set_featured(plaque)
-        redirect('/')
+        redirect("/")
+
 
 @app.route("/featured", methods=["GET"])
 def get_featured() -> str:
@@ -535,6 +548,7 @@ def get_featured() -> str:
     with ndb.Client().context() as context:
         plaque = _get_featured()
         return _render_template("one.html", [plaque])
+
 
 @app.route("/featured/geojson", methods=["GET"])
 @app.route("/tweet", methods=["GET"])
@@ -544,6 +558,7 @@ def get_featured_geojson():
         plaque = _get_featured()
         return plaque.json_for_tweet if plaque else "No featured plaque"
 
+
 @app.route("/geojson/<string:title_url>", methods=["GET"])
 def get_geojson(title_url: str) -> str:
     """Display the GeoJSON for the given plaque"""
@@ -551,9 +566,11 @@ def get_geojson(title_url: str) -> str:
         plaque = Plaque.query().filter(Plaque.title_url == title_url).get()
         return plaque.json_for_tweet if plaque else f"No plaque for {title_url}"
 
+
 # TODO when get_random_plaque is done
-#@app.route('/featured/random',methods=["GET"])
+# @app.route('/featured/random',methods=["GET"])
 #    with ndb.Client().context() as context:
+
 
 # TODO: add argument for number of plaques
 @app.route("/tag/<string:tag>")
@@ -591,7 +608,6 @@ def map(lat: str = None, lng: str = None, zoom: str = None) -> str:
             if zoom is not None:
                 template_values["bigmap_zoom"] = float(zoom)
 
-        # TODO: switch this to _render_template_map? unclear if that's useful
         return _render_template("bigmap.html", [], **template_values)
 
 
@@ -626,12 +642,8 @@ def about() -> str:
     """The "about" page"""
     return _render_template("about.html")
 
-@app.route("/geo/<float(signed=True):lat>/<float(signed=True):lng>/<float(signed=True):search_radius_meters>")
-def geo_plaques(lat: float = None, lng: float = None, search_radius_meters: float = None) -> str:
-    """
-    Return plaques within search_radius_meters of lat/lng, sorted by distance
-    from lat/lng.
-    """
+
+def _geo_search(lat: float, lng: float, search_radius_meters: int = 5000):
     search_radius_meters = int(search_radius_meters)
     loc_expr = f"distance(location, geopoint({lat}, {lng}))"
     query = f"{loc_expr} < {search_radius_meters}"
@@ -639,13 +651,15 @@ def geo_plaques(lat: float = None, lng: float = None, search_radius_meters: floa
     sortexpr = search.SortExpression(
         expression=loc_expr,
         direction=search.SortExpression.ASCENDING,
-        default_value=search_radius_meters)
+        default_value=search_radius_meters,
+    )
 
     search_query = search.Query(
         query_string=query,
         options=search.QueryOptions(
             sort_options=search.SortOptions(expressions=[sortexpr])
-    ))
+        ),
+    )
 
     with ndb.Client().context() as context:
         plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
@@ -654,25 +668,111 @@ def geo_plaques(lat: float = None, lng: float = None, search_radius_meters: floa
         keys = [ndb.Key(urlsafe=r.doc_id) for r in results]
         plaques = ndb.get_multi(keys)
 
+    return plaques
+
+
+@app.route(
+    "/geo/<float(signed=True):lat>/<float(signed=True):lng>/<float(signed=True):search_radius_meters>"
+)
+def geo_plaques(lat: float, lng: float, search_radius_meters: float) -> str:
+    """
+    Return plaques within search_radius_meters of lat/lng, sorted by distance
+    from lat/lng.
+    """
+    plaques = _geo_search(lat, lng, search_radius_meters)
     return _render_template_map(plaques=plaques, page_title="Geo Search")
+
 
 @app.route("/search/<string:search_term>", methods=["GET"])
 def search_plaques(search_term: str) -> str:
-    search_term = search_term.replace('"', '')
-    search_term = search_term.encode("ascii", "ignore").decode() # prevent crashing on e.g. 'Piñata'
+    search_term = search_term.replace('"', "")
+    # prevent crashing on e.g. 'Piñata'
+    search_term = search_term.encode("ascii", "ignore").decode()
 
     with ndb.Client().context() as context:
         plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
         results = plaque_search_index.search(search_term)
         plaques = [ndb.Key(urlsafe=r.doc_id).get() for r in results]
 
+    # Hide unpublished plaques for non admin
+    if not users.is_current_user_admin():
+        plaques = [p for p in plaques if p.approved]
+
     return _render_template_map(plaques=plaques, page_title="Search")
+
+
+@app.route(
+    "/nearby/<float(signed=True):lat>/<float(signed=True):lng>/<int:num>",
+    methods=["GET"],
+)
+def nearby_plaques(lat: float, lng: float, num: int = DEF_NUM_NEARBY) -> str:
+    if num > 20:
+        num = 20
+
+    # Reduce search billing cost by making nearby search less granular:
+    # 500 m, 50 km, 500 km
+    search_radii_meters = [5 * 10**i for i in [2, 4, 6]]
+    for i, search_radius_meters in enumerate(search_radii_meters):
+        plaques = _geo_search(lat, lng, search_radius_meters)
+        if len(plaques) > num:
+            break
+    return _render_template_map(plaques=plaques, page_title="Nearby Plaques")
+
+
+def _json_for_all(summary=True):
+    plaques_all = []
+    num = 1000
+    more = True
+    cursor = None
+    while more:
+        plaques, cursor, more = Plaque.fetch_page(num, cursor, urlsafe=False)
+        plaques_all.extend(plaques)
+
+    plaque_dicts = [p.to_dict(summary=summary) for p in plaques if p]
+    return json.dumps(plaque_dicts)
+
+
+def _json_for_keys(plaque_keys_str, summary=True):
+    plaque_keys = plaque_keys_str.split("&")
+
+    plaques = []
+    with ndb.Client().context() as context:
+        for plaque_key in plaque_keys:
+            try:
+                plaque = ndb.Key(urlsafe=plaque_key).get()
+                if plaque:
+                    plaques.append(plaque)
+            except ProtocolBuffer.ProtocolBufferDecodeError:
+                pass
+
+    if not plaques:
+        return ""
+
+    plaque_dicts = [p.to_dict(summary=summary) for p in plaques]
+    return json.dumps(plaque_dicts)
+
+
+@app.route("/alljp", methods=["GET"])
+@app.route("/alljp/<string:plaque_keys_str>", methods=["GET"])
+def json_plaques(plaque_keys_str: str = None, summary: bool = True):
+    """
+    JSON summary for the plaques specified; if no plaques are specified,
+    do all plaques.
+    """
+    if plaque_keys_str is None:
+        json_output = _json_for_all(summary)
+    else:
+        json_output = _json_for_keys(plaque_keys_str, summary)
+    return json_output
+
 
 # TODO
 # /flush
-# /nearby # TODO new API for search?
-# /alljp /updatejp /fulljp
-
+# /updatejp /fulljp
+# /featured/geojson', h.GeoJsonFeatured),
+# /geojson/(.+?)/?', h.GeoJson),
+# /geojson/?', h.GeoJson),
+# /tweet/?', h.GeoJsonFeatured),
 
 
 if __name__ == "__main__":
