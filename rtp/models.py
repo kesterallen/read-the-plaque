@@ -8,7 +8,7 @@ import re
 from google.cloud import ndb
 
 #from google.appengine.api import memcache # TODO
-#from google.appengine.api import search # TODO
+from google.appengine.api import search
 #from google.appengine.datastore.datastore_query import Cursor # TODO
 #from google.appengine.ext.db import BadValueError # TODO
 
@@ -358,7 +358,7 @@ class Plaque(ndb.Model):
 
     @property
     def json_for_tweet(self):
-        plaque_dict = self.to_dict(summary=True)
+        plaque_dict = self.to_dict(summary=True) # TODO: use .geojson instead?
         plaque_dict["tweet"] = self.tweet_text
         plaque_dict["submitter_tweet"] = self.tweet_to_plaque_submitter
         return json.dumps(plaque_dict)
