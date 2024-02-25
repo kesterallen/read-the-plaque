@@ -4,6 +4,7 @@ Main run script
 
 import datetime as dt
 import json
+import math
 import os
 import re
 import random
@@ -16,7 +17,6 @@ from google.appengine.api import wrap_wsgi_app, users, search
 from flask import Flask, render_template, request, redirect
 
 from rtp.models import Plaque, FeaturedPlaque
-
 
 
 # GCS_BUCKET configuration: This appears to work for the bucket named
@@ -41,7 +41,8 @@ PLAQUE_SEARCH_INDEX_NAME = "plaque_index"
 
 
 class SubmitError(Exception):
-    """ Catchall error for submitting plaques"""
+    """Catchall error for submitting plaques"""
+
     pass
 
 
@@ -126,6 +127,7 @@ def _get_footer_items():
 
 
 def _loginout() -> dict:
+    """Helper function to get the login/logout details in one place"""
     is_admin = users.is_current_user_admin()
     if user := users.get_current_user():
         text = f"Log out {user.nickname()}"
@@ -141,6 +143,91 @@ def _loginout() -> dict:
     )
 
 
+def _get_random_plaque():
+    """Get a random plaque from the database"""
+    plaque_key = _get_random_plaque_key()
+    if plaque_key is None:
+        return None
+    plaque = ndb.Key(urlsafe=plaque_key).get()
+    return plaque
+
+
+def _get_random_plaque_key(method="time"):
+    """
+    Get a random plaque key.  Limit to total number of runs to 100 to prevent
+    infinite loop if there are no plaques.
+
+    There are at least three strategies to get a random plaque:
+
+        1. Perform a Plaque.query().count(), get a random int in the [0,count)
+           range, and get the plaque at that offset using
+           Plaque.query.get(offset=foo).
+
+           This technique favors large submissions of plaques that were
+           imported automatically (e.g. North Carolina, Geographs,
+           Toronto/Ontario), and using large offsets is expensive in the NDB
+           system.
+
+        2. "time": Pick a random time since the start of the site, and find a
+           plaque that has a created_by value close to that time.
+
+           This technique favors plaques which were submitted by users who have
+           submitted many plaques over a long period of time, and will be
+           unlikely to pick a plaque which would be picked by technique #1.
+
+        3. "geo": Pick a random geographical spot on the globe, and get the
+           plaque closest to that.
+
+           This will favor plaques that are further away from other plaques.
+
+    """
+    plaque_key = None
+    bailout = 0
+    plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
+    while plaque_key is None and bailout < 100:
+        bailout += 1
+        if method == "geo":
+            # Math from http://mathworld.wolfram.com/SpherePointPicking.html
+            rand_u = random.random()
+            rand_v = random.random()
+            lng = ((2.0 * rand_u) - 1.0) * 180.0  # Range: [-180.0, 180.0)
+            lat = math.acos(2.0 * rand_v - 1) * 180.0 / math.pi - 90.0
+            search_radius_meters = 100000  # 100 km
+
+            query_string = (
+                f"distance(location, geopoint({lat}, {lng})) < {search_radius_meters}"
+            )
+            query = search.Query(query_string)
+            results = plaque_search_index.search(query)
+            if results.number_found > 0:
+                doc_id = results[0].doc_id
+                plaque_key = ndb.Key(doc_id).get()
+        else:  # method == "time"
+            random_time = _get_random_time()
+            if random_time is not None:
+                plaque_key = (
+                    Plaque.query()
+                    .filter(Plaque.approved == True)
+                    .filter(Plaque.created_on > random_time)
+                    .get(keys_only=True)
+                )
+    if plaque_key is None:
+        return None
+
+    return plaque_key.urlsafe()
+
+
+def _get_random_time(year=FIRST_YEAR, month=FIRST_MONTH, day=FIRST_DAY) -> dt.datetime:
+    """
+    Utilize the fact that the first plaque submission was 2015-09-09 to
+    generate a random time between then and now.
+    """
+    first = dt.datetime(year, month, day)
+    now = dt.datetime.now()
+    rand_seconds = random.randint(0, int((now - first).total_seconds()))
+    return first + dt.timedelta(seconds=rand_seconds)
+
+
 @app.route("/", methods=["GET", "HEAD"])
 def many_plaques():
     """View a page of multiple plaques"""
@@ -150,7 +237,7 @@ def many_plaques():
 
     # cursor = None # TODO
     per_page = DEF_NUM_PER_PAGE
-    # is_random = False # TODO
+    # is_random = False # TODO this was used for caching non-random pages in the 2.7 version
 
     with ndb.Client().context() as context:
         plaques, next_cur, more = Plaque.fetch_page(DEF_NUM_PER_PAGE)
@@ -196,7 +283,7 @@ def one_plaque(title_url: str) -> str:
     if request.method == "HEAD":
         return _render_template("head.html")
 
-    # TODO: add other search terms possibilities (key, old ID, etc)
+    # TODO, eventually: add other search terms possibilities (key, old ID, etc)
 
     with ndb.Client().context() as context:
         # Get plaque if exists, otherwise get earliest
@@ -305,7 +392,7 @@ def _upload_image(img_fh, plaque):
     img_fh.seek(0)  # reset file handle
     base64_img_bytes = img_fh.read()
     blob.upload_from_string(base64_img_bytes)
-    make_public_url = blob.make_public() # TODO might be a better img url for this
+    blob.make_public()  # TODO might be a better img url for this
 
     #    # Kill old image and URL, if they exist. If they don't, ignore any errors:
     #    #
@@ -347,12 +434,18 @@ def _plaque_for_insert() -> Plaque:
     plaque.updated_by = None
 
     # Upload the image for a new plaque
-    img_name, img_fh = _get_img_from_request() # TODO: do we need need to add img_name back to _upload_image?
+    (
+        img_name,
+        img_fh,
+    ) = (
+        _get_img_from_request()
+    )  # TODO: do we need need to add img_name back to _upload_image?
     _upload_image(img_fh, plaque)
 
     # Search index the plaque text
     plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
     plaque_search_index.put(plaque.to_search_document())
+    plaque.put()
     return plaque
 
 
@@ -360,13 +453,7 @@ def _add_plaque_post() -> str:
     """Do the POST request for /add"""
     with ndb.Client().context() as context:
         plaque = _plaque_for_insert()
-        plaque.put()  # ? TODO
         return _render_template_map("add.html", [plaque])
-        # return _render_template(
-        # "add.html",
-        # [plaque],
-        # bounding_box=_get_bounding_box([plaque]),
-        # )
 
 
 def _add_plaque_get() -> str:
@@ -485,30 +572,17 @@ def disapprove_plaque(plaque_key: str = None) -> str:
 def random_plaques(num_plaques: int = 5) -> str:
     """View a random group of plaques."""
 
-    def _random_time(year=FIRST_YEAR, month=FIRST_MONTH, day=FIRST_DAY) -> dt.datetime:
-        """
-        Utilize the fact that the first plaque submission was 2015-09-09 to
-        generate a random time between then and now.
-        """
-        first = dt.datetime(year, month, day)
-        now = dt.datetime.now()
-        rand_seconds = random.randint(0, int((now - first).total_seconds()))
-        return first + dt.timedelta(seconds=rand_seconds)
-
     plaques = []
     with ndb.Client().context() as context:
         for _ in range(num_plaques):
             plaque = (
                 Plaque.query()
                 .filter(Plaque.approved == True)
-                .filter(Plaque.created_on > _random_time())
+                .filter(Plaque.created_on > _get_random_time())
                 .get()
             )
             plaques.append(plaque)
         return _render_template("all.html", plaques)
-
-
-# TODO: def _get_rand_featured():
 
 
 def _get_featured():
@@ -567,9 +641,15 @@ def get_geojson(title_url: str) -> str:
         return plaque.json_for_tweet if plaque else f"No plaque for {title_url}"
 
 
-# TODO when get_random_plaque is done
-# @app.route('/featured/random',methods=["GET"])
-#    with ndb.Client().context() as context:
+@app.route("/featured/random", methods=["GET"])
+def set_featured_random() -> str:
+    """
+    Set a random plaque to be the featured one and respond with the tweet JSON
+    """
+    with ndb.Client().context() as context:
+        plaque = _get_random_plaque()
+        set_featured(plaque)
+        return plaque.json_for_tweet
 
 
 # TODO: add argument for number of plaques
@@ -692,12 +772,14 @@ def search_plaques_form() -> str:
         return redirect(f"/search/{search_term}")
     return redirect("/")
 
+
 @app.route("/search/<string:search_term>", methods=["GET"])
 def search_plaques(search_term: str) -> str:
     """Display a search results page"""
 
+    # TODO: probably a better way to sanitize incoming search terms
     search_term = search_term.replace('"', "")
-    # prevent crashing on e.g. 'Piñata'
+    # prevent crashing on e.g. 'Piñata':
     search_term = search_term.encode("ascii", "ignore").decode()
 
     with ndb.Client().context() as context:
@@ -718,7 +800,7 @@ def search_plaques(search_term: str) -> str:
     methods=["GET"],
 )
 def nearby_plaques(lat: float, lng: float, num: int = DEF_NUM_NEARBY) -> str:
-    """ Get a page of nearby plaques """
+    """Get a page of nearby plaques"""
     num = min(num, 20)
 
     # Reduce search billing cost by making nearby search less granular:
@@ -778,6 +860,15 @@ def json_plaques(plaque_keys_str: str = None, summary: bool = True):
     else:
         json_output = _json_for_keys(plaque_keys_str, summary)
     return json_output
+
+
+# TODO
+# @app.errorhandler(404)
+# def not_found(e):
+#    return render_template("404.html")
+# @app.errorhandler(500)
+# def server_error(e):
+#    return render_template("500.html")
 
 
 # TODO
