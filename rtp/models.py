@@ -183,16 +183,16 @@ class Plaque(ndb.Model):
     @property
     def title_page_url(self):
         """This plaque's key-based page URL."""
-        url = '/plaque/{}'.format(self.title_url)
+        url = f"/plaque/{self.title_url}"
         return url
 
     @property
     def fully_qualified_title_page_url(self):
-        return "https://readtheplaque.com{0.title_page_url}".format(self)
+        return f"https://readtheplaque.com{self.title_page_url}"
 
     def page_url(self):
         """This plaque's key-based page URL."""
-        url = '/plaque/{}'.format(self.key.urlsafe())
+        url = f"/plaque/{self.key.urlsafe()}"
         return url
 
     def set_title_and_title_url(self, title, ancestor_key):
@@ -200,7 +200,7 @@ class Plaque(ndb.Model):
         title = title[:1499] # limit to 1500 char
         if title != self.title:
             self.title = title
-            self.set_title_url(plaqueset_key)
+            self.set_title_url(ancestor_key)
 
     def set_title_url(self, ancestor_key):
         """
@@ -214,7 +214,7 @@ class Plaque(ndb.Model):
         n_matches = Plaque.num_same_title_urls(title_url, ancestor_key)
         while n_matches > 0:
             count += n_matches
-            title_url = "{}{}".format(orig_title_url, count)
+            title_url = f"{orig_title_url}{count}"
             n_matches = Plaque.num_same_title_urls(title_url, ancestor_key)
 
         self.title_url = title_url
@@ -336,7 +336,7 @@ class Plaque(ndb.Model):
 
     @property
     def tweet_text (self):
-        return "'{0.title}' Always #readtheplaque {0.fully_qualified_title_page_url}".format(self)
+        return f"'{self.title}' Always #readtheplaque {self.fully_qualified_title_page_url}"
 
     @property
     def tweet_to_plaque_submitter(self):
@@ -348,9 +348,9 @@ class Plaque(ndb.Model):
         if match:
             submitter = match.group(submitter_match_index).strip()
             submitter_tweet = (
-                "@{0} Your plaque has been selected by the random plaque "
-                "generator! Thanks again! #readtheplaque {1}".format(
-                    submitter, self.fully_qualified_title_page_url)
+                f"@{submitter} Your plaque has been selected by the random plaque "
+                "generator! Thanks again! #readtheplaque"
+                f"{self.fully_qualified_title_page_url}"
             )
         else:
             submitter_tweet = None
