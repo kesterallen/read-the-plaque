@@ -37,6 +37,8 @@ DEF_NUM_PER_PAGE = 25
 DEF_NUM_NEARBY = 5
 DEF_RAND_NUM_PER_PAGE = 5
 
+DELETE_PRIVS = ['kester']
+
 PLAQUE_SEARCH_INDEX_NAME = "plaque_index"
 
 
@@ -547,22 +549,30 @@ def _set_approval(plaque_key, approval=True):
         plaque.put()
 
 
-@app.route("/approve/<string:plaque_key>", methods=["POST"])
-def approve_plaque(plaque_key: str, approval: bool = True) -> str:
+@app.route("/approve", methods=["POST"])
+@app.route("/approve/<string:plaque_key>", methods=["GET"])
+def approve_plaque(plaque_key: str = None, approval: bool = True) -> str:
     """Turn on the approval of an existing plaque. Note: admin only"""
 
     if not users.is_current_user_admin():
         print("redirecting to homepage because user is not admin")
         return redirect("/")
 
-    _set_approval(plaque_key, approval)
-    return redirect("/")
+    if plaque_key is None:
+        plaque_key = request.form.get("plaque_key", None)
+
+    if plaque_key:
+        _set_approval(plaque_key, approval)
+    else:
+        print("no plaque key")
+
+    return redirect('/nextpending')
 
 
-@app.route("/disapprove/<string:plaque_key>", methods=["POST"])
-def disapprove_plaque(plaque_key: str = None) -> str:
-    """Turn off the approval of an existing plaque. Note: admin only"""
-    return approve_plaque(plaque_key, False)
+@app.route("/disapprove", methods=["POST"])
+@app.route("/disapprove/<string:plaque_key>", methods=["GET"])
+def disapprove_plaque(plaque_key: str = None, approval: bool = False) -> str:
+    return approve_plaque(plaque_key, approval)
 
 
 @app.route("/random")
@@ -861,6 +871,37 @@ def json_plaques(plaque_keys_str: str = None, summary: bool = True):
         json_output = _json_for_keys(plaque_keys_str, summary)
     return json_output
 
+
+@app.route("/delete", methods=["POST"])
+def delete_plaque() -> str:
+    """Remove one plaque and its associated GCS image."""
+    if not users.is_current_user_admin():
+        return "admin only, please log in"
+
+    user = users.get_current_user()
+    name = "anon" if user is None else user.nickname()
+    if name not in DELETE_PRIVS:
+        return f"delete is turned off for user '{name}'"
+
+    if plaque_key := request.form.get("plaque_key", None):
+        plaque = ndb.Key(urlsafe=plaque_key).get()
+    else:
+        return f"no plaque for key {plaqueset_key}"
+
+    try:
+        gcs.delete(plaque.pic)
+
+        # Delete search index for this document
+        plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
+        results = plaque_search_index.search(search_term)
+        for result in results:
+            plaques = [ndb.Key(urlsafe=r.doc_id).get() for r in results]
+            plaque_search_index.delete(result.doc_id)
+    except:
+        pass
+
+    plaque.key.delete()
+    return redirect('/nextpending')
 
 # TODO
 # @app.errorhandler(404)
