@@ -37,7 +37,7 @@ DEF_NUM_PER_PAGE = 25
 DEF_NUM_NEARBY = 5
 DEF_RAND_NUM_PER_PAGE = 5
 
-DELETE_PRIVS = ['kester']
+DELETE_PRIVS = ["kester"]
 
 PLAQUE_SEARCH_INDEX_NAME = "plaque_index"
 
@@ -276,6 +276,19 @@ def rand_pending_plaques(
         plaques = Plaque.pending_list(num_to_select_from)
         rand_plaques = random.sample(plaques, num)
         return _render_template_map(plaques=rand_plaques)
+
+
+@app.route("/nextpending")
+def next_pending_plaque():
+    """View the next pending plaque. Note: admin only"""
+    if not users.is_current_user_admin():
+        print("redirecting to homepage because user is not admin")
+        return redirect("/")
+
+    with ndb.Client().context() as context:
+        plaques = Plaque.pending_list(1)
+        plaque = plaques[0]
+        return redirect(plaque.title_page_url)
 
 
 @app.route("/plaque/<string:title_url>", methods=["GET", "HEAD"])
@@ -566,7 +579,7 @@ def approve_plaque(plaque_key: str = None, approval: bool = True) -> str:
     else:
         print("no plaque key")
 
-    return redirect('/nextpending')
+    return redirect("/nextpending")
 
 
 @app.route("/disapprove", methods=["POST"])
@@ -824,6 +837,7 @@ def nearby_plaques(lat: float, lng: float, num: int = DEF_NUM_NEARBY) -> str:
 
 
 def _json_for_all(summary=True):
+    """Get the JSON representation of all plaques"""
     plaques_all = []
     num = 1000
     more = True
@@ -837,6 +851,7 @@ def _json_for_all(summary=True):
 
 
 def _json_for_keys(plaque_keys_str, summary=True):
+    """Get the JSON representation of the given plaques"""
     plaque_keys = plaque_keys_str.split("&")
 
     plaques = []
@@ -883,25 +898,33 @@ def delete_plaque() -> str:
     if name not in DELETE_PRIVS:
         return f"delete is turned off for user '{name}'"
 
-    if plaque_key := request.form.get("plaque_key", None):
-        plaque = ndb.Key(urlsafe=plaque_key).get()
-    else:
-        return f"no plaque for key {plaqueset_key}"
+    with ndb.Client().context() as context:
+        if plaque_key := request.form.get("plaque_key", None):
+            plaque = ndb.Key(urlsafe=plaque_key).get()
+        else:
+            return f"no plaque for key {plaqueset_key}"
 
-    try:
-        gcs.delete(plaque.pic)
+        try:
+            gcs.delete(plaque.pic)
 
-        # Delete search index for this document
-        plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
-        results = plaque_search_index.search(search_term)
-        for result in results:
-            plaques = [ndb.Key(urlsafe=r.doc_id).get() for r in results]
-            plaque_search_index.delete(result.doc_id)
-    except:
-        pass
+            # Delete search index for this document
+            plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
+            results = plaque_search_index.search(search_term)
+            for result in results:
+                plaques = [ndb.Key(urlsafe=r.doc_id).get() for r in results]
+                plaque_search_index.delete(result.doc_id)
+        except:
+            pass
 
-    plaque.key.delete()
-    return redirect('/nextpending')
+        plaque.key.delete()
+    return redirect("/nextpending")
+
+
+# TODO
+@app.route("/flush")
+def flush_memcache() -> str:
+    return redirect("/")
+
 
 # TODO
 # @app.errorhandler(404)
