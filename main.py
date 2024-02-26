@@ -681,11 +681,21 @@ def get_featured_geojson():
 
 
 @app.route("/geojson/<string:title_url>", methods=["GET"])
-def get_geojson(title_url: str) -> str:
-    """Display the GeoJSON for the given plaque"""
-    with ndb.Client().context() as context:
-        plaque = Plaque.query().filter(Plaque.title_url == title_url).get()
-        return plaque.json_for_tweet if plaque else f"No plaque for {title_url}"
+@app.route("/geojson/", methods=["POST"])
+def get_geojson(title_url: str = None) -> str:
+    """
+    GET: Display the GeoJSON for the given plaque
+    POST: Returns the JSON for plaques with updated_on after the specified date.
+    """
+    if request.method == "POST":
+        updated_on_str = request.form.get("updated_on")
+        with ndb.Client().context() as context:
+            geojson = Plaque.created_after_geojson(updated_on_str)
+        return json.dumps(geojson)
+    else:
+        with ndb.Client().context() as context:
+            plaque = Plaque.query().filter(Plaque.title_url == title_url).get()
+            return plaque.json_for_tweet if plaque else f"No plaque for {title_url}"
 
 
 @app.route("/featured/random", methods=["GET"])
@@ -947,7 +957,7 @@ def delete_plaque() -> str:
 @app.route("/flush")
 def flush_memcache() -> str:
     """Flush the memcache and go to the homepage"""
-    memcache.flush()
+    memcache.flush_all()
     return redirect("/")
 
 
