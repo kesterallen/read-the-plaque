@@ -671,7 +671,7 @@ def set_featured_random() -> str:
     """
     with ndb.Client().context() as context:
         plaque = _get_random_plaque()
-        set_featured(plaque)
+        _set_featured(plaque)
         return plaque.json_for_tweet
 
 
