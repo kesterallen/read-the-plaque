@@ -12,7 +12,7 @@ import urllib
 
 from google.cloud import ndb
 from google.cloud import storage
-from google.appengine.api import wrap_wsgi_app, users, search
+from google.appengine.api import wrap_wsgi_app, users, search, memcache
 
 from flask import Flask, render_template, request, redirect
 
@@ -83,7 +83,7 @@ def _render_template(template_file: str, plaques: list = None, **kwargs) -> str:
     """A wrapper for flask.render_template that injects some defaults, filter out None plaques"""
     if plaques is not None:
         plaques = [p for p in plaques if p is not None]
-    return render_template(
+    rendered = render_template(
         template_file,
         plaques=plaques,
         next_cursor_urlsafe="foo",  # TODO
@@ -91,6 +91,8 @@ def _render_template(template_file: str, plaques: list = None, **kwargs) -> str:
         footer_items=_get_footer_items(),
         **kwargs,
     )
+    _memcache_set(rendered)
+    return rendered
 
 
 def _render_template_map(
@@ -230,6 +232,21 @@ def _get_random_time(year=FIRST_YEAR, month=FIRST_MONTH, day=FIRST_DAY) -> dt.da
     return first + dt.timedelta(seconds=rand_seconds)
 
 
+def _memcache_name():
+    """Define the memcache key: method-requestpath-adminstatus"""
+    return f"{request.method}_{request.path}_{users.is_current_user_admin()}"
+
+
+def _memcache_get():
+    """Return the memcache for a given request"""
+    return memcache.get(_memcache_name())
+
+
+def _memcache_set(text):
+    """Set the memcache for a given request"""
+    return memcache.set(_memcache_name(), text)
+
+
 @app.route("/", methods=["GET", "HEAD"])
 def many_plaques():
     """View a page of multiple plaques"""
@@ -241,10 +258,15 @@ def many_plaques():
     per_page = DEF_NUM_PER_PAGE
     # is_random = False # TODO this was used for caching non-random pages in the 2.7 version
 
+    if rendered := _memcache_get():
+        return rendered
     with ndb.Client().context() as context:
         plaques, next_cur, more = Plaque.fetch_page(DEF_NUM_PER_PAGE)
         featured_plaque = _get_featured()
-        return _render_template("all.html", plaques, featured_plaque=featured_plaque)
+        rendered = _render_template(
+            "all.html", plaques, featured_plaque=featured_plaque
+        )
+        return rendered
 
 
 @app.route("/pending")
@@ -306,6 +328,8 @@ def one_plaque(title_url: str) -> str:
         if plaque is None:
             plaque = Plaque.query().order(Plaque.created_on).get()
 
+        if rendered := _memcache_get():
+            return rendered
         return _render_template_map("one.html", [plaque], plaque.title)
 
 
@@ -920,9 +944,10 @@ def delete_plaque() -> str:
     return redirect("/nextpending")
 
 
-# TODO
 @app.route("/flush")
 def flush_memcache() -> str:
+    """Flush the memcache and go to the homepage"""
+    memcache.flush()
     return redirect("/")
 
 
@@ -934,9 +959,6 @@ def flush_memcache() -> str:
 # def server_error(e):
 #    return render_template("500.html")
 
-
-# TODO
-# /flush
 
 if __name__ == "__main__":
     # This is used when running locally only. When deploying to Google App
