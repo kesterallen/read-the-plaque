@@ -60,7 +60,7 @@ app.wsgi_app = wrap_wsgi_app(app.wsgi_app)
 # TODO: get cursor or next button working
 
 
-def _get_key(key_filename="key_googlemaps.txt"):
+def _get_key(key_filename="key_googlemaps.txt") -> str:
     """Get the value of the key in the given file"""
     with open(key_filename) as key_fh:
         key = key_fh.read().rstrip()
@@ -71,6 +71,7 @@ def _get_key(key_filename="key_googlemaps.txt"):
 # same entity group. Queries across the single entity group will be consistent.
 # However, the write rate should be limited to ~1/second.
 #
+# TODO return type
 def _plaqueset_key(plaqueset_name=DEF_PLAQUESET_NAME):
     """
     Constructs a Datastore key for a Plaque entity. Use plaqueset_name as
@@ -112,15 +113,12 @@ def _render_template_map(
     )
 
 
-def _get_footer_items():
+def _get_footer_items(num: int = 5):
     """
-    Just 5 tags for the footer.
+    A list of tag items for the page footer.
     """
-    # TODO: turn this back on when you figure out memcaching
-    # rand_plaques = [get_random_plaque() for _ in range(5)]
-    # tags = get_random_tags()
-    rand_plaques = []
-    tags = []
+    rand_plaques = [_get_random_plaque() for _ in range(num)]
+    tags = _get_random_tags(num)
     footer_items = {
         "tags": tags,
         "new_plaques": rand_plaques,
@@ -137,12 +135,31 @@ def _loginout() -> dict:
     else:
         text = "Admin login"
         url = users.create_login_url("/")
+    return dict(is_admin=is_admin, text=text, url=url)
 
-    return dict(
-        is_admin=is_admin,
-        text=text,
-        url=url,
-    )
+
+def _get_random_tags(num:int) -> str:
+    """
+    Get a list of random tags. Limit to total number of runs to 100 to prevent
+    infinite loop if there are no plaques or tags.
+    """
+    tags = set()
+    bailout = 0
+    try:
+        while len(tags) < num and bailout < 100:
+            bailout += 1
+            plaque = _get_random_plaque()
+            if plaque is None:
+                continue
+            if plaque.tags:
+                tag = random.choice(plaque.tags)
+                tags.add(tag)
+    except ValueError:
+        logging.info("no plaques in get_random_tags")
+
+    outtags = list(tags)
+    outtags = outtags[:num]
+    return outtags
 
 
 def _get_random_plaque():

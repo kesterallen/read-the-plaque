@@ -130,8 +130,11 @@ def main():
 
     # Update a plaques entry in the Big Map static/plaques.geojson file for one
     # or more plaques, given as URLs (e.g. four-citizens-killed-by-british-soldiers
-    # for the plaque at # readtheplaque.com/plaque/four-citizens-killed-by-british-soldiers),
+    # for the plaque at readtheplaque.com/plaque/four-citizens-killed-by-british-soldiers),
     # if any URLs are specified on the command line.
+    #
+    # If not URLs are specified on the command line, skip this.
+    #
     if len(sys.argv) > 1:
         for fix_json_location_url in sys.argv[1:]:
             try:
