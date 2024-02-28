@@ -426,9 +426,10 @@ def _add_plaque_get() -> str:
         "Click the plaque's location on the map, or search "
         "for it, or enter its lat/lng location"
     )
-    return _render_template_map(
-        "add.html", None, maptext=maptext, page_title="Add Plaque"
-    )
+    with ndb.Client().context() as context:
+        return _render_template_map(
+            "add.html", None, maptext=maptext, page_title="Add Plaque"
+        )
 
 
 def _plaque_for_edit(plaque: Plaque) -> Plaque:
@@ -551,7 +552,8 @@ def many_plaques():
     """View a page of multiple plaques"""
     # Return a lightweight response for a HEAD request
     if request.method == "HEAD":
-        return _render_template("head.html")
+        with ndb.Client().context() as context:
+            return _render_template("head.html")
 
     # cursor = None # TODO
     per_page = DEF_NUM_PER_PAGE
@@ -847,7 +849,8 @@ def rss_feed() -> str:
 @app.route("/about")
 def about() -> str:
     """The "about" page"""
-    return _render_template("about.html")
+    with ndb.Client().context() as context:
+        return _render_template("about.html")
 
 
 @app.route(
@@ -858,8 +861,9 @@ def geo_plaques(lat: float, lng: float, search_radius_meters: float) -> str:
     Return plaques within search_radius_meters of lat/lng, sorted by distance
     from lat/lng.
     """
-    plaques = _geo_search(lat, lng, search_radius_meters)
-    return _render_template_map(plaques=plaques, page_title="Geo Search")
+    with ndb.Client().context() as context:
+        plaques = _geo_search(lat, lng, search_radius_meters)
+        return _render_template_map(plaques=plaques, page_title="Geo Search")
 
 
 @app.route("/search", methods=["POST"])
@@ -883,11 +887,11 @@ def search_plaques(search_term: str) -> str:
         results = plaque_search_index.search(search_term)
         plaques = [ndb.Key(urlsafe=r.doc_id).get() for r in results]
 
-    # Hide unpublished plaques for non admin
-    if not users.is_current_user_admin():
-        plaques = [p for p in plaques if p.approved]
+        # Hide unpublished plaques for non admin
+        if not users.is_current_user_admin():
+            plaques = [p for p in plaques if p.approved]
 
-    return _render_template_map(plaques=plaques, page_title="Search")
+        return _render_template_map(plaques=plaques, page_title="Search")
 
 
 @app.route("/nearby/<float(signed=True):lat>/<float(signed=True):lng>", methods=["GET"])
@@ -896,14 +900,15 @@ def nearby_plaques(lat: float, lng: float, num: int = DEF_NUM_NEARBY) -> str:
     """Get a page of nearby plaques"""
     num = min(num, 20)
 
-    # Reduce search billing cost by making nearby search less granular:
-    # 500 m, 50 km, 500 km
-    search_radii_meters = [5 * 10**i for i in [2, 4, 6]]
-    for i, search_radius_meters in enumerate(search_radii_meters):
-        plaques = _geo_search(lat, lng, search_radius_meters)
-        if len(plaques) > num:
-            break
-    return _render_template_map(plaques=plaques, page_title="Nearby Plaques")
+    with ndb.Client().context() as context:
+        # Reduce search billing cost by making nearby search less granular:
+        # 500 m, 50 km, 500 km
+        search_radii_meters = [5 * 10**i for i in [2, 4, 6]]
+        for i, search_radius_meters in enumerate(search_radii_meters):
+            plaques = _geo_search(lat, lng, search_radius_meters)
+            if len(plaques) > num:
+                break
+        return _render_template_map(plaques=plaques, page_title="Nearby Plaques")
 
 
 @app.route("/updatejp", methods=["GET"])  # delete?
