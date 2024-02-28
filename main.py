@@ -33,7 +33,7 @@ DEF_PLAQUESET_NAME = "public"
 
 DEF_NUM_PENDING = 5
 DEF_NUM_RSS = 10
-DEF_NUM_PER_PAGE = 25
+DEF_NUM_PAGE = 25
 DEF_NUM_NEARBY = 5
 DEF_RAND_NUM_PER_PAGE = 5
 
@@ -55,8 +55,6 @@ class SubmitError(Exception):
 
 app = Flask(__name__)
 app.wsgi_app = wrap_wsgi_app(app.wsgi_app)
-
-# TODO: get cursor or next button working
 
 
 def _get_key(key_filename="key_googlemaps.txt") -> str:
@@ -80,13 +78,15 @@ def _plaqueset_key(plaqueset_name=DEF_PLAQUESET_NAME):
 
 
 def _render_template(template_file: str, plaques: list = None, **kwargs) -> str:
-    """A wrapper for flask.render_template that injects some defaults, filter out None plaques"""
+    """
+    A wrapper for flask.render_template that injects some defaults, filter out
+    None plaques
+    """
     if plaques is not None:
         plaques = [p for p in plaques if p is not None]
     rendered = render_template(
         template_file,
         plaques=plaques,
-        next_cursor_urlsafe="foo",  # TODO
         loginout=_loginout(),
         footer_items=_get_footer_items(),
         **kwargs,
@@ -262,7 +262,9 @@ def _memcache_set(text):
 
 
 def _get_bounding_box(plaques: list[Plaque]) -> list[float]:
-    """Calculate the bounding box corners for the coordinates of a list of plaques"""
+    """
+    Calculate the bounding box corners for the coordinates of a list of plaques
+    """
     if plaques is not None:
         plaques = [p for p in plaques if p is not None]
     if plaques:
@@ -485,6 +487,10 @@ def _set_featured(plaque):
 
 
 def _geo_search(lat: float, lng: float, search_radius_meters: int = 5000):
+    """
+    Return the plaques within a radius around lat/lng.
+    Context is provided by caller.
+    """
     search_radius_meters = int(search_radius_meters)
     loc_expr = f"distance(location, geopoint({lat}, {lng}))"
     query = f"{loc_expr} < {search_radius_meters}"
@@ -502,13 +508,10 @@ def _geo_search(lat: float, lng: float, search_radius_meters: int = 5000):
         ),
     )
 
-    with ndb.Client().context() as context:
-        plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
-        results = plaque_search_index.search(search_query)
-
-        keys = [ndb.Key(urlsafe=r.doc_id) for r in results]
-        plaques = ndb.get_multi(keys)
-
+    plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
+    results = plaque_search_index.search(search_query)
+    keys = [ndb.Key(urlsafe=r.doc_id) for r in results]
+    plaques = ndb.get_multi(keys)
     return plaques
 
 
@@ -519,7 +522,7 @@ def _json_for_all(summary=True):
     more = True
     cursor = None
     while more:
-        plaques, _, _ = Plaque.fetch_page(num, cursor, urlsafe=False)
+        plaques, cursor, more = Plaque.fetch_page(num, cursor, urlsafe=False)
         plaques_all.extend(plaques)
 
     plaque_dicts = [p.to_dict(summary=summary) for p in plaques if p]
@@ -548,28 +551,26 @@ def _json_for_keys(plaque_keys_str, summary=True):
 
 
 @app.route("/", methods=["GET", "HEAD"])
-def many_plaques():
+@app.route("/page/<string:cursor>", methods=["GET"])
+def many_plaques(cursor: str = None) -> str:
     """View a page of multiple plaques"""
     # Return a lightweight response for a HEAD request
     if request.method == "HEAD":
         with ndb.Client().context() as context:
             return _render_template("head.html")
 
-    # cursor = None # TODO
-    per_page = DEF_NUM_PER_PAGE
-    # is_random = False # TODO this was used for caching non-random pages in the 2.7 version
-
     if rendered := _memcache_get():
         return rendered
     with ndb.Client().context() as context:
-        plaques, nextcur, more = Plaque.fetch_page(DEF_NUM_PER_PAGE) # TODO: pagination
-        featured_plaque = _get_featured()
+        cursor = ndb.Cursor(urlsafe=cursor) if cursor else None
+        plaques, cursor, more = Plaque.fetch_page(DEF_NUM_PAGE, cursor)
+        cursor = cursor.urlsafe().decode() if cursor is not None else None
         return _render_template(
             "all.html",
             plaques,
-            featured_plaque=featured_plaque,
-            # nextcur
-            # more
+            featured_plaque=_get_featured(),
+            cursor=cursor,
+            more=more,
         )
 
 
@@ -800,7 +801,7 @@ def tagged_plaques(tag: str, only_approved: bool = True) -> str:
         plaques = (
             query.filter(Plaque.tags == tag)
             .order(-Plaque.created_on)
-            .fetch(limit=DEF_NUM_PER_PAGE)
+            .fetch(limit=DEF_NUM_PAGE)
         )
         return _render_template("all.html", plaques)
 

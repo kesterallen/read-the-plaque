@@ -77,18 +77,18 @@ class Plaque(ndb.Model):
         return title
 
     @classmethod
-    def fetch_page(cls, num, startcur=None, urlsafe=True):
+    def fetch_page(cls, num, start_cursor=None, urlsafe=True):
         """
-        The "startcur" and "nextcur" variables refer to the pagination start
+        The "start_cursor" and "next_cursor" variables refer to the pagination start
         and next cursors.
         """
         if not urlsafe:
-            startcur = startcur.urlsafe() if startcur else None
+            start_cursor = start_cursor.urlsafe() if start_cursor else None
 
         query = Plaque.query().filter(Plaque.approved == True).order(-Plaque.created_on)
-        plaques, nextcur, more = query.fetch_page(num, start_cursor=startcur)
+        plaques, next_cursor, more = query.fetch_page(num, start_cursor=start_cursor)
 
-        return plaques, nextcur, more
+        return plaques, next_cursor, more
 
     @classmethod
     def num_pending(cls, num=20): # num is the max to return
