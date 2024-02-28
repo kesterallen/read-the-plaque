@@ -344,7 +344,7 @@ class Plaque(ndb.Model):
         """ URL for google maps at this plaque's location """
         return (
             "http://maps.google.com/maps?&z=21&t=m&q=loc:"
-            f"{self.location.latitudet:.8f}+{self.location.longitude:.8f}"
+            f"{self.location.latitude:.8f}+{self.location.longitude:.8f}"
         )
 
 class FeaturedPlaque(ndb.Model):
