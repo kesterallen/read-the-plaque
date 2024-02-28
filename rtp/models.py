@@ -1,16 +1,11 @@
+"""ORM classes for Read the Plaque"""
 
-from collections import defaultdict
 import datetime
 import json
-import logging
 import re
 
 from google.cloud import ndb
-
-#from google.appengine.api import memcache # TODO
 from google.appengine.api import search
-#from google.appengine.datastore.datastore_query import Cursor # TODO
-#from google.appengine.ext.db import BadValueError # TODO
 
 class Comment(ndb.Model):
     """
@@ -67,21 +62,25 @@ class Plaque(ndb.Model):
 
     @classmethod
     def num_approved(cls):
+        """How many plaques are approved"""
         count = Plaque.query().filter(Plaque.approved == True).count()
         return count
 
     @classmethod
     def tokenize_title(cls, title):
+        """ Make a URL title """
         title = title.strip().lower()
-        title = re.sub(r'[^\w]+', '-', title) # replace one or more non-word chars with a single dash
-        title = re.sub(r'^-+|-+$', '', title) # remove leading or trailing dashes
+        # replace one or more non-word chars with a single dash, and remove
+        # leaving/trailing dashes
+        title = re.sub(r'[^\w]+', '-', title)
+        title = re.sub(r'^-+|-+$', '', title)
         return title
 
     @classmethod
     def fetch_page(cls, num, startcur=None, urlsafe=True):
         """
-        The "startcur" and "nextcur" variables refer to the start cursor and
-        next cursors for this pagination.
+        The "startcur" and "nextcur" variables refer to the pagination start
+        and next cursors.
         """
         if not urlsafe:
             startcur = startcur.urlsafe() if startcur else None
@@ -93,13 +92,13 @@ class Plaque(ndb.Model):
 
     @classmethod
     def num_pending(cls, num=20): # num is the max to return
+        """ How many pending plaques are there? """
         count = Plaque.query().filter(Plaque.approved != True).count(limit=num)
         return count
 
     @classmethod
     def pending_list(cls, num=25, desc=True):
-        """A separate method from approved() so that it will
-        never be memcached."""
+        """The newest {num} pending plaques."""
         query = Plaque.query().filter(Plaque.approved != True).order(Plaque.approved)
         if desc:
             query = query.order(-Plaque.created_on)
@@ -109,49 +108,14 @@ class Plaque(ndb.Model):
         plaques = query.fetch(limit=num)
         return plaques
 
-    # Turning off because this doesn't scale.
-    # TODO: add table UniqueTags
-    @classmethod
-    def all_tags_sized(cls):
-        """
-        Return a dict of the tags and their display-layer font sizes. Done
-        here to speed rendering and to make the whole thing memcacheable.
-        """
-        tag_counts = memcache.get('all_tags_sized')
-        if tag_counts is None:
-            tag_counts = defaultdict(int)
 
-            plaques = Plaque.query().filter(Plaque.approved == True).fetch()
-            for plaque in plaques:
-                for t in plaque.tags:
-                    tag_counts[t] += 1
-
-            tag_fontsize = {}
-            for tag, count in tag_counts.items():
-                if count < 5:
-                    tag_fontsize[tag] = 10
-                elif count < 10:
-                    tag_fontsize[tag] = 13
-                elif count < 20:
-                    tag_fontsize[tag] = 16
-                elif count < 40:
-                    tag_fontsize[tag] = 19
-                elif count < 120:
-                    tag_fontsize[tag] = 22
-                else:
-                    tag_fontsize[tag] = 25
-            memcache_status = memcache.set('all_tags_sized', tag_fontsize)
-            if not memcache_status:
-                logging.debug("memcaching for all_tags_sized failed")
-        else:
-            logging.debug("memcache.get worked for all_tags_sized")
-
-        return tag_counts
-
-    # Trying this with media_link for img_url in blob creation (in main.py)
-    # TODO: evaluate if this is the right way to do things and delete the other code for img_url_* if so
     def img_url_base(self, size, crop=False):
         """Base method for  image URLs"""
+
+        # TODO: Trying this with media_link for img_url in blob creation (in main.py)
+        # TODO: evaluate if this is the right way to do things and delete the
+        #       other code for img_url_* if so
+
         url = self.img_url
         #url = '{}=s{}'.format(self.img_url, size)
         #if crop:
@@ -183,17 +147,16 @@ class Plaque(ndb.Model):
     @property
     def title_page_url(self):
         """This plaque's key-based page URL."""
-        url = f"/plaque/{self.title_url}"
-        return url
+        return f"/plaque/{self.title_url}"
 
     @property
     def fully_qualified_title_page_url(self):
+        """This plaque's page's fully-qualified URL."""
         return f"https://readtheplaque.com{self.title_page_url}"
 
     def page_url(self):
         """This plaque's key-based page URL."""
-        url = f"/plaque/{self.key.urlsafe()}"
-        return url
+        return f"/plaque/{self.key.urlsafe()}"
 
     def set_title_and_title_url(self, title, ancestor_key):
         """Update title if necessary and set the URL"""
@@ -221,6 +184,7 @@ class Plaque(ndb.Model):
 
     @classmethod
     def num_same_title_urls(cls, title_url, ancestor_key):
+        """How many plaques have this title_url?"""
         num_same_title= (
             Plaque.query(ancestor=ancestor_key)
             .filter(Plaque.title_url == title_url)
@@ -230,6 +194,7 @@ class Plaque(ndb.Model):
 
     @classmethod
     def num_same_title_urls_published(cls, title_url, ancestor_key):
+        """How many pubished plaques have this title_url?"""
         num_same_title = (
             Plaque.query(ancestor=ancestor_key)
             .filter(Plaque.title_url == title_url)
@@ -270,6 +235,7 @@ class Plaque(ndb.Model):
         return geojson
 
     def to_search_document(self):
+        """Generate a search document for this plaque"""
         location = search.GeoPoint(self.location.latitude, self.location.longitude)
         doc = search.Document(
             doc_id = self.key.urlsafe(),
@@ -284,9 +250,11 @@ class Plaque(ndb.Model):
 
     @property
     def geojson(self):
+        """Generate the geojson for this plaque (property)"""
         return self.to_geojson()
 
     def to_geojson(self, summary=False, jsonify=True):
+        """Generate the geojson for this plaque"""
 
         data = {
             "geometry": {
@@ -309,12 +277,16 @@ class Plaque(ndb.Model):
         return json.dumps(data) if jsonify else data
 
     def to_dict(self, summary=False):
+        """
+        Generate the non-geojson dict for this plaque; used for updating the
+        static big map page
+        """
         if summary:
             plaque_dict = {
                 'title': self.title,
                 'title_page_url': self.title_page_url,
                 'lat': str(self.location.latitude),
-                'lng': str(self.location.longitude), # note spelling difference "lng" vs "lon"
+                'lng': str(self.location.longitude),
                 'img_url_tiny': self.img_url_tiny,
             }
         else:
@@ -335,13 +307,13 @@ class Plaque(ndb.Model):
         return plaque_dict
 
     @property
-    def tweet_text (self):
+    def tweet_text(self):
+        """ The text for a tweet about this plaque """
         return f"'{self.title}' Always #readtheplaque {self.fully_qualified_title_page_url}"
 
     @property
     def tweet_to_plaque_submitter(self):
-        #submitter_regex = r"Submitted by.*(twitter.com/\w+|@\w+)\b"
-        #submitter_match_index = 1
+        """ Congratulations text for the submitter of this plaque """
         submitter_regex = r"Submitted by.*(twitter.com/|@)(\w+)\b"
         submitter_match_index = 2
         match = re.search(submitter_regex, self.description, re.DOTALL)
@@ -358,19 +330,24 @@ class Plaque(ndb.Model):
 
     @property
     def json_for_tweet(self):
-        plaque_dict = self.to_dict(summary=True) # TODO: use .geojson instead?
+        """
+        Separate non-geoJSON JSON representation. Use for updating the
+        static map file
+        """
+        plaque_dict = self.to_dict(summary=True)
         plaque_dict["tweet"] = self.tweet_text
         plaque_dict["submitter_tweet"] = self.tweet_to_plaque_submitter
         return json.dumps(plaque_dict)
 
     @property
     def gmaps_url(self):
+        """ URL for google maps at this plaque's location """
         return (
-            "http://maps.google.com/maps?&z=21&t=m&q="
-            "loc:{0.lat:.8f}+{0.lon:.8f}".format(self.location)
+            "http://maps.google.com/maps?&z=21&t=m&q=loc:"
+            f"{self.location.latitudet:.8f}+{self.location.longitude:.8f}"
         )
 
 class FeaturedPlaque(ndb.Model):
+    """ Class to keep track of which plaque is the fetured one """
     created_on = ndb.DateTimeProperty(auto_now_add=True)
     plaque = ndb.KeyProperty(repeated=False, kind=Plaque)
-
