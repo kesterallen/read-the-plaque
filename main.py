@@ -44,7 +44,6 @@ PLAQUE_SEARCH_INDEX_NAME = "plaque_index"
 
 class SubmitError(Exception):
     """Catchall error for submitting plaques"""
-
     pass
 
 
@@ -135,7 +134,7 @@ def _loginout() -> dict:
     else:
         text = "Admin login"
         url = users.create_login_url("/")
-    return dict(is_admin=is_admin, text=text, url=url)
+    return {"is_admin": is_admin, "text": text, "url": url}
 
 
 def _get_random_tags(num:int) -> str:
@@ -155,7 +154,7 @@ def _get_random_tags(num:int) -> str:
                 tag = random.choice(plaque.tags)
                 tags.add(tag)
     except ValueError:
-        logging.info("no plaques in get_random_tags")
+        print("no plaques in get_random_tags")
 
     outtags = list(tags)
     outtags = outtags[:num]
@@ -248,7 +247,7 @@ def _get_random_time(year=FIRST_YEAR, month=FIRST_MONTH, day=FIRST_DAY) -> dt.da
 
 
 def _memcache_name():
-    """Define the memcache key: method-requestpath-adminstatus"""
+    """Define the memcache key: method_RequestPath_AdminStatus"""
     return f"{request.method}_{request.path}_{users.is_current_user_admin()}"
 
 
@@ -287,8 +286,7 @@ def _get_img_from_request():
         return img_name, img_fh
 
     # If no file was uploaded, use plaque_img_url if it has a value:
-    if request.form["plaque_image_url"]:
-        img_url = request.form["plaque_image_url"]
+    if img_url := request.form.get("plaque_image_url", None):
         img_name = os.path.basename(img_url)
         img_fh = urllib.request.urlopen(img_url)
         return img_name, img_fh
@@ -373,7 +371,7 @@ def _upload_image(img_fh, plaque):
             pass
     if plaque.img_url is not None:
         try:
-            images.delete_serving_url(plaque.img_url)
+            images.delete_serving_url(plaque.img_url) # TODO
         except:
             pass
 
@@ -404,13 +402,9 @@ def _plaque_for_insert() -> Plaque:
     plaque.updated_by = None
 
     # Upload the image for a new plaque
-    (
-        img_name,
-        img_fh,
-    ) = (
-        _get_img_from_request()
-    )  # TODO: do we need need to add img_name back to _upload_image?
+    (img_name, img_fh) = _get_img_from_request()
     _upload_image(img_fh, plaque)
+    # TODO: do we need need to add img_name back to _upload_image?
 
     # Search index the plaque text
     plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
@@ -524,7 +518,7 @@ def _json_for_all(summary=True):
     more = True
     cursor = None
     while more:
-        plaques, cursor, more = Plaque.fetch_page(num, cursor, urlsafe=False)
+        plaques, _, _ = Plaque.fetch_page(num, cursor, urlsafe=False)
         plaques_all.extend(plaques)
 
     plaque_dicts = [p.to_dict(summary=summary) for p in plaques if p]
@@ -566,12 +560,15 @@ def many_plaques():
     if rendered := _memcache_get():
         return rendered
     with ndb.Client().context() as context:
-        plaques, next_cur, more = Plaque.fetch_page(DEF_NUM_PER_PAGE)
+        plaques, nextcur, more = Plaque.fetch_page(DEF_NUM_PER_PAGE) # TODO: pagination
         featured_plaque = _get_featured()
-        rendered = _render_template(
-            "all.html", plaques, featured_plaque=featured_plaque
+        return _render_template(
+            "all.html",
+            plaques,
+            featured_plaque=featured_plaque,
+            # nextcur
+            # more
         )
-        return rendered
 
 
 @app.route("/pending")
@@ -660,7 +657,7 @@ def edit_plaque(plaque_key: str = None) -> str:
         return redirect("/")
 
     if request.method == "POST":
-        plaque_key = request.form["plaque_key"]
+        plaque_key = request.form.get("plaque_key", None)
         if plaque_key is None:
             return redirect("/")
 
@@ -769,8 +766,8 @@ def get_geojson(title_url: str = None) -> str:
     POST: Returns the JSON for plaques with updated_on after the specified date.
     """
     if request.method == "POST":
-        updated_on_str = request.form.get("updated_on")
         with ndb.Client().context() as context:
+            updated_on_str = request.form.get("updated_on")
             geojson = Plaque.created_after_geojson(updated_on_str)
         return json.dumps(geojson)
     else:
@@ -832,26 +829,18 @@ def map_plaques(lat: str = None, lng: str = None, zoom: str = None) -> str:
 @app.route("/counts")
 def counts() -> str:
     """View the counts"""
-
-    verbose = request.args.get("verbose", default=False, type=bool)
-
     with ndb.Client().context() as context:
         query = Plaque.query()
         num_plaques = query.count()
         num_pending = query.filter(Plaque.approved == False).count()
-
-        return (
-            f"<ul><li>{num_plaques} plaques</li><li>{num_pending} pending</li></ul>"
-            if verbose
-            else f"{num_plaques} plaques, {num_pending} pending"
-        )
+        return f"<ul><li>{num_plaques} plaques</li><li>{num_pending} pending</li></ul>"
 
 
 @app.route("/rss")
 def rss_feed() -> str:
     """RSS feed for newly-added plaques"""
     with ndb.Client().context() as context:
-        plaques, next_cur, more = Plaque.fetch_page(DEF_NUM_RSS)
+        plaques, _, _ = Plaque.fetch_page(DEF_NUM_RSS)
         return _render_template("feed.xml", plaques=plaques)
 
 
@@ -873,11 +862,9 @@ def geo_plaques(lat: float, lng: float, search_radius_meters: float) -> str:
     return _render_template_map(plaques=plaques, page_title="Geo Search")
 
 
-# @app.route("/search/pending/<string:search_term>", methods=["GET"]) # TODO
-
-
 @app.route("/search", methods=["POST"])
 def search_plaques_form() -> str:
+    """A POST redirect for search"""
     if search_term := request.form.get("search_term", None):
         return redirect(f"/search/{search_term}")
     return redirect("/")
@@ -886,7 +873,6 @@ def search_plaques_form() -> str:
 @app.route("/search/<string:search_term>", methods=["GET"])
 def search_plaques(search_term: str) -> str:
     """Display a search results page"""
-
     # TODO: probably a better way to sanitize incoming search terms
     search_term = search_term.replace('"', "")
     # prevent crashing on e.g. 'Piñata':
@@ -905,10 +891,7 @@ def search_plaques(search_term: str) -> str:
 
 
 @app.route("/nearby/<float(signed=True):lat>/<float(signed=True):lng>", methods=["GET"])
-@app.route(
-    "/nearby/<float(signed=True):lat>/<float(signed=True):lng>/<int:num>",
-    methods=["GET"],
-)
+@app.route("/nearby/<float(signed=True):lat>/<float(signed=True):lng>/<int:num>", methods=["GET"])
 def nearby_plaques(lat: float, lng: float, num: int = DEF_NUM_NEARBY) -> str:
     """Get a page of nearby plaques"""
     num = min(num, 20)
@@ -957,8 +940,7 @@ def delete_plaque() -> str:
             return f"no plaque for key {_plaqueset_key}"
 
         try:
-             gcs.delete(plaque.pic)
-            # blob.delete? TODO
+            gcs.delete(plaque.pic) # TODO # blob.delete?
 
             # TODO Delete search index for this document
             #plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
