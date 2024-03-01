@@ -12,7 +12,7 @@ from flask import Flask, request, redirect
 
 from rtp.models import Plaque
 from rtp.utils import (
-    PLAQUE_SEARCH_INDEX_NAME,
+    SEARCH_INDEX_NAME,
     _add_plaque_get,
     _add_plaque_post,
     _geo_search,
@@ -125,8 +125,6 @@ def one_plaque(title_url: str) -> str:
     if request.method == "HEAD":
         return _render_template("head.html")
 
-    # TODO, eventually: add other search terms possibilities (key, old ID, etc)
-
     with ndb.Client().context() as context:
         # Get plaque if exists, otherwise get earliest
         plaque = Plaque.query().filter(Plaque.title_url == title_url).get()
@@ -172,7 +170,7 @@ def edit_plaque(plaque_key: str = None) -> str:
     if request.method == "GET":
         with ndb.Client().context() as context:
             plaque = ndb.Key(urlsafe=plaque_key).get()
-            return _render_template(
+            return _render_template_map(
                 "edit.html",
                 [plaque],
                 page_title="Edit Plaque",
@@ -386,8 +384,7 @@ def search_plaques(search_term: str) -> str:
     search_term = search_term.encode("ascii", "ignore").decode()
 
     with ndb.Client().context() as context:
-        plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
-        results = plaque_search_index.search(search_term)
+        results = search.Index(SEARCH_INDEX_NAME).search(search_term)
         plaques = [ndb.Key(urlsafe=r.doc_id).get() for r in results]
 
         # Hide unpublished plaques for non admin
@@ -454,7 +451,7 @@ def delete_plaque() -> str:
             gcs.delete(plaque.pic)  # TODO # blob.delete?
 
             #  TODO Delete search index for this document
-            # plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
+            # plaque_search_index = search.Index(SEARCH_INDEX_NAME)
             # results = plaque_search_index.search(search_term)
             # for result in results:
             #      TODO ? plaques = [ndb.Key(urlsafe=r.doc_id).get() for r in results]

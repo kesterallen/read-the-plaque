@@ -24,8 +24,7 @@ from .models import Plaque, FeaturedPlaque
 GCS_BUCKET = "read-the-plaque.appspot.com"
 
 DEF_PLAQUESET_NAME = "public"
-PLAQUE_SEARCH_INDEX_NAME = "plaque_index"
-
+SEARCH_INDEX_NAME = "plaque_index"
 
 FIRST_YEAR = 2015
 FIRST_MONTH = 9
@@ -207,7 +206,7 @@ def _get_random_plaque_key(method="time"):
     """
     plaque_key = None
     bailout = 0
-    plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
+    plaque_search_index = search.Index(SEARCH_INDEX_NAME)
     while plaque_key is None and bailout < 100:
         bailout += 1
         if method == "geo":
@@ -392,8 +391,7 @@ def _plaque_for_insert() -> Plaque:
     # TODO: do we need need to add img_name back to _upload_image?
 
     # Search index the plaque text
-    plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
-    plaque_search_index.put(plaque.to_search_document())
+    search.Index(SEARCH_INDEX_NAME).put(plaque.to_search_document())
     plaque.put()
     return plaque
 
@@ -421,8 +419,7 @@ def _plaque_for_edit(plaque: Plaque) -> Plaque:
     """
     Update the plaque with edits
     """
-    plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
-    plaque_search_index.put(plaque.to_search_document())
+    search.Index(SEARCH_INDEX_NAME).put(plaque.to_search_document())
 
     plaque.set_title_and_title_url(request.form["title"], _plaqueset_key())
 
@@ -491,8 +488,7 @@ def _geo_search(lat: float, lng: float, search_radius_meters: int = 5000) -> lis
         ),
     )
 
-    plaque_search_index = search.Index(PLAQUE_SEARCH_INDEX_NAME)
-    results = plaque_search_index.search(search_query)
+    results = search.Index(SEARCH_INDEX_NAME).search(search_query)
     keys = [ndb.Key(urlsafe=r.doc_id) for r in results]
     plaques = ndb.get_multi(keys)
     return plaques
