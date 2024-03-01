@@ -7,6 +7,7 @@ import re
 from google.cloud import ndb
 from google.appengine.api import search
 
+
 class Comment(ndb.Model):
     """
     DEPRECATED, TO BE REMOVED
@@ -15,10 +16,12 @@ class Comment(ndb.Model):
 
     Linked to a single Plaque object via the .plaque KeyProperty/FK.
     """
+
     text = ndb.TextProperty()
     created_on = ndb.DateTimeProperty(auto_now_add=True)
     created_by = ndb.UserProperty()
     approved = ndb.BooleanProperty(default=False)
+
 
 class Plaque(ndb.Model):
     """
@@ -38,15 +41,16 @@ class Plaque(ndb.Model):
     KeyProperty/FK to Comment. Not sure if this is better than having a
     comment.plaque KeyProperty/FK in the other direction.
     """
+
     TINY_SIZE_PX = 100
     THUMBNAIL_SIZE_PX = 300
     DISPLAY_SIZE_PX = 1024
     BIG_SIZE_PX = 4096
     ALLOWED_ROTATIONS = [90, 180, 270]
 
-    title = ndb.StringProperty(required=True) # StringProperty: 1500 char limit
+    title = ndb.StringProperty(required=True)  # StringProperty: 1500 char limit
     title_url = ndb.StringProperty(required=True)
-    description = ndb.TextProperty(required=True) # no limit on TextProperty
+    description = ndb.TextProperty(required=True)  # no limit on TextProperty
     location = ndb.GeoPtProperty(required=True)
     pic = ndb.StringProperty()
     img_url = ndb.StringProperty()
@@ -68,12 +72,12 @@ class Plaque(ndb.Model):
 
     @classmethod
     def tokenize_title(cls, title):
-        """ Make a URL title """
+        """Make a URL title"""
         title = title.strip().lower()
         # replace one or more non-word chars with a single dash, and remove
         # leaving/trailing dashes
-        title = re.sub(r'[^\w]+', '-', title)
-        title = re.sub(r'^-+|-+$', '', title)
+        title = re.sub(r"[^\w]+", "-", title)
+        title = re.sub(r"^-+|-+$", "", title)
         return title
 
     @classmethod
@@ -91,8 +95,8 @@ class Plaque(ndb.Model):
         return plaques, next_cursor, more
 
     @classmethod
-    def num_pending(cls, num=20): # num is the max to return
-        """ How many pending plaques are there? """
+    def num_pending(cls, num=20):  # num is the max to return
+        """How many pending plaques are there?"""
         count = Plaque.query().filter(Plaque.approved != True).count(limit=num)
         return count
 
@@ -108,7 +112,6 @@ class Plaque(ndb.Model):
         plaques = query.fetch(limit=num)
         return plaques
 
-
     def img_url_base(self, size, crop=False):
         """Base method for  image URLs"""
 
@@ -117,10 +120,10 @@ class Plaque(ndb.Model):
         #       other code for img_url_* if so
 
         url = self.img_url
-        #url = '{}=s{}'.format(self.img_url, size)
-        #if crop:
+        # url = '{}=s{}'.format(self.img_url, size)
+        # if crop:
         #    url += '-c'
-        #if self.img_rot in Plaque.ALLOWED_ROTATIONS:
+        # if self.img_rot in Plaque.ALLOWED_ROTATIONS:
         #    url = "{}-r{}".format(url, self.img_rot)
         return url
 
@@ -160,7 +163,7 @@ class Plaque(ndb.Model):
 
     def set_title_and_title_url(self, title, ancestor_key):
         """Update title if necessary and set the URL"""
-        title = title[:1499] # limit to 1500 char
+        title = title[:1499]  # limit to 1500 char
         if title != self.title:
             self.title = title
             self.set_title_url(ancestor_key)
@@ -171,7 +174,7 @@ class Plaque(ndb.Model):
         another plaque, add a suffix to make it unique. Keep plaques which are
         being edited the same.
         """
-        title_url = Plaque.tokenize_title(self.title) if self.title else 'change-me'
+        title_url = Plaque.tokenize_title(self.title) if self.title else "change-me"
         orig_title_url = title_url
         count = 1
         n_matches = Plaque.num_same_title_urls(title_url, ancestor_key)
@@ -185,7 +188,7 @@ class Plaque(ndb.Model):
     @classmethod
     def num_same_title_urls(cls, title_url, ancestor_key):
         """How many plaques have this title_url?"""
-        num_same_title= (
+        num_same_title = (
             Plaque.query(ancestor=ancestor_key)
             .filter(Plaque.title_url == title_url)
             .count()
@@ -208,7 +211,7 @@ class Plaque(ndb.Model):
         """
         List of Plaque objects with created_on > updated_on_str.
         """
-        date_fmt =  "%Y-%m-%d %H:%M:%S.%f"
+        date_fmt = "%Y-%m-%d %H:%M:%S.%f"
         updated_on = datetime.datetime.strptime(updated_on_str, date_fmt)
 
         plaques = (
@@ -226,7 +229,7 @@ class Plaque(ndb.Model):
         Geojson FeatureCollection of Plaque objects with created_on > updated_on_str.
         """
         plaques = Plaque.created_after(updated_on_str)
-        features = [p.to_geojson(jsonify=False)for p in plaques if p] # Remove empties
+        features = [p.to_geojson(jsonify=False) for p in plaques if p]  # Remove empties
         geojson = {
             "type": "FeatureCollection",
             "features": features,
@@ -238,12 +241,12 @@ class Plaque(ndb.Model):
         """Generate a search document for this plaque"""
         location = search.GeoPoint(self.location.latitude, self.location.longitude)
         doc = search.Document(
-            doc_id = self.key.urlsafe(),
+            doc_id=self.key.urlsafe(),
             fields=[
-                search.TextField(name='tags', value=" ".join(self.tags)),
-                search.TextField(name='title', value=self.title),
-                search.HtmlField(name='description', value=self.description),
-                search.GeoField(name='location', value=location),
+                search.TextField(name="tags", value=" ".join(self.tags)),
+                search.TextField(name="title", value=self.title),
+                search.HtmlField(name="description", value=self.description),
+                search.GeoField(name="location", value=location),
             ],
         )
         return doc
@@ -259,14 +262,14 @@ class Plaque(ndb.Model):
         data = {
             "geometry": {
                 "type": "Point",
-                "coordinates": [self.location.longitude, self.location.latitude]
+                "coordinates": [self.location.longitude, self.location.latitude],
             },
             "type": "Feature",
             "properties": {
                 "img_url_tiny": self.img_url_tiny,
                 "title_page_url": self.title_page_url,
-                "title": self.title
-            }
+                "title": self.title,
+            },
         }
         if not summary:
             data["properties"]["key"] = self.key.urlsafe().decode()
@@ -283,37 +286,37 @@ class Plaque(ndb.Model):
         """
         if summary:
             plaque_dict = {
-                'title': self.title,
-                'title_page_url': self.title_page_url,
-                'lat': str(self.location.latitude),
-                'lng': str(self.location.longitude),
-                'img_url_tiny': self.img_url_tiny,
+                "title": self.title,
+                "title_page_url": self.title_page_url,
+                "lat": str(self.location.latitude),
+                "lng": str(self.location.longitude),
+                "img_url_tiny": self.img_url_tiny,
             }
         else:
             plaque_dict = {
-                'plaque_key': self.key.urlsafe().decode(),
-                'title': self.title,
-                'title_url': self.title_url,
-                'description': self.description,
-                'location': str(self.location),
-                'pic': self.pic,
-                'img_url': self.img_url,
-                'img_rot': self.img_rot,
-                'tags': self.tags,
-                'comments': self.comments,
-                'approved': self.approved,
-                'old_site_id': self.old_site_id,
+                "plaque_key": self.key.urlsafe().decode(),
+                "title": self.title,
+                "title_url": self.title_url,
+                "description": self.description,
+                "location": str(self.location),
+                "pic": self.pic,
+                "img_url": self.img_url,
+                "img_rot": self.img_rot,
+                "tags": self.tags,
+                "comments": self.comments,
+                "approved": self.approved,
+                "old_site_id": self.old_site_id,
             }
         return plaque_dict
 
     @property
     def tweet_text(self):
-        """ The text for a tweet about this plaque """
+        """The text for a tweet about this plaque"""
         return f"'{self.title}' Always #readtheplaque {self.fully_qualified_title_page_url}"
 
     @property
     def tweet_to_plaque_submitter(self):
-        """ Congratulations text for the submitter of this plaque """
+        """Congratulations text for the submitter of this plaque"""
         submitter_regex = r"Submitted by.*(twitter.com/|@)(\w+)\b"
         submitter_match_index = 2
         match = re.search(submitter_regex, self.description, re.DOTALL)
@@ -341,13 +344,15 @@ class Plaque(ndb.Model):
 
     @property
     def gmaps_url(self):
-        """ URL for google maps at this plaque's location """
+        """URL for google maps at this plaque's location"""
         return (
             "http://maps.google.com/maps?&z=21&t=m&q=loc:"
             f"{self.location.latitude:.8f}+{self.location.longitude:.8f}"
         )
 
+
 class FeaturedPlaque(ndb.Model):
-    """ Class to keep track of which plaque is the fetured one """
+    """Class to keep track of which plaque is the fetured one"""
+
     created_on = ndb.DateTimeProperty(auto_now_add=True)
     plaque = ndb.KeyProperty(repeated=False, kind=Plaque)
