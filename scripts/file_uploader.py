@@ -8,7 +8,7 @@ from PIL import Image
 import requests
 
 DEBUG = False
-GPS_INFO_TAG = 34853 # "GPSInfo"
+GPS_INFO_TAG = 34853  # "GPSInfo"
 
 # Values in these constants was extracted from:
 # from PIL.ExifTags import TAGS, GPSTAGS
@@ -29,25 +29,27 @@ GPS_INFO_TAG = 34853 # "GPSInfo"
 #  31: 5.369866362451108
 # }
 
-LAT_REF = 1 # e.g. "N"
-LAT = 2 # e.g.  (37.0, 47.0, 12.85)
-LNG_REF = 3 # e.g. W
-LNG = 4 # e.g. (122.0, 15.0, 19.94)
+LAT_REF = 1  # e.g. "N"
+LAT = 2  # e.g.  (37.0, 47.0, 12.85)
+LNG_REF = 3  # e.g. W
+LNG = 4  # e.g. (122.0, 15.0, 19.94)
+
 
 class Plaque:
     """
     Class to encapsulate the image/location of the plaque, and provide a method
     to submit the object to Read the Plaque.
     """
+
     DEFAULT_LAT = 44.0
     DEFAULT_LNG = 46.0
 
     if DEBUG:
-        submit_url = 'http://localhost:8080/add'
+        submit_url = "http://127.0.0.1:8080/add"
     else:
-        submit_url = 'https://readtheplaque.com/add'
+        submit_url = "https://readtheplaque.com/add"
 
-    def __init__(self, fname, title='', description=''):
+    def __init__(self, fname, title="", description=""):
         """Lat/Lng is extracted from the exif tags of the image file."""
         self.fname = fname
         self.title = title
@@ -56,16 +58,23 @@ class Plaque:
 
     def submit(self):
         """Submit the plaque with a POST request to Read The Plaque"""
-        with open(self.fname, 'rb') as plaque_image_fh:
-            files = {'plaque_image_file': plaque_image_fh}
+        print(self)
+        print(self.fname)
+        with open(self.fname, "rb") as plaque_image_fh:
+            print(plaque_image_fh)
+            files = {"plaque_image_file": plaque_image_fh}
+            print(files)
             data = {
-                'lat': self.lat,
-                'lng': self.lng,
-                'title': self.title,
-                'description': self.description,
-                #'tags': 'bench',
+                "lat": self.lat,
+                "lng": self.lng,
+                "title": self.title,
+                "description": self.description,
+                "tags": "",
             }
-            response = requests.post(Plaque.submit_url, files=files, data=data, timeout=60)
+            print(data)
+            response = requests.post(
+                Plaque.submit_url, files=files, data=data, timeout=60
+            )
             response.raise_for_status()
 
     def _set_exif_lat_lng(self):
@@ -74,7 +83,7 @@ class Plaque:
         def _decimal_pos_from_exif(exif, ref):
             degs, mins, secs = [float(exif[i]) for i in range(3)]
             decimal = degs + mins / 60.0 + secs / 3600.0
-            if ref in ('S', 'W'):
+            if ref in ("S", "W"):
                 decimal *= -1
             return decimal
 
@@ -84,12 +93,15 @@ class Plaque:
                 self.lat = _decimal_pos_from_exif(gps[LAT], gps[LAT_REF])
                 self.lng = _decimal_pos_from_exif(gps[LNG], gps[LNG_REF])
         except (TypeError, KeyError) as err:
-            print(f"Error in GPS read for {self.fname}, using defaults. {err} {type(err)}")
+            print(
+                f"Error in GPS read for {self.fname}, using defaults. {err} {type(err)}"
+            )
             self.lat = self.DEFAULT_LAT
             self.lng = self.DEFAULT_LNG
 
     def __repr__(self):
         return f"{self.fname} ({self.lat:.5f}, {self.lng:.5f})"
+
 
 def main(img_fnames):
     """
@@ -98,7 +110,7 @@ def main(img_fnames):
     plaques = []
     print(f"Loading {len(img_fnames)} images")
     for fname in img_fnames:
-        plaque = Plaque(fname)
+        plaque = Plaque(fname, "", "")
         plaques.append(plaque)
     print("Loading complete")
 
@@ -112,17 +124,18 @@ def main(img_fnames):
                 tstart = datetime.datetime.now()
                 plaque.submit()
                 tend = datetime.datetime.now()
-                print(" ", tend-tstart)
+                print(" ", tend - tstart)
                 time.sleep(30)
             succeeded.append(plaque.fname)
-        except requests.exceptions.HTTPError:
+        except requests.exceptions.HTTPError as err:
             failed.append(plaque.fname)
-            print(", failed")
+            print(", failed", err)
 
     if succeeded:
         print("\nUploaded successfully:\n\t{}".format("\n\t".join(succeeded)))
     if failed:
         print("\n\nFailed:\n\t{}".format("\n\t".join(failed)))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main(sys.argv[1:])
