@@ -58,12 +58,8 @@ class Plaque:
 
     def submit(self):
         """Submit the plaque with a POST request to Read The Plaque"""
-        print(self)
-        print(self.fname)
         with open(self.fname, "rb") as plaque_image_fh:
-            print(plaque_image_fh)
             files = {"plaque_image_file": plaque_image_fh}
-            print(files)
             data = {
                 "lat": self.lat,
                 "lng": self.lng,
@@ -71,7 +67,6 @@ class Plaque:
                 "description": self.description,
                 "tags": "",
             }
-            print(data)
             response = requests.post(
                 Plaque.submit_url, files=files, data=data, timeout=60
             )
@@ -93,9 +88,7 @@ class Plaque:
                 self.lat = _decimal_pos_from_exif(gps[LAT], gps[LAT_REF])
                 self.lng = _decimal_pos_from_exif(gps[LNG], gps[LNG_REF])
         except (TypeError, KeyError) as err:
-            print(
-                f"Error in GPS read for {self.fname}, using defaults. {err} {type(err)}"
-            )
+            print(f"Can't read GPS in {self.fname}, using defaults. {err}")
             self.lat = self.DEFAULT_LAT
             self.lng = self.DEFAULT_LNG
 
@@ -114,7 +107,7 @@ def main(img_fnames):
         plaques.append(plaque)
     print("Loading complete")
 
-    succeeded = []
+    posted = []
     failed = []
 
     for i, plaque in enumerate(plaques):
@@ -126,16 +119,15 @@ def main(img_fnames):
                 tend = datetime.datetime.now()
                 print(" ", tend - tstart)
                 time.sleep(30)
-            succeeded.append(plaque.fname)
+            posted.append(plaque.fname)
         except requests.exceptions.HTTPError as err:
             failed.append(plaque.fname)
             print(", failed", err)
 
-    if succeeded:
-        print("\nUploaded successfully:\n\t{}".format("\n\t".join(succeeded)))
-    if failed:
-        print("\n\nFailed:\n\t{}".format("\n\t".join(failed)))
 
+    (prefix, items) = ("Uploaded", posted) if posted else ("Failed", failed)
+    items_str = "\n\t".join(items)
+    print(f"{prefix}:\n\t{items_str}"
 
 if __name__ == "__main__":
     main(sys.argv[1:])
