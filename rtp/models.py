@@ -120,11 +120,11 @@ class Plaque(ndb.Model):
         #       other code for img_url_* if so
 
         url = self.img_url
-        # url = '{}=s{}'.format(self.img_url, size)
+        # url = f"{self.img_url}=s{size}"
         # if crop:
         #    url += '-c'
         # if self.img_rot in Plaque.ALLOWED_ROTATIONS:
-        #    url = "{}-r{}".format(url, self.img_rot)
+        #    url += f"-r{self.img_rot}"
         return url
 
     @property

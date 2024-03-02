@@ -400,7 +400,7 @@ def _add_plaque_post() -> str:
     """Do the POST request for /add"""
     with ndb.Client().context() as context:
         plaque = _plaque_for_insert()
-        return _render_template_map("add.html", [plaque], maptext="hello", page_title="plaque added!")
+        return _render_template_map("add.html", [plaque], maptext="hello", page_title="added!")
 
 
 def _add_plaque_get() -> str:
