@@ -31,4 +31,6 @@ Update:
     #gcloud app deploy --quiet --project=read-the-plaque --version=20240111t092053 && gcloud app services --quiet --project=read-the-plaque set-traffic --splits=20240111t092357=1
 
     Check that "git branch --show" is in main, then:
-    ~/.virtualenv/twitter/bin/python scripts/update_geojson_map_file.py && gcloud app deploy --quiet --project=read-the-plaque && curl -s https://readtheplaque.com/{flush,counts}
+    ~/.virtualenv/twitter/bin/python scripts/update_geojson_map_file.py &&
+        gcloud app deploy --quiet --project=read-the-plaque &&
+        echo "" && curl -s https://readtheplaque.com/{flush/silent,counts} && printf "\n\n"
