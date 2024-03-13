@@ -127,7 +127,7 @@ def main(img_fnames):
 
     (prefix, items) = ("Uploaded", posted) if posted else ("Failed", failed)
     items_str = "\n\t".join(items)
-    print(f"{prefix}:\n\t{items_str}"
+    print(f"{prefix}:\n\t{items_str}")
 
 if __name__ == "__main__":
     main(sys.argv[1:])
