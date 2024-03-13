@@ -4,6 +4,7 @@ Main run script. This file should only contain the routes, other code is in rtp/
 
 import json
 import random
+from urllib.parse import quote
 
 from google.cloud import ndb
 from google.appengine.api import wrap_wsgi_app, users, search, memcache
@@ -31,11 +32,11 @@ from rtp.utils import (
 )
 
 
-DEF_NUM_PENDING = 5
-DEF_NUM_RSS = 10
-DEF_NUM_PAGE = 25
-DEF_NUM_NEARBY = 5
-DEF_RAND_NUM_PER_PAGE = 5
+NUM_PENDING = 5
+NUM_RSS = 10
+NUM_PAGE = 10
+NUM_NEARBY = 5
+RAND_NUM_PER_PAGE = 5
 
 DELETE_PRIVS = ["kester"]
 
@@ -63,7 +64,7 @@ def many_plaques(cursor: str = None) -> str:
         return rendered
     with ndb.Client().context() as context:
         cursor = ndb.Cursor(urlsafe=cursor) if cursor else None
-        plaques, cursor, more = Plaque.fetch_page(DEF_NUM_PAGE, cursor)
+        plaques, cursor, more = Plaque.fetch_page(NUM_PAGE, cursor)
         cursor = cursor.urlsafe().decode() if cursor is not None else None
         return _render_template(
             "all.html",
@@ -76,7 +77,7 @@ def many_plaques(cursor: str = None) -> str:
 
 @app.route("/pending")
 @app.route("/pending/<int:num>")
-def pending_plaques(num: int = DEF_NUM_PENDING) -> str:
+def pending_plaques(num: int = NUM_PENDING) -> str:
     """View the most recent pending plaques. Note: admin only"""
 
     if not users.is_current_user_admin():
@@ -91,7 +92,7 @@ def pending_plaques(num: int = DEF_NUM_PENDING) -> str:
 @app.route("/randpending")
 @app.route("/randpending/<int:num>")
 def rand_pending_plaques(
-    num: int = DEF_RAND_NUM_PER_PAGE, num_to_select_from: int = 500
+    num: int = RAND_NUM_PER_PAGE, num_to_select_from: int = 500
 ) -> str:
     """View a random list of pending plaques. Note: admin only"""
 
@@ -212,7 +213,7 @@ def disapprove_plaque(plaque_key: str = None, approval: bool = False) -> str:
 @app.route("/random/<int:num_plaques>")
 @app.route("/randompage")
 @app.route("/randompage/<int:num_plaques>")
-def random_plaques(num_plaques: int = DEF_RAND_NUM_PER_PAGE) -> str:
+def random_plaques(num_plaques: int = RAND_NUM_PER_PAGE) -> str:
     """View a random group of plaques."""
 
     plaques = []
@@ -293,7 +294,7 @@ def set_featured_random() -> str:
 
 @app.route("/tag/<string:tag>")
 @app.route("/tag/<string:tag>/<int:num>")
-def tagged_plaques(tag: str, num: int = DEF_NUM_PAGE) -> str:
+def tagged_plaques(tag: str, num: int = NUM_PAGE) -> str:
     """View a group of plaques with a given tag."""
     with ndb.Client().context() as context:
         plaques = (
@@ -343,7 +344,7 @@ def counts() -> str:
 def rss_feed() -> str:
     """RSS feed for newly-added plaques"""
     with ndb.Client().context() as context:
-        plaques, _, _ = Plaque.fetch_page(DEF_NUM_RSS)
+        plaques, _, _ = Plaque.fetch_page(NUM_RSS)
         return _render_template("feed.xml", plaques=plaques)
 
 
@@ -377,14 +378,12 @@ def search_plaques_form() -> str:
 
 @app.route("/search/<string:search_term>", methods=["GET"])
 def search_plaques(search_term: str) -> str:
-    """Display a search results page"""
-    # TODO: probably a better way to sanitize incoming search terms
-    search_term = search_term.replace('"', "")
-    # prevent crashing on e.g. 'Piñata':
-    search_term = search_term.encode("ascii", "ignore").decode()
-
+    """
+    Display a search results page after sanitizing the user-supplied search
+    term with the urllib.parse.quote method.
+    """
     with ndb.Client().context() as context:
-        results = search.Index(SEARCH_INDEX_NAME).search(search_term)
+        results = search.Index(SEARCH_INDEX_NAME).search(quote(search_term))
         plaques = [ndb.Key(urlsafe=r.doc_id).get() for r in results]
 
         # Hide unpublished plaques for non admin
@@ -399,7 +398,7 @@ def search_plaques(search_term: str) -> str:
     "/nearby/<float(signed=True):lat>/<float(signed=True):lng>/<int:num>",
     methods=["GET"],
 )
-def nearby_plaques(lat: float, lng: float, num: int = DEF_NUM_NEARBY) -> str:
+def nearby_plaques(lat: float, lng: float, num: int = NUM_NEARBY) -> str:
     """Get a page of nearby plaques"""
     num = min(num, 20)
 
@@ -463,20 +462,24 @@ def delete_plaque() -> str:
     return redirect("/nextpending")
 
 
+@app.route("/flush/silent")
 @app.route("/flush")
 def flush_memcache() -> str:
     """Flush the memcache and go to the homepage"""
     memcache.flush_all()
-    return redirect("/")
+    return redirect("/") if request.path == "/flush" else ""
 
 
 # TODO
-# @app.errorhandler(404)
-# def not_found(e):
-#    return render_template("404.html")
-# @app.errorhandler(500)
-# def server_error(e):
-#    return render_template("500.html")
+@app.errorhandler(404)
+def not_found(err):
+    return f"404 error {err}"
+    #return render_template("404.html")
+
+@app.errorhandler(500)
+def server_error(e):
+    return f"500 error {err}"
+    #return render_template("500.html")
 
 
 if __name__ == "__main__":
