@@ -23,7 +23,7 @@ from .models import Plaque, FeaturedPlaque
 # GCS_BUCKET = "/read-the-plaque.appspot.com"
 GCS_BUCKET = "read-the-plaque.appspot.com"
 
-DEF_PLAQUESET_NAME = "public"
+PLAQUESET_NAME = "public"
 SEARCH_INDEX_NAME = "plaque_index"
 
 FIRST_YEAR = 2015
@@ -46,7 +46,7 @@ def _get_key(key_filename="key_googlemaps.txt") -> str:
 # same entity group. Queries across the single entity group will be consistent.
 # However, the write rate should be limited to ~1/second.
 #
-def _plaqueset_key(plaqueset_name=DEF_PLAQUESET_NAME) -> ndb.Key:
+def _plaqueset_key(plaqueset_name=PLAQUESET_NAME) -> ndb.Key:
     """
     Constructs a Datastore key for a Plaque entity. Use plaqueset_name as
     the key.
