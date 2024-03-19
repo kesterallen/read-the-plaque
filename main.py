@@ -474,12 +474,14 @@ def flush_memcache() -> str:
 @app.errorhandler(404)
 def not_found(err):
     return f"404 error {err}"
-    #return render_template("404.html")
+    # return render_template("404.html")
 
+
+# TODO
 @app.errorhandler(500)
 def server_error(e):
     return f"500 error {err}"
-    #return render_template("500.html")
+    # return render_template("500.html")
 
 
 if __name__ == "__main__":
