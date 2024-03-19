@@ -341,7 +341,7 @@ def _upload_image(img_fh, plaque) -> None:
 
     plaque.pic = gcs_filename
 
-    #img_fh.seek(0)  # reset file handle
+    # img_fh.seek(0)  # reset file handle
     base64_img_bytes = img_fh.read()
     blob.upload_from_string(base64_img_bytes)
     blob.make_public()  # TODO might be a better img url for this
@@ -400,7 +400,9 @@ def _add_plaque_post() -> str:
     """Do the POST request for /add"""
     with ndb.Client().context() as context:
         plaque = _plaque_for_insert()
-        return _render_template_map("add.html", [plaque], maptext="hello", page_title="added!")
+        return _render_template_map(
+            "add.html", [plaque], maptext="hello", page_title="added!"
+        )
 
 
 def _add_plaque_get() -> str:
