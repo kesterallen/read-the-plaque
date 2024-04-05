@@ -384,11 +384,20 @@ def search_plaques(search_term: str) -> str:
     """
     with ndb.Client().context() as context:
         results = search.Index(SEARCH_INDEX_NAME).search(quote(search_term))
-        plaques = [ndb.Key(urlsafe=r.doc_id).get() for r in results]
 
-        # Hide unpublished plaques for non admin
-        if not users.is_current_user_admin():
-            plaques = [p for p in plaques if p.approved]
+        # Get plaques from search results, hiding unpublished plaques from
+        # non-admins. The try/catch loop is to avoid a bug reported by Alan
+        # Reno on 4-April-2024 that search was broken for his name, I think it
+        # was because approval wasn't set on newly-submitted plaques yet, but
+        # not sure.
+        plaques = []
+        for result in results:
+            try:
+                plaque = ndb.Key(urlsafe=result.doc_id).get()
+                if plaque.approved or users.is_current_user_admin():
+                    plaques.append(plaque)
+            except Exception as err:
+                print(f"error parsing results in /search/{search_term}: \n\n{err}")
 
         return _render_template_map(plaques=plaques, page_title="Search")
 
@@ -479,7 +488,7 @@ def not_found(err):
 
 # TODO
 @app.errorhandler(500)
-def server_error(e):
+def server_error(err):
     return f"500 error {err}"
     # return render_template("500.html")
 
