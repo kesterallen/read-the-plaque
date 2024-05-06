@@ -482,6 +482,7 @@ def flush_memcache() -> str:
 # TODO
 @app.errorhandler(404)
 def not_found(err):
+    """404 error handler, to be fleshed out in the future"""
     return f"404 error {err}"
     # return render_template("404.html")
 
@@ -489,6 +490,7 @@ def not_found(err):
 # TODO
 @app.errorhandler(500)
 def server_error(err):
+    """500 error handler, to be fleshed out in the future"""
     return f"500 error {err}"
     # return render_template("500.html")
 
