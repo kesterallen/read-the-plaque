@@ -8,6 +8,7 @@ from PIL import Image
 import requests
 
 DEBUG = False
+PAUSE_SECONDS = 60
 GPS_INFO_TAG = 34853  # "GPSInfo"
 
 # Values in these constants was extracted from:
@@ -96,6 +97,12 @@ class Plaque:
         return f"{self.fname} ({self.lat:.5f}, {self.lng:.5f})"
 
 
+def _print_message(prefix: str, items: list) -> None:
+    items_str = "\n\t".join(items)
+    print(f"{prefix}:")
+    print(f"{prefix}:\n\t{items_str}")
+
+
 def main(img_fnames):
     """
     For a list of images, make plaque instances and submit to Read The Plaque.
@@ -118,16 +125,16 @@ def main(img_fnames):
                 plaque.submit()
                 tend = datetime.datetime.now()
                 print(" ", tend - tstart)
-                time.sleep(30)
+                time.sleep(PAUSE_SECONDS)
             posted.append(plaque.fname)
         except requests.exceptions.HTTPError as err:
             failed.append(plaque.fname)
             print(", failed", err)
+    if posted:
+        _print_message("Uploaded", posted)
+    if failed:
+        _print_message("Failed", failed)
 
-
-    (prefix, items) = ("Uploaded", posted) if posted else ("Failed", failed)
-    items_str = "\n\t".join(items)
-    print(f"{prefix}:\n\t{items_str}")
 
 if __name__ == "__main__":
     main(sys.argv[1:])
