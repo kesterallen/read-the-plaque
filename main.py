@@ -138,8 +138,7 @@ def one_plaque(title_url: str) -> str:
 
 
 @app.route("/img/<string:img_url>", methods=["GET", "HEAD"])
-def img(title_url: str = None) -> str:
-    # return _render_template("img.html", title_url)
+def img(img_url: str = None) -> str:
     rendered = render_template("img.html", img_url=img_url)
     return rendered
 
