@@ -137,12 +137,6 @@ def one_plaque(title_url: str) -> str:
         return _render_template_map("one.html", [plaque], plaque.title)
 
 
-@app.route("/img/<string:img_url>", methods=["GET", "HEAD"])
-def img(img_url: str = None) -> str:
-    rendered = render_template("img.html", img_url=img_url)
-    return rendered
-
-
 @app.route("/add", methods=["GET", "POST"])
 @app.route("/submit", methods=["GET", "POST"])
 @app.route("/submit-your-own", methods=["GET", "POST"])
