@@ -9,7 +9,7 @@ from urllib.parse import quote
 from google.cloud import ndb
 from google.appengine.api import wrap_wsgi_app, users, search, memcache
 
-from flask import Flask, request, redirect
+from flask import Flask, request, redirect, render_template
 
 from rtp.models import Plaque
 from rtp.utils import (
@@ -32,9 +32,9 @@ from rtp.utils import (
 )
 
 
-NUM_PENDING = 5
+NUM_PENDING = 15
 NUM_RSS = 10
-NUM_PAGE = 10
+NUM_PAGE = 15
 NUM_NEARBY = 5
 RAND_NUM_PER_PAGE = 5
 
@@ -135,6 +135,13 @@ def one_plaque(title_url: str) -> str:
         if rendered := _memcache_get():
             return rendered
         return _render_template_map("one.html", [plaque], plaque.title)
+
+
+@app.route("/img/<string:img_url>", methods=["GET", "HEAD"])
+def img(title_url: str = None) -> str:
+    # return _render_template("img.html", title_url)
+    rendered = render_template("img.html", img_url=img_url)
+    return rendered
 
 
 @app.route("/add", methods=["GET", "POST"])
