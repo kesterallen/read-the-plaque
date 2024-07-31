@@ -112,6 +112,7 @@ def _render_template_map(
         bounding_box=_get_bounding_box(plaques),
         mapzoom=mapzoom,
         google_maps_api_key=_get_key(),
+        mapbox_access_token=_get_key("key_mapbox.txt"),
         page_title=page_title,
         **kwargs,
     )

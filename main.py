@@ -32,7 +32,7 @@ from rtp.utils import (
 )
 
 
-NUM_PENDING = 15
+NUM_PENDING = 5
 NUM_RSS = 10
 NUM_PAGE = 15
 NUM_NEARBY = 5

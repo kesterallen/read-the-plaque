@@ -15,7 +15,7 @@ function plaquesGeoJson() {
   return geoJson;
 }
 
-mapboxgl.accessToken = "pk.eyJ1Ijoia2VzdGVyIiwiYSI6ImNqMmFwNjg5YTAwOGsyd283dW5qY2ZnOG4ifQ.sKwEiADp2cvoMpO7QxlQFg";
+mapboxgl.accessToken = "{{mapbox_access_token}}";
 
 
 var mapId = '{% if bigmap %}bigmap{% elif featured_plaque %}featured_row_map{% else %}map{% endif %}';

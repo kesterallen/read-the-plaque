@@ -103,7 +103,7 @@
             mapCanvasId = 'bigmap';
         }
 
-        L.mapbox.accessToken = 'pk.eyJ1IjoibG9nYW5yb2NrbW9yZSIsImEiOiJjaW10djNoY3QwMjNwdXBra2tndzljZW5kIn0.NVzBF6iK5Xrrre2fjtBP5Q';
+        L.mapbox.accessToken = "{{mapbox_access_token}}";
         var map = L.mapbox.map(mapCanvasId, 'mapbox.light').setView([0, 0], 1);
         {% if bigmap_center %}
             {% if bigmap_zoom %}
