@@ -2,6 +2,21 @@ runtime: python312
 
 app_engine_apis: true
 
+automatic_scaling:
+  max_instances: 1
+
+instance_class: F1
+
+resources:
+  cpu: 0.2
+  memory_gb: 0.6
+  disk_size_gb: 10
+
+health_check:
+  enable_health_check: False
+
+
+
 handlers:
   - url: /.*php
     static_files: static/nophp.txt
