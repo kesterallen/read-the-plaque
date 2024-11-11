@@ -522,7 +522,7 @@ def _json_for_keys(plaque_keys_str: str, summary: bool = True) -> str:
                 plaque = ndb.Key(urlsafe=plaque_key).get()
                 if plaque:
                     plaques.append(plaque)
-            except:
+            except Exception:
                 pass
 
     if not plaques:
