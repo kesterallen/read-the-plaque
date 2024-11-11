@@ -18,7 +18,7 @@ GEOJSON_FILE = os.path.join(HERE_PATH, "../static/plaques.geojson")
 ALL = False
 
 
-def print_status(tmpl, num_plaques):
+def print_status(tmpl, num_plaques, date):
     """Print a status message for num_plaques"""
     suffix = "" if num_plaques == 1 else "s"
 
@@ -26,7 +26,9 @@ def print_status(tmpl, num_plaques):
     suffix2 = "" if update_count == 1 else "s"
     txt = f"Updated {update_count} location{suffix2} in plaques.geojson."
 
-    print(tmpl.format(num_plaques, suffix), txt)
+
+    date = datetime.datetime.strptime(date, "%Y-%m-%d %H:%M:%S.%f").strftime("%d-%b %H:%M")
+    print(tmpl.format(num_plaques, suffix, date), txt)
 
 
 def time_to_utc(last_updated_str):
@@ -59,11 +61,11 @@ def _get_plaques_geojson(updated_on, tmpl):
     """
     Get the geojson representation of plaques published since updated_on.
     """
-    updated_on = time_to_utc(updated_on)
-    resp = requests.post(GEOJSON_URL, data={"updated_on": updated_on})
+    updated_on_utc = time_to_utc(updated_on)
+    resp = requests.post(GEOJSON_URL, data={"updated_on": updated_on_utc})
     geojson = json.loads(resp.content.decode("utf-8"))
 
-    print_status(tmpl, len(geojson["features"]))
+    print_status(tmpl, len(geojson["features"]), updated_on)
     if len(geojson["features"]) == 0:
         sys.exit(1)
 
@@ -74,7 +76,7 @@ def get_all_plaques():
     """
     Get every published plaque from the site to make a new GEOJSON file.
     """
-    return _get_plaques_geojson(ALL_PLAQUES_DATE, "Total: {} plaque{}.")
+    return _get_plaques_geojson(ALL_PLAQUES_DATE, "Total: {} plaque{} since {}.")
 
 
 def add_new_plaques():
@@ -89,7 +91,7 @@ def add_new_plaques():
 
     # Get plaques from the site that have been added since the last update:
     updated_on = existing_geojson["updated_on"]
-    geojson = _get_plaques_geojson(updated_on, "Found {} new plaque{}.")
+    geojson = _get_plaques_geojson(updated_on, "Found {} new plaque{} since {}.")
 
     # Insert the new plaques descending time order, and update the timestamp
     for plaque in reversed(geojson["features"]):
