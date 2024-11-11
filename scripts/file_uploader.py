@@ -97,10 +97,8 @@ class Plaque:
         return f"{self.fname} ({self.lat:.5f}, {self.lng:.5f})"
 
 
-def _print_message(prefix: str, items: list) -> None:
-    items_str = "\n\t".join(items)
-    print(f"{prefix}:")
-    print(f"{prefix}:\n\t{items_str}")
+def _print_message(header: str, items: list) -> None:
+    print("\n\t".join([header] + items))
 
 
 def main(img_fnames):
@@ -131,9 +129,9 @@ def main(img_fnames):
             failed.append(plaque.fname)
             print(", failed", err)
     if posted:
-        _print_message("Uploaded", posted)
+        _print_message("Uploaded:", posted)
     if failed:
-        _print_message("Failed", failed)
+        _print_message("Failed:", failed)
 
 
 if __name__ == "__main__":
