@@ -12,7 +12,8 @@ lib/cloudstorage/common.pyc
 lib/cloudstorage/errors.pyc
 lib/cloudstorage/rest_api.pyc
 lib/cloudstorage/storage_api.pyc
-key_googlemaps.txt   
-key_googlevision.txt 
-key_twitter.txt 
+key_googlemaps.txt
+key_googlevision.txt
+key_twitter.txt
+key_mapbox.txt
 *.un~
