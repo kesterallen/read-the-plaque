@@ -23,7 +23,7 @@
     enctype="multipart/form-data">
 
     <div class="col-xs-10 col-xs-offset-1">
-      {% if message %}<h2>{{message}}</h2>{% endif %}
+      {% if message %}<h2>{{message|safe}}</h2>{% endif %}
     </div>
 
     <div class="col-xs-10 col-xs-offset-1">
