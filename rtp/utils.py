@@ -401,8 +401,13 @@ def _add_plaque_post() -> str:
     """Do the POST request for /add"""
     with ndb.Client().context() as context:
         plaque = _plaque_for_insert()
+        # TODO add a message="{plaque.title_url}" arg here?
         return _render_template_map(
-            "add.html", [plaque], maptext="hello", page_title="added!"
+            "add.html",
+            [plaque],
+            maptext="hello",
+            page_title="added!",
+            message=f'Plaque URL (when approved): <a href="https://readtheplaque.com/plaque/{plaque.title_url}">readtheplaque.com/plaque/{plaque.title_url}</a>',
         )
 
 
