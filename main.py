@@ -32,10 +32,10 @@ from rtp.utils import (
 )
 
 
-NUM_PENDING = 5
-NUM_RSS = 10
-NUM_PAGE = 15
-NUM_NEARBY = 5
+NUM_PENDING = 2
+NUM_RSS = 2
+NUM_PAGE = 20
+NUM_NEARBY = 2
 RAND_NUM_PER_PAGE = 5
 
 DELETE_PRIVS = ["kester"]
@@ -66,7 +66,7 @@ def many_plaques(cursor: str = None) -> str:
         cursor = ndb.Cursor(urlsafe=cursor) if cursor else None
         plaques, cursor, more = Plaque.fetch_page(NUM_PAGE, cursor)
         cursor = cursor.urlsafe().decode() if cursor is not None else None
-        return _render_template(
+        return _render_template_map(
             "all.html",
             plaques,
             featured_plaque=_get_featured(),
@@ -136,6 +136,11 @@ def one_plaque(title_url: str) -> str:
             return rendered
         return _render_template_map("one.html", [plaque], plaque.title)
 
+@app.route("/worms", methods=["GET", "HEAD"])
+@app.route("/mulberry", methods=["GET", "HEAD"])
+def worms_mulberry_tree_map() -> str:
+    with ndb.Client().context() as context:
+        return _render_template_map("mulberry_map_demo.html", [], "Berkeley Mulberry Tree Map")
 
 @app.route("/add", methods=["GET", "POST"])
 @app.route("/submit", methods=["GET", "POST"])
@@ -292,19 +297,19 @@ def set_featured_random() -> str:
         return plaque.json_for_tweet
 
 
-@app.route("/tag/<string:tag>")
-@app.route("/tag/<string:tag>/<int:num>")
-def tagged_plaques(tag: str, num: int = NUM_PAGE) -> str:
-    """View a group of plaques with a given tag."""
-    with ndb.Client().context() as context:
-        plaques = (
-            Plaque.query()
-            .filter(Plaque.approved == True)
-            .filter(Plaque.tags == tag)
-            .order(-Plaque.created_on)
-            .fetch(limit=num)
-        )
-        return _render_template("all.html", plaques)
+#@app.route("/tag/<string:tag>")
+#@app.route("/tag/<string:tag>/<int:num>")
+#def tagged_plaques(tag: str, num: int = NUM_PAGE) -> str:
+#    """View a group of plaques with a given tag."""
+#    with ndb.Client().context() as context:
+#        plaques = (
+#            Plaque.query()
+#            .filter(Plaque.approved == True)
+#            .filter(Plaque.tags == tag)
+#            .order(-Plaque.created_on)
+#            .fetch(limit=num)
+#        )
+#        return _render_template("all.html", plaques)
 
 
 @app.route("/map")
@@ -355,71 +360,71 @@ def about() -> str:
         return _render_template("about.html")
 
 
-@app.route(
-    "/geo/<float(signed=True):lat>/<float(signed=True):lng>/<float(signed=True):search_radius_meters>"
-)
-def geo_plaques(lat: float, lng: float, search_radius_meters: float) -> str:
-    """
-    Return plaques within search_radius_meters of lat/lng, sorted by distance
-    from lat/lng.
-    """
-    with ndb.Client().context() as context:
-        plaques = _geo_search(lat, lng, search_radius_meters)
-        return _render_template_map(plaques=plaques, page_title="Geo Search")
+#@app.route(
+#    "/geo/<float(signed=True):lat>/<float(signed=True):lng>/<float(signed=True):search_radius_meters>"
+#)
+#def geo_plaques(lat: float, lng: float, search_radius_meters: float) -> str:
+#    """
+#    Return plaques within search_radius_meters of lat/lng, sorted by distance
+#    from lat/lng.
+#    """
+#    with ndb.Client().context() as context:
+#        plaques = _geo_search(lat, lng, search_radius_meters)
+#        return _render_template_map(plaques=plaques, page_title="Geo Search")
 
 
-@app.route("/search", methods=["POST"])
-def search_plaques_form() -> str:
-    """A POST redirect for search"""
-    if search_term := request.form.get("search_term", None):
-        return redirect(f"/search/{search_term}")
-    return redirect("/")
+#@app.route("/search", methods=["POST"])
+#def search_plaques_form() -> str:
+#    """A POST redirect for search"""
+#    if search_term := request.form.get("search_term", None):
+#        return redirect(f"/search/{search_term}")
+#    return redirect("/")
+#
+#
+#@app.route("/search/<string:search_term>", methods=["GET"])
+#def search_plaques(search_term: str) -> str:
+#    """
+#    Display a search results page after sanitizing the user-supplied search
+#    term with the urllib.parse.quote method.
+#    """
+#    with ndb.Client().context() as context:
+#        results = search.Index(SEARCH_INDEX_NAME).search(quote(search_term))
+#
+#        # Get plaques from search results, hiding unpublished plaques from
+#        # non-admins. The try/catch loop is to avoid a bug reported by Alan
+#        # Reno on 4-April-2024 that search was broken for his name, I think it
+#        # was because approval wasn't set on newly-submitted plaques yet, but
+#        # not sure.
+#        plaques = []
+#        for result in results:
+#            try:
+#                plaque = ndb.Key(urlsafe=result.doc_id).get()
+#                if plaque.approved or users.is_current_user_admin():
+#                    plaques.append(plaque)
+#            except Exception as err:
+#                print(f"error parsing results in /search/{search_term}: \n\n{err}")
+#
+#        return _render_template_map(plaques=plaques, page_title="Search")
 
 
-@app.route("/search/<string:search_term>", methods=["GET"])
-def search_plaques(search_term: str) -> str:
-    """
-    Display a search results page after sanitizing the user-supplied search
-    term with the urllib.parse.quote method.
-    """
-    with ndb.Client().context() as context:
-        results = search.Index(SEARCH_INDEX_NAME).search(quote(search_term))
-
-        # Get plaques from search results, hiding unpublished plaques from
-        # non-admins. The try/catch loop is to avoid a bug reported by Alan
-        # Reno on 4-April-2024 that search was broken for his name, I think it
-        # was because approval wasn't set on newly-submitted plaques yet, but
-        # not sure.
-        plaques = []
-        for result in results:
-            try:
-                plaque = ndb.Key(urlsafe=result.doc_id).get()
-                if plaque.approved or users.is_current_user_admin():
-                    plaques.append(plaque)
-            except Exception as err:
-                print(f"error parsing results in /search/{search_term}: \n\n{err}")
-
-        return _render_template_map(plaques=plaques, page_title="Search")
-
-
-@app.route("/nearby/<float(signed=True):lat>/<float(signed=True):lng>", methods=["GET"])
-@app.route(
-    "/nearby/<float(signed=True):lat>/<float(signed=True):lng>/<int:num>",
-    methods=["GET"],
-)
-def nearby_plaques(lat: float, lng: float, num: int = NUM_NEARBY) -> str:
-    """Get a page of nearby plaques"""
-    num = min(num, 20)
-
-    with ndb.Client().context() as context:
-        # Reduce search billing cost by making nearby search less granular:
-        # 500 m, 50 km, 500 km
-        search_radii_meters = [5 * 10**i for i in [2, 4, 6]]
-        for i, search_radius_meters in enumerate(search_radii_meters):
-            plaques = _geo_search(lat, lng, search_radius_meters)
-            if len(plaques) > num:
-                break
-        return _render_template_map(plaques=plaques, page_title="Nearby Plaques")
+#@app.route("/nearby/<float(signed=True):lat>/<float(signed=True):lng>", methods=["GET"])
+#@app.route(
+#    "/nearby/<float(signed=True):lat>/<float(signed=True):lng>/<int:num>",
+#    methods=["GET"],
+#)
+#def nearby_plaques(lat: float, lng: float, num: int = NUM_NEARBY) -> str:
+#    """Get a page of nearby plaques"""
+#    num = min(num, 20)
+#
+#    with ndb.Client().context() as context:
+#        # Reduce search billing cost by making nearby search less granular:
+#        # 500 m, 50 km, 500 km
+#        search_radii_meters = [5 * 10**i for i in [2, 4, 6]]
+#        for i, search_radius_meters in enumerate(search_radii_meters):
+#            plaques = _geo_search(lat, lng, search_radius_meters)
+#            if len(plaques) > num:
+#                break
+#        return _render_template_map(plaques=plaques, page_title="Nearby Plaques")
 
 
 @app.route("/updatejp", methods=["GET"])  # delete?
@@ -437,6 +442,25 @@ def json_plaques(plaque_keys_str: str = None, summary: bool = True):
         json_output = _json_for_keys(plaque_keys_str, summary)
     return json_output
 
+
+#@app.route("/delete/pending/<int:num>", methods=["GET"])
+#def delete_plaque_multiple(num: int = 0) -> str:
+#    """Remove num plaques and their associated GCS images"""
+#
+#    user = users.get_current_user()
+#    name = "anon" if user is None else user.nickname()
+#    if name not in DELETE_PRIVS:
+#        return f"delete is not enabled for user '{name}'"
+#
+#    with ndb.Client().context() as context:
+#        plaques = Plaque.pending_list(num)
+#        for plaque in plaques:
+#            try:
+#                gcs.delete(plaque.pic)  # TODO # blob.delete?
+#            except:
+#                pass
+#            plaque.key.delete()
+#    return redirect(f"/pending/{num}")
 
 @app.route("/delete", methods=["POST"])
 def delete_plaque() -> str:
