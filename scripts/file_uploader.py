@@ -6,9 +6,10 @@ import time
 
 from PIL import Image
 import requests
+import urllib3
 
 DEBUG = False
-PAUSE_SECONDS = 60
+PAUSE_SECONDS = 180
 GPS_INFO_TAG = 34853  # "GPSInfo"
 
 # Values in these constants was extracted from:
@@ -125,7 +126,7 @@ def main(img_fnames):
                 print(" ", tend - tstart)
                 time.sleep(PAUSE_SECONDS)
             posted.append(plaque.fname)
-        except requests.exceptions.HTTPError as err:
+        except (requests.exceptions.HTTPError, urllib3.exceptions.NewConnectionError) as err:
             failed.append(plaque.fname)
             print(", failed", err)
     if posted:
