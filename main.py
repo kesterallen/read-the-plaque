@@ -119,6 +119,18 @@ def next_pending_plaque() -> str:
         return redirect(plaque.title_page_url)
 
 
+@app.route("/date/latest", methods=["GET", "HEAD"])
+def latest_date() -> str:
+    """Return the date of the most recently uploaded plaque."""
+    if rendered := memcache.get("latest_date"):
+        return rendered
+    else:
+        with ndb.Client().context() as context:
+            plaque = Plaque.query().order(-Plaque.created_on).get()
+            text = str(plaque.created_on)
+            memcache.set("latest_date", text)
+            return text
+
 @app.route("/plaque/<string:title_url>", methods=["GET", "HEAD"])
 def one_plaque(title_url: str) -> str:
     """View one plaque."""
