@@ -126,7 +126,7 @@ def latest_date() -> str:
         return rendered
     else:
         with ndb.Client().context() as context:
-            plaque = Plaque.query().order(-Plaque.created_on).get()
+            plaque = Plaque.query().filter(Plaque.approved == False).order(-Plaque.created_on).get()
             text = str(plaque.created_on)
             memcache.set("latest_date", text)
             return text
@@ -455,24 +455,24 @@ def json_plaques(plaque_keys_str: str = None, summary: bool = True):
     return json_output
 
 
-#@app.route("/delete/pending/<int:num>", methods=["GET"])
-#def delete_plaque_multiple(num: int = 0) -> str:
-#    """Remove num plaques and their associated GCS images"""
-#
-#    user = users.get_current_user()
-#    name = "anon" if user is None else user.nickname()
-#    if name not in DELETE_PRIVS:
-#        return f"delete is not enabled for user '{name}'"
-#
-#    with ndb.Client().context() as context:
-#        plaques = Plaque.pending_list(num)
-#        for plaque in plaques:
-#            try:
-#                gcs.delete(plaque.pic)  # TODO # blob.delete?
-#            except:
-#                pass
-#            plaque.key.delete()
-#    return redirect(f"/pending/{num}")
+@app.route("/delete/pending/<int:num>", methods=["GET"])
+def delete_plaque_multiple(num: int = 0) -> str:
+    """Remove num plaques and their associated GCS images"""
+
+    user = users.get_current_user()
+    name = "anon" if user is None else user.nickname()
+    if name not in DELETE_PRIVS:
+        return f"delete is not enabled for user '{name}'"
+
+    with ndb.Client().context() as context:
+        plaques = Plaque.pending_list(num)
+        for plaque in plaques:
+            try:
+                gcs.delete(plaque.pic)  # TODO # blob.delete?
+            except:
+                pass
+            plaque.key.delete()
+    return redirect(f"/pending/{num}")
 
 @app.route("/delete", methods=["POST"])
 def delete_plaque() -> str:
