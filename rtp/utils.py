@@ -9,8 +9,9 @@ import os
 import random
 import re
 import urllib
+import requests
 
-from flask import render_template, request
+from flask import render_template, request, jsonify
 
 from google.cloud import ndb, storage
 from google.appengine.api import users, search, memcache
@@ -399,6 +400,23 @@ def _plaque_for_insert() -> Plaque:
 
 def _add_plaque_post() -> str:
     """Do the POST request for /add"""
+
+    # Recaptcha check:
+#
+    key_captcha_secret = _get_key("key_captcha_secret.txt"),
+    recaptcha_response = request.form.get('g-recaptcha-response')
+    if not recaptcha_response:
+        return jsonify({'error': 'Please complete the reCAPTCHA'}), 400
+    verification_response = requests.post(
+        'https://www.google.com/recaptcha/api/siteverify',
+        data={
+            'secret': key_captcha_secret,
+            'response': recaptcha_response,
+            'remoteip': request.remote_addr  # Optional but recommended
+        }
+    )
+    # TODO
+
     with ndb.Client().context() as context:
         plaque = _plaque_for_insert()
         # TODO add a message="{plaque.title_url}" arg here?
@@ -419,7 +437,11 @@ def _add_plaque_get() -> str:
     )
     with ndb.Client().context() as context:
         return _render_template_map(
-            "add.html", None, maptext=maptext, page_title="Add Plaque"
+            "add.html",
+            None,
+            maptext=maptext,
+            page_title="Add Plaque",
+            captcha_key=_get_key("key_captcha.txt"),
         )
 
 

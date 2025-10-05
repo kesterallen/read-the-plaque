@@ -7,17 +7,18 @@
 <script src="/static/jquery.exif.js"></script>
 <script type="text/javascript" src="/static/jquery.exif.js"></script>
 
+
 <div id="submitFormContainer" class="container-fluid">
   <div class="col-xs-10 col-xs-offset-1">
-    <h3>(You may also tweet plaque photos to <a href="http://www.twitter.com/readtheplaque">@readtheplaque</a> or
-      email them to <a href="mailto:info@readtheplaque.com">info@readtheplaque.com</a>).</h3>
+    <h3>(You may also email plaque photos to <a href="mailto:info@readtheplaque.com">info@readtheplaque.com</a>).</h3>
   </div>
 
   <div class="col-xs-6 col-xs-offset-3">
-    <h1>Add a new Plaque</h1>
+    <h1>Submit a new Plaque</h1>
   </div>
 
   <form
+    id="plaque_submit"
     action="/add"
     method="POST"
     enctype="multipart/form-data">
@@ -27,10 +28,6 @@
     </div>
 
     <div class="col-xs-10 col-xs-offset-1">
-
-      <div class="form-group">
-        <button type="submit" name="add" id="add" class="btn btn-primary">Add your Plaque </button>
-      </div>
 
       <div class="form-group">
         <legend>1) Image of your Plaque (file or URL):</legend>
@@ -43,8 +40,9 @@
               name="plaque_image_url"
               placeholder="Image URL"
               style="width: 40%;">
+          <img hidden class="img-responsive" id="preview" alt="Image preview"/>
+
         </div>
-        <img class="img-responsive" id="preview" src="#" alt="Image preview"/>
       </div>
 
       <div class="form-group">
@@ -89,8 +87,10 @@
       </div>
 
       <div class="form-group">
-        <button type="submit" name="add" id="add" class="btn btn-primary">Add your Plaque </button>
+        <button type="submit" name="add" id="add" class="btn btn-secondary">Add this Plaque</button>
+        <div class="g-recaptcha" name"g-recaptcha-response" data-sitekey="{{captcha_key}}"></div>
       </div>
+
     </div>
 
   </form>
@@ -120,7 +120,8 @@ function convertCoords(gps, ref) {
 
 var submitButton = document.getElementById("add");
 submitButton.disabled = true;
-submitButton.innerHTML = "(Specify plaque location)";
+submitButton.innerHTML = "(Specify plaque location before sumbmitting)";
+submitButton.className = "btn btn-secondary";
 
 // If the location is picked by the user in the visual picker, the button
 // will get updated there.
@@ -141,9 +142,8 @@ var locationCheck = function(exifObject) {
     picker.init($('.map_picker_form'), 14);
 
     submitButton.disabled = false;
-    submitButton.innerHTML = "Add your Plaque";
+    submitButton.innerHTML = "Add This Plaque.";
     submitButton.className = "btn btn-success";
-    // TODO: this should happen for a user-selected location also (from the map pane)
   }
 }
 
@@ -187,21 +187,17 @@ try {
 
 </script>
 
-<!-- Keep the Submit button visible during scroll-->
-<script>
-//$(window).scroll(function() { 
-  //$('#submitButtonColumn').animate({top:$(this).scrollTop()});
-//});
-$('#preview').hide();
-</script>
-
 {% endblock %}
 
 {% block bottomofbody %}
 <script>
 function set_focus() {
     var element = document.getElementById("thanks_admin");
-    element.focus();
+    if (element) {
+        element.focus();
+    }
 }
 </script>
+
+
 {% endblock %}

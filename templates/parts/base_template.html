@@ -12,10 +12,7 @@
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
 
 <script src="https://apis.google.com/js/platform.js" async defer></script>
-
-<!--
-<meta name="google-signin-client_id" content="1084769574145-ootpims2nnkr8i1f6eo2lrguf7hprdu9.apps.googleusercontent.com">
--->
+<script src="https://www.google.com/recaptcha/api.js"></script>
 
 
 
@@ -79,34 +76,6 @@
 {% block content %}
 {% endblock %}
 
-<!--
-<div class="g-signin2" data-onsuccess="onSignIn"></div>
-<a href="#" onclick="signOut();">Sign out</a>
-<script>
-  function signOut() {
-    var auth2 = gapi.auth2.getAuthInstance();
-    auth2.signOut().then(function () {
-      console.log('User signed out.');
-    });
-  }
-
-  // TODO https://developers.google.com/identity/gsi/web/guides/fedcm-migration
-  // TODO https://developers.google.com/identity/sign-in/web/sign-in
-  // TODO https://developers.google.com/identity/sign-in/web/backend-auth#python
-  function onSignIn(googleUser) {
-    var id_token = googleUser.getAuthResponse().id_token;
-
-    // Send to back end
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', 'https://yourbackend.example.com/tokensignin');
-    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-    xhr.onload = function() {
-      console.log('Signed in as: ' + xhr.responseText);
-    };
-    xhr.send('idtoken=' + id_token);
-  }
-</script>
--->
 
 
 {% if footer_items %}
