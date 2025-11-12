@@ -88,7 +88,7 @@
 
       <div class="form-group">
         <button type="submit" name="add" id="add" class="btn btn-secondary">Add this Plaque</button>
-        <div class="g-recaptcha" name"g-recaptcha-response" data-sitekey="{{captcha_key}}"></div>
+        <div class="g-recaptcha" name"g-recaptcha-response" data-sitekey="{{captcha_key}}" data-callback="recaptchaClicked"></div>
       </div>
 
     </div>
@@ -99,6 +99,7 @@
 {# {% include 'parts/pretty_editor.html' %} #}
 
 <!-- Prevent "enter" keystrokes in the Google Maps search from submiting the plaque -->
+
 <script>
 $(document).ready(function() {
   $('.map_picker_form').keydown(function(event){
@@ -141,10 +142,17 @@ var locationCheck = function(exifObject) {
     picker = $(document).gMapsLatLonPicker();
     picker.init($('.map_picker_form'), 14);
 
-    submitButton.disabled = false;
-    submitButton.innerHTML = "Add This Plaque.";
-    submitButton.className = "btn btn-success";
+    //submitButton.disabled = false;
+    submitButton.innerHTML = "Add your Plaque.";
+    submitButton.className = "btn btn-primary";
   }
+}
+
+function recaptchaClicked() {
+  // TODO: add check for specified-location
+  // TODO: add check for good recaptcha
+  submitButton.disabled = false;
+  submitButton.innerHTML = "Add your plaque.";
 }
 
 function readURL(input) {
