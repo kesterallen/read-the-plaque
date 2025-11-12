@@ -102,8 +102,11 @@ def rand_pending_plaques(
 
     with ndb.Client().context() as context:
         plaques = Plaque.pending_list(num_to_select_from)
-        rand_plaques = random.sample(plaques, num)
-        return _render_template_map(plaques=rand_plaques)
+        if plaques:
+            rand_plaques = random.sample(plaques, num)
+            return _render_template_map(plaques=rand_plaques)
+        else:
+            return "no plaques pending"
 
 
 @app.route("/nextpending")
@@ -115,8 +118,11 @@ def next_pending_plaque() -> str:
 
     with ndb.Client().context() as context:
         plaques = Plaque.pending_list(1)
-        plaque = plaques[0]
-        return redirect(plaque.title_page_url)
+        if plaques:
+            plaque = plaques[0]
+            return redirect(plaque.title_page_url)
+        else:
+            return "no plaques pending"
 
 
 @app.route("/date/latest", methods=["GET", "HEAD"])
@@ -127,7 +133,7 @@ def latest_date() -> str:
     else:
         with ndb.Client().context() as context:
             plaque = Plaque.query().filter(Plaque.approved == False).order(-Plaque.created_on).get()
-            text = str(plaque.created_on)
+            text = str(plaque.created_on) if plaque else "no plaques pending"
             memcache.set("latest_date", text)
             return text
 
