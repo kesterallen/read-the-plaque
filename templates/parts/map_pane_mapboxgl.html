@@ -1,6 +1,6 @@
 
-<script src='https://api.mapbox.com/mapbox-gl-js/v0.41.0/mapbox-gl.js'></script>
-<link href='https://api.mapbox.com/mapbox-gl-js/v0.41.0/mapbox-gl.css' rel='stylesheet' />
+<script src='https://api.mapbox.com/mapbox-gl-js/v3.17.0-beta.1/mapbox-gl.js'></script>
+<link href='https://api.mapbox.com/mapbox-gl-js/v3.17.0-beta.1/mapbox-gl.css' rel='stylesheet' />
 <script src="https://unpkg.com/supercluster@4.0.0/dist/supercluster.min.js"></script>
 
 
@@ -22,7 +22,8 @@ var mapId = '{% if bigmap %}bigmap{% elif featured_plaque %}featured_row_map{% e
 
 var map = new mapboxgl.Map({
   container: mapId, // container id
-  style: "mapbox://styles/mapbox/light-v9", //stylesheet location
+  projection: "globe",
+  style: "mapbox://styles/mapbox/standard", //stylesheet location
   {% if bigmap_center %}center: [{{bigmap_lng}}, {{bigmap_lat}}],{% endif %}
   {% if bigmap_zoom %}zoom: {{bigmap_zoom}}{% endif %}
 });
