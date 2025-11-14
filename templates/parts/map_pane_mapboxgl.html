@@ -23,6 +23,7 @@ var mapId = '{% if bigmap %}bigmap{% elif featured_plaque %}featured_row_map{% e
 var map = new mapboxgl.Map({
   container: mapId, // container id
   projection: "globe",
+  config: { basemap: { theme: "monochrome" } },
   style: "mapbox://styles/mapbox/standard", //stylesheet location
   {% if bigmap_center %}center: [{{bigmap_lng}}, {{bigmap_lat}}],{% endif %}
   {% if bigmap_zoom %}zoom: {{bigmap_zoom}}{% endif %}
